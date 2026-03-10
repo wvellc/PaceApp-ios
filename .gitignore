@@ -1,0 +1,111 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Xcode
+# Build generated
+build/
+DerivedData/
+
+# Xcode workspace and user settings
+*.xcworkspace/xcuserdata/
+*.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+xcuserdata/
+
+# Scheme management
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/xcshareddata/WorkspaceSettings.xcsettings
+
+# Do not ignore shared schemes
+!*.xcodeproj/xcshareddata/
+!*.xcworkspace/xcshareddata/
+
+# Swift Package Manager
+.swiftpm/
+.build/
+Packages/
+Package.resolved
+
+# CocoaPods
+Pods/
+# If you are using CocoaPods with frameworks
+# Carthage
+Carthage/Build/
+Carthage/Checkouts/
+
+# Accio dependency manager
+Dependencies/
+.accio/
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+fastlane/readme.md
+
+# Code Coverage
+*.xccovreport
+*.xccovarchive
+
+# SwiftLint and other tools caches
+.swiftlint.cache
+
+# SwiftUI previews
+# Derived data already ignored, but preview device logs sometimes appear
+*.preview-thumbnails
+
+# Playground
+timeline.xctimeline
+playground.xcworkspace
+
+# Provisioning profiles and signing
+*.mobileprovision
+*.provisionprofile
+
+# Crash logs
+*.crash
+
+# Archives
+*.xcarchive
+
+# User-specific files
+*.swp
+*.swo
+*~
+
+# SwiftData / Core Data stores (if generated during development)
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Firebase/GoogleService files (uncomment if you keep secrets out of VCS)
+# GoogleService-Info.plist
+
+# Secrets (uncomment or adjust to your setup)
+# .env
+# .env.*
+
+# SPM Artifacts cache (Xcode 15+)
+SourcePackages/
+
+# Xcode 15+ DerivedData inside workspace (already covered globally)
+*.xcworkspace/xcshareddata/swiftpm/Package.resolved
+
+.DS_Store
+/PaceApp.xcodeproj/project.xcworkspace/xcuserdata

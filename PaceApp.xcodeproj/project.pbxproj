@@ -9,12 +9,14 @@
 /* Begin PBXBuildFile section */
 		E6C69B682F603CC400ACED81 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E6C69B652F603CC400ACED81 /* Assets.xcassets */; };
 		E6C69B732F603EAB00ACED81 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E6C69B722F603EAB00ACED81 /* Colors.xcassets */; };
+		E6C69B752F60410400ACED81 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = E6C69B742F60410400ACED81 /* .gitignore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		E6C69B572F603C8D00ACED81 /* PaceApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PaceApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E6C69B652F603CC400ACED81 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E6C69B722F603EAB00ACED81 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
+		E6C69B742F60410400ACED81 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -72,6 +74,7 @@
 			children = (
 				E6C69B652F603CC400ACED81 /* Assets.xcassets */,
 				E6C69B722F603EAB00ACED81 /* Colors.xcassets */,
+				E6C69B742F60410400ACED81 /* .gitignore */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -142,6 +145,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E6C69B682F603CC400ACED81 /* Assets.xcassets in Resources */,
+				E6C69B752F60410400ACED81 /* .gitignore in Resources */,
 				E6C69B732F603EAB00ACED81 /* Colors.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
