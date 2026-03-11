@@ -11,7 +11,8 @@ import SwiftUI
 struct PaceAppApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+				.preferredColorScheme(.light)
         }
     }
 }

@@ -7,22 +7,44 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E6C4BEDF2F613E1300C17C69 /* AppGradients.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C4BEDE2F613E1300C17C69 /* AppGradients.swift */; };
+		E6C4BEEE2F616B8800C17C69 /* Gilroy-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = E6C4BEED2F616B8800C17C69 /* Gilroy-SemiBold.ttf */; };
+		E6C4BEEF2F616B8800C17C69 /* Gilroy-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = E6C4BEE82F616B8800C17C69 /* Gilroy-Bold.ttf */; };
+		E6C4BEF02F616B8800C17C69 /* Gilroy-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = E6C4BEE92F616B8800C17C69 /* Gilroy-ExtraBold.ttf */; };
+		E6C4BEF12F616B8800C17C69 /* Gilroy-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = E6C4BEEB2F616B8800C17C69 /* Gilroy-Medium.ttf */; };
+		E6C4BEF22F616B8800C17C69 /* Gilroy-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = E6C4BEEA2F616B8800C17C69 /* Gilroy-Light.ttf */; };
+		E6C4BEF32F616B8800C17C69 /* Gilroy-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = E6C4BEEC2F616B8800C17C69 /* Gilroy-Regular.ttf */; };
+		E6C4BEF82F61849700C17C69 /* LogoWithText.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C4BEF72F61849700C17C69 /* LogoWithText.swift */; };
+		E6C4BEFA2F618A2800C17C69 /* PaceSpacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C4BEF92F618A2800C17C69 /* PaceSpacing.swift */; };
 		E6C69B682F603CC400ACED81 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E6C69B652F603CC400ACED81 /* Assets.xcassets */; };
 		E6C69B732F603EAB00ACED81 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E6C69B722F603EAB00ACED81 /* Colors.xcassets */; };
-		E6C69B752F60410400ACED81 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = E6C69B742F60410400ACED81 /* .gitignore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		E6C4BEDE2F613E1300C17C69 /* AppGradients.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGradients.swift; sourceTree = "<group>"; };
+		E6C4BEE62F615C2A00C17C69 /* PaceApp-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "PaceApp-Info.plist"; sourceTree = "<group>"; };
+		E6C4BEE82F616B8800C17C69 /* Gilroy-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gilroy-Bold.ttf"; sourceTree = "<group>"; };
+		E6C4BEE92F616B8800C17C69 /* Gilroy-ExtraBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gilroy-ExtraBold.ttf"; sourceTree = "<group>"; };
+		E6C4BEEA2F616B8800C17C69 /* Gilroy-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gilroy-Light.ttf"; sourceTree = "<group>"; };
+		E6C4BEEB2F616B8800C17C69 /* Gilroy-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gilroy-Medium.ttf"; sourceTree = "<group>"; };
+		E6C4BEEC2F616B8800C17C69 /* Gilroy-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gilroy-Regular.ttf"; sourceTree = "<group>"; };
+		E6C4BEED2F616B8800C17C69 /* Gilroy-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gilroy-SemiBold.ttf"; sourceTree = "<group>"; };
+		E6C4BEF52F616CCF00C17C69 /* AppFonts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFonts.swift; sourceTree = "<group>"; };
+		E6C4BEF72F61849700C17C69 /* LogoWithText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogoWithText.swift; sourceTree = "<group>"; };
+		E6C4BEF92F618A2800C17C69 /* PaceSpacing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaceSpacing.swift; sourceTree = "<group>"; };
+		E6C4BEFE2F618CE000C17C69 /* Date+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Ext.swift"; sourceTree = "<group>"; };
+		E6C4BEFF2F618CE000C17C69 /* View+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "View+Ext.swift"; sourceTree = "<group>"; };
+		E6C4BF012F618D6000C17C69 /* Gilroy+Font.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Gilroy+Font.swift"; sourceTree = "<group>"; };
+		E6C4BF022F618D9D00C17C69 /* GilroyFontModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GilroyFontModifier.swift; sourceTree = "<group>"; };
 		E6C69B572F603C8D00ACED81 /* PaceApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PaceApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E6C69B652F603CC400ACED81 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E6C69B722F603EAB00ACED81 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
-		E6C69B742F60410400ACED81 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		E6C69B592F603C8D00ACED81 /* PaceApp */ = {
+		E6C69B592F603C8D00ACED81 /* App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = PaceApp;
+			path = App;
 			sourceTree = "<group>";
 		};
 		E6C69B6E2F603E4D00ACED81 /* Modules */ = {
@@ -43,13 +65,82 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		E6C4BEE72F616B6300C17C69 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				E6C4BEE82F616B8800C17C69 /* Gilroy-Bold.ttf */,
+				E6C4BEE92F616B8800C17C69 /* Gilroy-ExtraBold.ttf */,
+				E6C4BEEA2F616B8800C17C69 /* Gilroy-Light.ttf */,
+				E6C4BEEB2F616B8800C17C69 /* Gilroy-Medium.ttf */,
+				E6C4BEEC2F616B8800C17C69 /* Gilroy-Regular.ttf */,
+				E6C4BEED2F616B8800C17C69 /* Gilroy-SemiBold.ttf */,
+			);
+			path = Fonts;
+			sourceTree = "<group>";
+		};
+		E6C4BEF42F616CB600C17C69 /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				E6C4BF002F618D3600C17C69 /* Font */,
+				E6C4BEF62F61846D00C17C69 /* Components */,
+				E6C4BEDE2F613E1300C17C69 /* AppGradients.swift */,
+				E6C4BEF92F618A2800C17C69 /* PaceSpacing.swift */,
+			);
+			path = DesignSystem;
+			sourceTree = "<group>";
+		};
+		E6C4BEF62F61846D00C17C69 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				E6C4BEF72F61849700C17C69 /* LogoWithText.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		E6C4BEFB2F618BFB00C17C69 /* Utility */ = {
+			isa = PBXGroup;
+			children = (
+				E6C4BEFD2F618C5900C17C69 /* Helpers */,
+				E6C4BEFC2F618C5200C17C69 /* Extensions */,
+			);
+			path = Utility;
+			sourceTree = "<group>";
+		};
+		E6C4BEFC2F618C5200C17C69 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				E6C4BEFE2F618CE000C17C69 /* Date+Ext.swift */,
+				E6C4BEFF2F618CE000C17C69 /* View+Ext.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		E6C4BEFD2F618C5900C17C69 /* Helpers */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Helpers;
+			sourceTree = "<group>";
+		};
+		E6C4BF002F618D3600C17C69 /* Font */ = {
+			isa = PBXGroup;
+			children = (
+				E6C4BF022F618D9D00C17C69 /* GilroyFontModifier.swift */,
+				E6C4BF012F618D6000C17C69 /* Gilroy+Font.swift */,
+				E6C4BEF52F616CCF00C17C69 /* AppFonts.swift */,
+			);
+			path = Font;
+			sourceTree = "<group>";
+		};
 		E6C69B4E2F603C8D00ACED81 = {
 			isa = PBXGroup;
 			children = (
+				E6C4BEFB2F618BFB00C17C69 /* Utility */,
+				E6C69B592F603C8D00ACED81 /* App */,
+				E6C4BEE62F615C2A00C17C69 /* PaceApp-Info.plist */,
+				E6C4BEF42F616CB600C17C69 /* DesignSystem */,
 				E6C69B6F2F603E6C00ACED81 /* Resources */,
 				E6C69B6E2F603E4D00ACED81 /* Modules */,
-				E6C69B6B2F603E2E00ACED81 /* Core */,
-				E6C69B592F603C8D00ACED81 /* PaceApp */,
 				E6C69B582F603C8D00ACED81 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -62,19 +153,12 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		E6C69B6B2F603E2E00ACED81 /* Core */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Core;
-			sourceTree = "<group>";
-		};
 		E6C69B6F2F603E6C00ACED81 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				E6C4BEE72F616B6300C17C69 /* Fonts */,
 				E6C69B652F603CC400ACED81 /* Assets.xcassets */,
 				E6C69B722F603EAB00ACED81 /* Colors.xcassets */,
-				E6C69B742F60410400ACED81 /* .gitignore */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -95,7 +179,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				E6C69B592F603C8D00ACED81 /* PaceApp */,
+				E6C69B592F603C8D00ACED81 /* App */,
 				E6C69B6E2F603E4D00ACED81 /* Modules */,
 			);
 			name = PaceApp;
@@ -145,8 +229,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				E6C69B682F603CC400ACED81 /* Assets.xcassets in Resources */,
-				E6C69B752F60410400ACED81 /* .gitignore in Resources */,
 				E6C69B732F603EAB00ACED81 /* Colors.xcassets in Resources */,
+				E6C4BEEE2F616B8800C17C69 /* Gilroy-SemiBold.ttf in Resources */,
+				E6C4BEEF2F616B8800C17C69 /* Gilroy-Bold.ttf in Resources */,
+				E6C4BEF02F616B8800C17C69 /* Gilroy-ExtraBold.ttf in Resources */,
+				E6C4BEF12F616B8800C17C69 /* Gilroy-Medium.ttf in Resources */,
+				E6C4BEF22F616B8800C17C69 /* Gilroy-Light.ttf in Resources */,
+				E6C4BEF32F616B8800C17C69 /* Gilroy-Regular.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -157,6 +246,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E6C4BEF82F61849700C17C69 /* LogoWithText.swift in Sources */,
+				E6C4BEFA2F618A2800C17C69 /* PaceSpacing.swift in Sources */,
+				E6C4BEDF2F613E1300C17C69 /* AppGradients.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -292,6 +384,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "PaceApp-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Pace;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -339,6 +432,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "PaceApp-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Pace;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
