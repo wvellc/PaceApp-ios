@@ -22,7 +22,7 @@ extension Font {
 	static let paceSemiBold20: Font  = Gilroy.semiBold.size(20)
 	
 	// Medium
-	static let paceMedium17: Font    = Gilroy.medium.size(17)
+	static let paceMedium16: Font    = Gilroy.medium.size(16)
 	
 	// Regular
 	static let paceRegular17: Font   = Gilroy.regular.size(17)

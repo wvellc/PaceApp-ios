@@ -41,25 +41,9 @@ struct WelcomeView: View {
 
                 Spacer()
 
-                Button(action: {}) {
-                    HStack(spacing: 12) {
-                        Text("Get Started")
-                            .font(.system(size: 17, weight: .semibold, design: .rounded))
-
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 14, weight: .bold))
-                    }
-                    .foregroundStyle(.whiteApp)
-                    .padding(.vertical, 14)
-                    .padding(.horizontal, 28)
-                    .background(
-                        Capsule()
-                            .fill(AppGradients.buttonFill)
-                    )
-                    .overlay(
-                        Capsule()
-                            .stroke(Color.neonAquaBlue, lineWidth: 1)
-                    )
+				//Get Started button
+                GlassButton(title: "Get Started") {
+                    // TODO: Handle Get Started action
                 }
                 .padding(.bottom, 36)
             }
@@ -72,3 +56,4 @@ struct WelcomeView: View {
 #Preview {
 	WelcomeView()
 }
+

@@ -102,7 +102,7 @@ private struct SetDisabled: ViewModifier {
         return content
             .disabled(disabled)
             .allowsHitTesting(!disabled)
-            .opacity(disabled ? Dimens.disabledOpacity : Dimens.defaultOpacity)
+			.opacity(disabled ? Constant.UI.disabledOpacity : Dimens.defaultOpacity)
     }
 }
 
