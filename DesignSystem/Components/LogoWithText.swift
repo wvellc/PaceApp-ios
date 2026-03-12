@@ -16,7 +16,7 @@ struct LogoWithText: View {
 				.frame(width: 153, height: 103)
                 .shadow(color: Color.black.opacity(0.3), radius: 12, x: 0, y: 8)
 
-            Text("PACE APP")
+			Text(.paceApp)
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundStyle(.whiteApp)
                 .tracking(2)

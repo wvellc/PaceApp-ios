@@ -43,8 +43,8 @@ extension View {
     
     func addRoundRectBorderOverlay(
         _ borderColor: Color,
-        borderWidth: CGFloat = Dimens.defaultBorderWidth,
-        cornerRadius: CGFloat = Dimens.defaultCornerRadius,
+		borderWidth: CGFloat = Constant.UI.defaultBorderWidth,
+        cornerRadius: CGFloat = Constant.UI.defaultCornerRadius,
         roundCorners: UIRectCorner = .allCorners
     ) -> some View {
         modifier(AddRoundRectBorderOverlay(
@@ -57,7 +57,7 @@ extension View {
     
     func addRoundedBackgroundColor(
         _ backgroundColor: Color,
-        cornerRadius: CGFloat = Dimens.defaultCornerRadius,
+        cornerRadius: CGFloat = Constant.UI.defaultCornerRadius,
         roundCorners: UIRectCorner = .allCorners,
         addShadow: Bool = false
     ) -> some View {
@@ -102,7 +102,7 @@ private struct SetDisabled: ViewModifier {
         return content
             .disabled(disabled)
             .allowsHitTesting(!disabled)
-			.opacity(disabled ? Constant.UI.disabledOpacity : Dimens.defaultOpacity)
+			.opacity(disabled ? Constant.UI.disabledOpacity : Constant.UI.defaultOpacity)
     }
 }
 
@@ -113,8 +113,8 @@ private struct AddShadow: ViewModifier {
     func body(content: Content) -> some View {
         return content
             .shadow(
-                color: Color.steelBlue.opacity(Dimens.shadowOpacity),
-                radius: Dimens.defaultCornerRadius,
+				color: Color.darkSeaBlue.opacity(Constant.UI.shadowOpacity),
+				radius: Constant.UI.cardCornerRadius,
                 x: offsetX,
                 y: offsetY
             )
@@ -157,7 +157,7 @@ private struct AddRoundedBackgroundColor: ViewModifier {
 
 struct ViewShape: Shape {
     var roundCorners = UIRectCorner.allCorners
-    var radius: CGFloat = Dimens.defaultCornerRadius
+	var radius: CGFloat = Constant.UI.defaultCornerRadius
     
     func path(in rect: CGRect) -> Path {
         let path = UIBezierPath(

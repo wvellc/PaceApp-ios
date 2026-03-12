@@ -25,4 +25,15 @@ enum AppGradients {
         startPoint: .top,
         endPoint: .bottom
     )
+	
+	static var gradientBorder: LinearGradient {
+		LinearGradient(
+			colors: [
+				.fluorescentMint,
+				.black
+			],
+			startPoint: .top,
+			endPoint: .bottom
+		)
+	}
 }
