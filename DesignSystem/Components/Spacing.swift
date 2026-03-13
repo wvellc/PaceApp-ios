@@ -9,21 +9,23 @@ import SwiftUI
 
 /// Handle Vertical space
 struct VSpace: View {
-	var height: Double = 10
+	var height: Double = 8.0
+	var isProportional: Bool = true
 	
 	var body: some View {
 		Spacer()
-			.frame(height: height)
+			.frame(height: isProportional ? height.proportionalHeight() : height)
 	}
 }
 
 /// Handle Horizontal space
 struct HSpace: View {
-	var width: Double = 10
+	var width: Double = 8.0
+	var isProportional: Bool = true
 	
 	var body: some View {
-		Spacer()
-			.frame(width: width)
+		Spacer(minLength: isProportional ? width.proportionalWidth() : width)
+			.frame(width: isProportional ? width.proportionalWidth() : width)
 	}
 }
 

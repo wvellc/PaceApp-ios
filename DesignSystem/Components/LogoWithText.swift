@@ -9,7 +9,7 @@ import SwiftUI
 
 struct LogoWithText: View {
     var body: some View {
-        VStack(spacing: 7) {
+        VStack(spacing: 12) {
             Image("logo")
                 .resizable()
                 .scaledToFit()
@@ -17,7 +17,7 @@ struct LogoWithText: View {
                 .shadow(color: Color.black.opacity(0.3), radius: 12, x: 0, y: 8)
 
 			Text(.paceApp)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+				.font(.extraBold34)
                 .foregroundStyle(.whiteApp)
                 .tracking(2)
         }

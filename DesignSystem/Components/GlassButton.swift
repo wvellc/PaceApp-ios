@@ -10,10 +10,10 @@ import SwiftUI
 
 /// A reusable glass-effect capsule button with a thin neon stroke and trailing chevron.
 public struct GlassButton: View {
-    public let title: String
+	public let title: String
     public let action: () -> Void
-
-    public init(title: String, action: @escaping () -> Void) {
+	
+	public init(title: String, action: @escaping () -> Void) {
         self.title = title
         self.action = action
     }
@@ -43,12 +43,12 @@ public struct GlassButton: View {
 		.contentShape(Capsule())
 		
 		// Liquid glass effect
-		.glassEffect(.regular, in: Capsule())
+		.glassEffect(.regular.tint(.black20), in: Capsule())
 		
 		// Neon gradient border
 		.overlay(
 			Capsule()
-				.stroke(AppGradients.gradientBorder, lineWidth: 1)
+				.stroke(AppGradients.border, lineWidth: 1)
 		)
 		
 		// Press animation (glass + border scale together)
@@ -65,9 +65,6 @@ public struct GlassButton: View {
 					isPressed = false
 				}
 		)
-		
-		.frame(width: .infinity)
-
     }
 }
 

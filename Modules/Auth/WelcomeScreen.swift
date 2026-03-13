@@ -8,7 +8,14 @@
 import SwiftUI
 
 /// Welcome screen
-struct WelcomeView: View {
+struct WelcomeScreen: View {
+	
+	//MARK: Environment
+	@Environment(Router.self) private var router
+	
+	
+	//MARK: States
+	
 	// Animation state flags
 	@State private var showBackgroundPattern = false
 	@State private var showLogo = false
@@ -19,20 +26,10 @@ struct WelcomeView: View {
 	private let logoZoomDuration: Double = 0.5
 	private let bottomDelayAfterLogo: Double = 1.0
 	
+	
+	//MARK: Body
 	var body: some View {
-		ZStack {
-			AppGradients.welcomeBackground
-				.ignoresSafeArea()
-			
-			// Background pattern fades in
-			Image("BackgroundPattern")
-				.resizable()
-				.scaledToFill()
-				.blendMode(.screen)
-				.ignoresSafeArea()
-				.opacity(showBackgroundPattern ? 1 : 0)
-				.animation(.easeInOut(duration: fadeDuration), value: showBackgroundPattern)
-			
+		BackgroundContainer {
 			VStack {
 				Spacer(minLength: 40)
 				
@@ -61,8 +58,9 @@ struct WelcomeView: View {
 						.animation(.easeOut(duration: 0.45).delay(0.05), value: showBottomContent)
 					
 					// Get Started button
-					GlassButton(title: "Get Started") {
+					GlassButton(title: String(localized: .getStarted)) {
 						// TODO: Handle Get Started action
+						router.setRoot(.auth)
 					}
 					.opacity(showBottomContent ? 1 : 0)
 					.offset(y: showBottomContent ? 0 : 10)
@@ -72,22 +70,24 @@ struct WelcomeView: View {
 				.multilineTextAlignment(.center)
 			}
 			.safeAreaPadding()
-		}
-		.onAppear {
-			// Stage 1: Fade in background pattern
-			showBackgroundPattern = true
+			.defaultScreenStyle()
 			
-			// Stage 2: Zoom in logo after a slight delay to let background settle
-			DispatchQueue.main.asyncAfter(deadline: .now() + fadeDuration * 0.7) {
-				withAnimation(.spring(response: logoZoomDuration, dampingFraction: 0.85)) {
-					showLogo = true
+			.onAppear {
+				// Stage 1: Fade in background pattern
+				showBackgroundPattern = true
+				
+				// Stage 2: Zoom in logo after a slight delay to let background settle
+				DispatchQueue.main.asyncAfter(deadline: .now() + fadeDuration * 0.7) {
+					withAnimation(.spring(response: logoZoomDuration, dampingFraction: 0.85)) {
+						showLogo = true
+					}
 				}
-			}
-			
-			// Stage 3: Reveal bottom content after specified delay from logo
-			DispatchQueue.main.asyncAfter(deadline: .now() + fadeDuration * 0.7 + bottomDelayAfterLogo) {
-				withAnimation(.easeOut(duration: 0.5)) {
-					showBottomContent = true
+				
+				// Stage 3: Reveal bottom content after specified delay from logo
+				DispatchQueue.main.asyncAfter(deadline: .now() + fadeDuration * 0.7 + bottomDelayAfterLogo) {
+					withAnimation(.easeOut(duration: 0.5)) {
+						showBottomContent = true
+					}
 				}
 			}
 		}
@@ -95,11 +95,7 @@ struct WelcomeView: View {
 }
 
 #Preview {
-	WelcomeView()
+	WelcomeScreen()
 }
 
-
-#Preview {
-    WelcomeView()
-}
 

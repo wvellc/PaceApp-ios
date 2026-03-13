@@ -7,8 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		E6C332862F62915700224AA5 /* PaceAppApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C332832F62915700224AA5 /* PaceAppApp.swift */; };
-		E6C332872F62915700224AA5 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C332842F62915700224AA5 /* RootView.swift */; };
+		E61F82232F63E6CC00C215DF /* AppBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F82222F63E6CC00C215DF /* AppBackground.swift */; };
+		E61F82282F63F50C00C215DF /* BackgroundContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F82272F63F50C00C215DF /* BackgroundContainer.swift */; };
+		E61F83AF2F641B0900C215DF /* CGFloat+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F83AE2F641B0900C215DF /* CGFloat+Ext.swift */; };
+		E61F83B12F641BB400C215DF /* UIWindow+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F83B02F641BB400C215DF /* UIWindow+Ext.swift */; };
+		E61F83B82F64277400C215DF /* AppButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F83B72F64277400C215DF /* AppButton.swift */; };
+		E61F83BA2F642A7000C215DF /* AppSegmentedControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F83B92F642A7000C215DF /* AppSegmentedControl.swift */; };
+		E6C332862F62915700224AA5 /* PaceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C332832F62915700224AA5 /* PaceApp.swift */; };
 		E6C332882F6291C500224AA5 /* Date+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C4BEFE2F618CE000C17C69 /* Date+Ext.swift */; };
 		E6C332892F6291C500224AA5 /* View+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C4BEFF2F618CE000C17C69 /* View+Ext.swift */; };
 		E6C3328A2F6291C500224AA5 /* GilroyFontModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C4BF022F618D9D00C17C69 /* GilroyFontModifier.swift */; };
@@ -30,12 +35,17 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		E6C332832F62915700224AA5 /* PaceAppApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaceAppApp.swift; sourceTree = "<group>"; };
-		E6C332842F62915700224AA5 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		E61F82222F63E6CC00C215DF /* AppBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBackground.swift; sourceTree = "<group>"; };
+		E61F82272F63F50C00C215DF /* BackgroundContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundContainer.swift; sourceTree = "<group>"; };
+		E61F83AE2F641B0900C215DF /* CGFloat+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CGFloat+Ext.swift"; sourceTree = "<group>"; };
+		E61F83B02F641BB400C215DF /* UIWindow+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIWindow+Ext.swift"; sourceTree = "<group>"; };
+		E61F83B72F64277400C215DF /* AppButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppButton.swift; sourceTree = "<group>"; };
+		E61F83B92F642A7000C215DF /* AppSegmentedControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSegmentedControl.swift; sourceTree = "<group>"; };
+		E6C332832F62915700224AA5 /* PaceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaceApp.swift; sourceTree = "<group>"; };
 		E6C3328D2F62920800224AA5 /* GlassButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassButton.swift; sourceTree = "<group>"; };
 		E6C334262F62B74B00224AA5 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		E6C4BEDE2F613E1300C17C69 /* AppGradients.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGradients.swift; sourceTree = "<group>"; };
-		E6C4BEE62F615C2A00C17C69 /* PaceApp-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "PaceApp-Info.plist"; sourceTree = "<group>"; };
+		E6C4BEE62F615C2A00C17C69 /* PaceApp-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "PaceApp-Info.plist"; sourceTree = "<group>"; };
 		E6C4BEE82F616B8800C17C69 /* Gilroy-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gilroy-Bold.ttf"; sourceTree = "<group>"; };
 		E6C4BEE92F616B8800C17C69 /* Gilroy-ExtraBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gilroy-ExtraBold.ttf"; sourceTree = "<group>"; };
 		E6C4BEEA2F616B8800C17C69 /* Gilroy-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gilroy-Light.ttf"; sourceTree = "<group>"; };
@@ -55,6 +65,16 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		E61F83B52F64264C00C215DF /* Model */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Model;
+			sourceTree = "<group>";
+		};
+		E61F83BC2F642F0900C215DF /* Manager */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Manager;
+			sourceTree = "<group>";
+		};
 		E6C3329C2F62926900224AA5 /* Constant */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Constant;
@@ -63,6 +83,11 @@
 		E6C3342E2F62BA7000224AA5 /* Animations */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Animations;
+			sourceTree = "<group>";
+		};
+		E6C335CC2F62D60500224AA5 /* Router */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Router;
 			sourceTree = "<group>";
 		};
 		E6C69B6E2F603E4D00ACED81 /* Modules */ = {
@@ -83,11 +108,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		E61F82242F63E97800C215DF /* AppBackground */ = {
+			isa = PBXGroup;
+			children = (
+				E61F82272F63F50C00C215DF /* BackgroundContainer.swift */,
+				E61F82222F63E6CC00C215DF /* AppBackground.swift */,
+			);
+			path = AppBackground;
+			sourceTree = "<group>";
+		};
 		E6C332852F62915700224AA5 /* PaceApp */ = {
 			isa = PBXGroup;
 			children = (
-				E6C332832F62915700224AA5 /* PaceAppApp.swift */,
-				E6C332842F62915700224AA5 /* RootView.swift */,
+				E6C332832F62915700224AA5 /* PaceApp.swift */,
 			);
 			path = PaceApp;
 			sourceTree = "<group>";
@@ -126,6 +159,9 @@
 		E6C4BEF62F61846D00C17C69 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				E61F83B92F642A7000C215DF /* AppSegmentedControl.swift */,
+				E61F83B72F64277400C215DF /* AppButton.swift */,
+				E61F82242F63E97800C215DF /* AppBackground */,
 				E6C3328D2F62920800224AA5 /* GlassButton.swift */,
 				E6C4BEF72F61849700C17C69 /* LogoWithText.swift */,
 				E6C4BEF92F618A2800C17C69 /* Spacing.swift */,
@@ -136,6 +172,7 @@
 		E6C4BEFB2F618BFB00C17C69 /* Utility */ = {
 			isa = PBXGroup;
 			children = (
+				E61F83BC2F642F0900C215DF /* Manager */,
 				E6C334282F62BA5F00224AA5 /* Modifier */,
 				E6C3329C2F62926900224AA5 /* Constant */,
 				E6C4BEFD2F618C5900C17C69 /* Helpers */,
@@ -147,6 +184,8 @@
 		E6C4BEFC2F618C5200C17C69 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
+				E61F83B02F641BB400C215DF /* UIWindow+Ext.swift */,
+				E61F83AE2F641B0900C215DF /* CGFloat+Ext.swift */,
 				E6C4BEFE2F618CE000C17C69 /* Date+Ext.swift */,
 				E6C4BEFF2F618CE000C17C69 /* View+Ext.swift */,
 			);
@@ -173,13 +212,15 @@
 		E6C69B4E2F603C8D00ACED81 = {
 			isa = PBXGroup;
 			children = (
-				E6C4BEFB2F618BFB00C17C69 /* Utility */,
 				E6C4BEE62F615C2A00C17C69 /* PaceApp-Info.plist */,
+				E6C332852F62915700224AA5 /* PaceApp */,
+				E6C4BEFB2F618BFB00C17C69 /* Utility */,
 				E6C4BEF42F616CB600C17C69 /* DesignSystem */,
 				E6C69B6F2F603E6C00ACED81 /* Resources */,
+				E61F83B52F64264C00C215DF /* Model */,
 				E6C69B6E2F603E4D00ACED81 /* Modules */,
 				E6C69B582F603C8D00ACED81 /* Products */,
-				E6C332852F62915700224AA5 /* PaceApp */,
+				E6C335CC2F62D60500224AA5 /* Router */,
 			);
 			sourceTree = "<group>";
 		};
@@ -218,8 +259,11 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				E61F83B52F64264C00C215DF /* Model */,
+				E61F83BC2F642F0900C215DF /* Manager */,
 				E6C3329C2F62926900224AA5 /* Constant */,
 				E6C3342E2F62BA7000224AA5 /* Animations */,
+				E6C335CC2F62D60500224AA5 /* Router */,
 				E6C69B6E2F603E4D00ACED81 /* Modules */,
 			);
 			name = PaceApp;
@@ -287,6 +331,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E61F83B82F64277400C215DF /* AppButton.swift in Sources */,
+				E61F82232F63E6CC00C215DF /* AppBackground.swift in Sources */,
+				E61F83BA2F642A7000C215DF /* AppSegmentedControl.swift in Sources */,
+				E61F82282F63F50C00C215DF /* BackgroundContainer.swift in Sources */,
+				E61F83AF2F641B0900C215DF /* CGFloat+Ext.swift in Sources */,
 				E6C332882F6291C500224AA5 /* Date+Ext.swift in Sources */,
 				E6C332892F6291C500224AA5 /* View+Ext.swift in Sources */,
 				E6C3328E2F62920800224AA5 /* GlassButton.swift in Sources */,
@@ -296,8 +345,8 @@
 				E6C4BEF82F61849700C17C69 /* LogoWithText.swift in Sources */,
 				E6C4BEFA2F618A2800C17C69 /* Spacing.swift in Sources */,
 				E6C4BEDF2F613E1300C17C69 /* AppGradients.swift in Sources */,
-				E6C332862F62915700224AA5 /* PaceAppApp.swift in Sources */,
-				E6C332872F62915700224AA5 /* RootView.swift in Sources */,
+				E6C332862F62915700224AA5 /* PaceApp.swift in Sources */,
+				E61F83B12F641BB400C215DF /* UIWindow+Ext.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
