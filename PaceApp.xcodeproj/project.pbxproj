@@ -13,6 +13,10 @@
 		E61F83B12F641BB400C215DF /* UIWindow+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F83B02F641BB400C215DF /* UIWindow+Ext.swift */; };
 		E61F83B82F64277400C215DF /* AppButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F83B72F64277400C215DF /* AppButton.swift */; };
 		E61F83BA2F642A7000C215DF /* AppSegmentedControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F83B92F642A7000C215DF /* AppSegmentedControl.swift */; };
+		E61FA4202F67BDFD001DA088 /* ValidationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61FA41F2F67BDFD001DA088 /* ValidationProvider.swift */; };
+		E61FA4222F67BE3C001DA088 /* AppTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61FA4212F67BE3C001DA088 /* AppTextField.swift */; };
+		E61FA4262F67C706001DA088 /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61FA4252F67C706001DA088 /* WebView.swift */; };
+		E61FA42E2F67D252001DA088 /* String+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61FA42D2F67D252001DA088 /* String+Ext.swift */; };
 		E6C332862F62915700224AA5 /* PaceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C332832F62915700224AA5 /* PaceApp.swift */; };
 		E6C332882F6291C500224AA5 /* Date+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C4BEFE2F618CE000C17C69 /* Date+Ext.swift */; };
 		E6C332892F6291C500224AA5 /* View+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C4BEFF2F618CE000C17C69 /* View+Ext.swift */; };
@@ -41,6 +45,10 @@
 		E61F83B02F641BB400C215DF /* UIWindow+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIWindow+Ext.swift"; sourceTree = "<group>"; };
 		E61F83B72F64277400C215DF /* AppButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppButton.swift; sourceTree = "<group>"; };
 		E61F83B92F642A7000C215DF /* AppSegmentedControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSegmentedControl.swift; sourceTree = "<group>"; };
+		E61FA41F2F67BDFD001DA088 /* ValidationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ValidationProvider.swift; sourceTree = "<group>"; };
+		E61FA4212F67BE3C001DA088 /* AppTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTextField.swift; sourceTree = "<group>"; };
+		E61FA4252F67C706001DA088 /* WebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebView.swift; sourceTree = "<group>"; };
+		E61FA42D2F67D252001DA088 /* String+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Ext.swift"; sourceTree = "<group>"; };
 		E6C332832F62915700224AA5 /* PaceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaceApp.swift; sourceTree = "<group>"; };
 		E6C3328D2F62920800224AA5 /* GlassButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassButton.swift; sourceTree = "<group>"; };
 		E6C334262F62B74B00224AA5 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
@@ -117,14 +125,6 @@
 			path = AppBackground;
 			sourceTree = "<group>";
 		};
-		E6C332852F62915700224AA5 /* PaceApp */ = {
-			isa = PBXGroup;
-			children = (
-				E6C332832F62915700224AA5 /* PaceApp.swift */,
-			);
-			path = PaceApp;
-			sourceTree = "<group>";
-		};
 		E6C334282F62BA5F00224AA5 /* Modifier */ = {
 			isa = PBXGroup;
 			children = (
@@ -159,6 +159,8 @@
 		E6C4BEF62F61846D00C17C69 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				E61FA4252F67C706001DA088 /* WebView.swift */,
+				E61FA4212F67BE3C001DA088 /* AppTextField.swift */,
 				E61F83B92F642A7000C215DF /* AppSegmentedControl.swift */,
 				E61F83B72F64277400C215DF /* AppButton.swift */,
 				E61F82242F63E97800C215DF /* AppBackground */,
@@ -184,6 +186,7 @@
 		E6C4BEFC2F618C5200C17C69 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
+				E61FA42D2F67D252001DA088 /* String+Ext.swift */,
 				E61F83B02F641BB400C215DF /* UIWindow+Ext.swift */,
 				E61F83AE2F641B0900C215DF /* CGFloat+Ext.swift */,
 				E6C4BEFE2F618CE000C17C69 /* Date+Ext.swift */,
@@ -195,6 +198,7 @@
 		E6C4BEFD2F618C5900C17C69 /* Helpers */ = {
 			isa = PBXGroup;
 			children = (
+				E61FA41F2F67BDFD001DA088 /* ValidationProvider.swift */,
 			);
 			path = Helpers;
 			sourceTree = "<group>";
@@ -212,8 +216,8 @@
 		E6C69B4E2F603C8D00ACED81 = {
 			isa = PBXGroup;
 			children = (
+				E6C332832F62915700224AA5 /* PaceApp.swift */,
 				E6C4BEE62F615C2A00C17C69 /* PaceApp-Info.plist */,
-				E6C332852F62915700224AA5 /* PaceApp */,
 				E6C4BEFB2F618BFB00C17C69 /* Utility */,
 				E6C4BEF42F616CB600C17C69 /* DesignSystem */,
 				E6C69B6F2F603E6C00ACED81 /* Resources */,
@@ -338,12 +342,16 @@
 				E61F83AF2F641B0900C215DF /* CGFloat+Ext.swift in Sources */,
 				E6C332882F6291C500224AA5 /* Date+Ext.swift in Sources */,
 				E6C332892F6291C500224AA5 /* View+Ext.swift in Sources */,
+				E61FA4222F67BE3C001DA088 /* AppTextField.swift in Sources */,
 				E6C3328E2F62920800224AA5 /* GlassButton.swift in Sources */,
 				E6C3328A2F6291C500224AA5 /* GilroyFontModifier.swift in Sources */,
 				E6C3328B2F6291C500224AA5 /* Gilroy+Font.swift in Sources */,
 				E6C3328C2F6291C500224AA5 /* AppFonts.swift in Sources */,
 				E6C4BEF82F61849700C17C69 /* LogoWithText.swift in Sources */,
 				E6C4BEFA2F618A2800C17C69 /* Spacing.swift in Sources */,
+				E61FA4262F67C706001DA088 /* WebView.swift in Sources */,
+				E61FA4202F67BDFD001DA088 /* ValidationProvider.swift in Sources */,
+				E61FA42E2F67D252001DA088 /* String+Ext.swift in Sources */,
 				E6C4BEDF2F613E1300C17C69 /* AppGradients.swift in Sources */,
 				E6C332862F62915700224AA5 /* PaceApp.swift in Sources */,
 				E61F83B12F641BB400C215DF /* UIWindow+Ext.swift in Sources */,

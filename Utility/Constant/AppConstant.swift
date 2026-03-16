@@ -33,7 +33,6 @@ struct Constant {
 		//Radius
 		public static let defaultCornerRadius	= CGFloat(8)
 		public static let cardCornerRadius 		= CGFloat(12)
-		public static let textFieldCornerRadius = CGFloat(20)
 		
 		//Border
 		public static let defaultBorderWidth = CGFloat(1)

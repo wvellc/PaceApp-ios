@@ -26,10 +26,6 @@ extension Router {
 	// MARK: - Destination resolver
 	
 	/// Resolves a `Destinations` case into its SwiftUI view.
-	///
-	/// Called exclusively from the single
-	/// `.navigationDestination(for: Destinations.self)` modifier placed
-	/// on the `NavigationStack` root.
 	@ViewBuilder
 	func destination(for destination: Destinations) -> some View {
 		switch destination {
@@ -38,26 +34,36 @@ extension Router {
 				// MARK: Auth
 				// ----------------------------------------------------------------
 				
-			case .login: LoginScreen()
-			case .createAccount: CreateAccountScreen()
+			case .login			: LoginScreen()
+			case .createAccount	: CreateAccountScreen()
+			case .verifyOTP		: EmptyView()
+
 				// ----------------------------------------------------------------
 				// MARK: Home
 				// ----------------------------------------------------------------
 				
-			case .home: EmptyView()
+			case .home			: EmptyView()
 				
 				// ----------------------------------------------------------------
 				// MARK: Profile
 				// ----------------------------------------------------------------
 				
-			case .profile: EmptyView()
+			case .profile		: EmptyView()
 		
 				
 				// ----------------------------------------------------------------
 				// MARK: Settings
 				// ----------------------------------------------------------------
 				
-			case .settings: EmptyView()
+			case .settings		: EmptyView()
+			case .termsOfService:
+				AppWebViewScreen(
+					requestUrl: NetworkConst.WebUrl.termsOfService
+				)
+			case .privacyPolicy	:
+				AppWebViewScreen(
+					requestUrl: NetworkConst.WebUrl.privacyPolicy
+				)
 			
 		}
 	}

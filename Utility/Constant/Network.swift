@@ -8,7 +8,7 @@
 
 // MARK: Network Level
 struct NetworkConst {
-	static fileprivate let baseURL      = "https://connectapi.garmin.com"
+	static fileprivate let baseURL      = "https://paceapp.net"
 	
 	struct API {
 		// Base endpoints
@@ -23,5 +23,10 @@ struct NetworkConst {
 			static let start            = "start"
 			static let activityType     = "activityType"
 		}
+	}
+	
+	struct WebUrl {
+		static let privacyPolicy    = "\(baseURL)/privacy-policy"
+		static let termsOfService   = "\(baseURL)/terms-of-service"
 	}
 }

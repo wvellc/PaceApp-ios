@@ -30,7 +30,7 @@ extension Font {
 	static let medium20: Font    = Gilroy.medium.size(20)
 	
 	// Regular
-	static let paceRegular17: Font   = Gilroy.regular.size(17)
+	static let regular17: Font   = Gilroy.regular.size(17)
 	
 	// Light
 	static let light32: Font     = Gilroy.light.size(32)

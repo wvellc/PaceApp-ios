@@ -9,10 +9,18 @@ import SwiftUI
 
 ///Login screen (Email + Phone )
 struct LoginScreen: View {
-    @StateObject private var viewModel = LoginViewModel()
+	
+	//MARK: Environment
+	@Environment(Router.self) private var router
+	
+
+	//MARK: States
+	@State private var viewModel = LoginViewModel()
     @State private var showSafari = false
     @State private var legalURL: URL? = nil
-    
+	@FocusState private var focus : LoginType?
+
+	//MARK: Body
     var body: some View {
 		BackgroundContainer {
 			VStack(spacing: 0) {
@@ -35,52 +43,63 @@ struct LoginScreen: View {
 					AppSegmentedControl(
 						selection: $viewModel.loginType,
 						segments: [
-							(key: .email, title: "Email"),
-							(key: .phoneNumber, title: "Phone Number")
+							(key: .email, title:String(localized: .email)),
+							(key: .phoneNumber, title: String(localized: .phoneNumber))
 						]
 					)
 					
 					// Input Fields
 					if viewModel.loginType == .email {
-						TextField(.emailAddress, text: $viewModel.email)
-							.font(.medium16)
-							.foregroundColor(.whiteApp)
-							.padding()
-							.background(Color.clear)
-							.overlay(
-								RoundedRectangle(cornerRadius: 12)
-									.stroke(Color.white.opacity(0.2), lineWidth: 1)
-							)
+
+						//Email
+						AppTextField(
+							text: $viewModel.email,
+							placeholder: .emailAddress,
+							validation: .email,
+							keyboardType: .emailAddress,
+							autocapitalization: .never,
+							borderColor: .white20,
+							onValueChanged: { newValue in
+								viewModel.email = newValue
+							}
+						)
+						.focused($focus, equals: .email)
+						.onSubmit { viewModel.validate(focus: &focus) }
+						
 					} else {
 						HStack(spacing: 12) {
-							// Country Code Dropdown
-							HStack(spacing: 6) {
-								Text(viewModel.countryCode)
-									.font(.medium18)
-									.foregroundColor(.whiteApp)
-								Image(systemName: "chevron.down")
-									.foregroundColor(.whiteApp)
-									.font(.system(size: 14, weight: .medium))
-							}
-							.padding(.horizontal, 16)
-							.padding(.vertical, 16)
-							.background(Color.clear)
-							.overlay(
-								RoundedRectangle(cornerRadius: 12)
-									.stroke(Color.white.opacity(0.2), lineWidth: 1)
-							)
+//							// Country Code Dropdown
+//							HStack(spacing: 7) {
+//								Text(viewModel.countryCode)
+//									.font(.medium18)
+//									.foregroundColor(.whiteApp)
+//								Image(systemName: "chevron.down")
+//									.foregroundColor(.whiteApp)
+//									.font(.system(size: 14, weight: .medium))
+//							}
+//							.padding(.horizontal, 16)
+//							.padding(.vertical, 16)
+//							.background(Color.clear)
+//							.overlay(
+//								RoundedRectangle(cornerRadius: 12)
+//									.stroke(Color.white.opacity(0.2), lineWidth: 1)
+//							)
 							
-							// Phone Input
-							TextField("81313782626", text: $viewModel.phoneNumber)
-								.keyboardType(.phonePad)
-								.font(.medium18)
-								.foregroundColor(.whiteApp)
-								.padding()
-								.background(Color.clear)
-								.overlay(
-									RoundedRectangle(cornerRadius: 12)
-										.stroke(Color.white.opacity(0.2), lineWidth: 1)
-								)
+							// Phone field
+							AppTextField(
+								text: $viewModel.phoneNumber,
+								placeholder: .phoneNumberPlaceholder,
+								validation: .phoneNumber,
+								textContentType: .telephoneNumber,
+								keyboardType: .phonePad,
+								borderColor: .white20,
+								onValueChanged: { newValue in
+									viewModel.phoneNumber = newValue
+								}
+							)
+							.focused($focus, equals: .phoneNumber)
+							.onSubmit { viewModel.validate(focus: &focus) }
+
 						}
 					}
 
@@ -88,36 +107,33 @@ struct LoginScreen: View {
 					AppButton(.sendOtp) {
 						Task { await viewModel.sendOTP() }
 					}
+					.disabled(!viewModel.isInputValid)
+					.opacity(viewModel.isInputValid ? 1 : 0.5)
+
 					
-					if viewModel.isLoading {
+					if viewModel.state == .sending {
 						ProgressView()
 							.tint(.white)
-					}
-					if let error = viewModel.errorMessage {
-						Text(error)
-							.font(.medium14)
-							.foregroundColor(.red)
 					}
 					
 					// Terms & Privacy
 					VStack(spacing: 6) {
-						Text("By continuing, you agree to our")
+						Text(.byContinuingYouAgreeToOur)
 							.font(.medium16)
 							.foregroundColor(.grayHint)
 							.multilineTextAlignment(.center)
-							.lineSpacing(2.5)
 
 						HStack(spacing: 6) {
-							Button(action: { presentLegal(urlString: "https://paceapp.net") }) {
-								Text("Terms of Service")
+							Button(action: viewModel.openTermsOfService) {
+								Text(.termsOfService)
 									.font(.semiBold16)
 									.foregroundColor(.whiteApp)
 							}
-							Text("and")
+							Text(.and)
 								.font(.medium16)
 								.foregroundColor(.grayHint)
-							Button(action: { presentLegal(urlString: "https://paceapp.net") }) {
-								Text("Privacy Policy.")
+							Button(action: viewModel.openPrivacyPolicy) {
+								Text(.privacyPolicy)
 									.font(.semiBold16)
 									.foregroundColor(.whiteApp)
 							}
@@ -131,44 +147,40 @@ struct LoginScreen: View {
 			}
 			.frame(maxWidth: .infinity, maxHeight: .infinity)
 		}
-		.sheet(isPresented: $showSafari) {
-			if let url = legalURL {
-				SafariWebView(url: url)
-					.ignoresSafeArea()
-			}
-		}
 		.onTapGesture {
 			UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
 		}
+		// Handles ALL navigation — ViewModel just fires events
+		.onChange(of: viewModel.navigationEvent) { _, event in
+			guard let event else { return }
+			handleNavigation(event)
+			viewModel.navigationEvent = nil   // reset after handling
+		}
+		.onChange(of: viewModel.loginType) { oldValue, newValue in
+			focus = newValue
+		}
+		.onAppear {
+			focus =  viewModel.loginType
+		}
+		.onDisappear {
+			focus = nil
+		}
+
     }
 	
-	private func presentLegal(urlString: String) {
-		if let url = URL(string: urlString) {
-			legalURL = url
-			showSafari = true
+	// MARK: - Navigation handler (all in one place, easy to read)
+	private func handleNavigation(_ event: LoginViewModel.NavigationEvent) {
+		switch event {
+			case .privacyPolicy		:	router.navigate(to: .privacyPolicy)
+			case .tearmsOfService	:	router.navigate(to: .termsOfService)
+			case .sendOTP			: 	router.navigate(to: .verifyOTP)
 		}
 	}
 }
 
 #Preview {
     LoginScreen()
-}
+		.environment(Router())
 
-import SafariServices
-
-struct SafariWebView: UIViewControllerRepresentable {
-    let url: URL
-
-    func makeUIViewController(context: Context) -> SFSafariViewController {
-        let config = SFSafariViewController.Configuration()
-        config.entersReaderIfAvailable = false
-        let vc = SFSafariViewController(url: url, configuration: config)
-        vc.preferredControlTintColor = UIColor.white
-        return vc
-    }
-
-    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {
-        // No dynamic updates needed.
-    }
 }
 

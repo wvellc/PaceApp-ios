@@ -8,7 +8,7 @@
 import Foundation
 
 /// Represents the type of login method available.
-enum LoginType: String, CaseIterable, Identifiable, Equatable {
+enum LoginType: String, CaseIterable, Identifiable, Equatable, Hashable {
 	case email
 	case phoneNumber
 	
