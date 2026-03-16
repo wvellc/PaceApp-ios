@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CountryPicker
 
 ///Login screen (Email + Phone )
 struct LoginScreen: View {
@@ -13,15 +14,20 @@ struct LoginScreen: View {
 	//MARK: Environment
 	@Environment(Router.self) private var router
 	
-
+	
 	//MARK: States
 	@State private var viewModel = LoginViewModel()
-    @State private var showSafari = false
-    @State private var legalURL: URL? = nil
+	@State private var showSafari = false
+	@State private var legalURL: URL? = nil
+	
+	//Focus state
 	@FocusState private var focus : LoginType?
-
+	
+	//Contry picker
+	@State private var showPicker = false
+	
 	//MARK: Body
-    var body: some View {
+	var body: some View {
 		BackgroundContainer {
 			VStack(spacing: 0) {
 				
@@ -38,7 +44,7 @@ struct LoginScreen: View {
 					Text(.loginToYourAccount)
 						.font(.medium20)
 						.foregroundColor(.whiteApp)
-
+					
 					// Segment Toggle
 					AppSegmentedControl(
 						selection: $viewModel.loginType,
@@ -50,7 +56,7 @@ struct LoginScreen: View {
 					
 					// Input Fields
 					if viewModel.loginType == .email {
-
+						
 						//Email
 						AppTextField(
 							text: $viewModel.email,
@@ -67,25 +73,25 @@ struct LoginScreen: View {
 						.onSubmit { viewModel.validate(focus: &focus) }
 						
 					} else {
-						HStack(spacing: 12) {
-//							// Country Code Dropdown
-//							HStack(spacing: 7) {
-//								Text(viewModel.countryCode)
-//									.font(.medium18)
-//									.foregroundColor(.whiteApp)
-//								Image(systemName: "chevron.down")
-//									.foregroundColor(.whiteApp)
-//									.font(.system(size: 14, weight: .medium))
-//							}
-//							.padding(.horizontal, 16)
-//							.padding(.vertical, 16)
-//							.background(Color.clear)
-//							.overlay(
-//								RoundedRectangle(cornerRadius: 12)
-//									.stroke(Color.white.opacity(0.2), lineWidth: 1)
-//							)
+						// Phone field
+						
+						HStack(alignment:.top,spacing: 12) {
+							// Country Code Picker
+							Button(action: {showPicker.toggle()}) {
+								Text(viewModel.countryCode.dialingCode ?? "+1")
+									.font(.medium18)
+									.foregroundColor(.whiteApp)
+								Image(.icArrowDown)
+									.foregroundColor(.whiteApp)
+									.font(.system(size: 14, weight: .medium))
+							}
+							.padding(16)
+							.background(Color.clear)
+							.overlay(
+								RoundedRectangle(cornerRadius: Constant.UI.defaultCornerRadius)
+									.stroke(.white20, lineWidth: 1.2)
+							)
 							
-							// Phone field
 							AppTextField(
 								text: $viewModel.phoneNumber,
 								placeholder: .phoneNumberPlaceholder,
@@ -99,17 +105,17 @@ struct LoginScreen: View {
 							)
 							.focused($focus, equals: .phoneNumber)
 							.onSubmit { viewModel.validate(focus: &focus) }
-
+							
 						}
 					}
-
+					
 					// Send OTP Button
 					AppButton(.sendOtp) {
 						Task { await viewModel.sendOTP() }
 					}
 					.disabled(!viewModel.isInputValid)
 					.opacity(viewModel.isInputValid ? 1 : 0.5)
-
+					
 					
 					if viewModel.state == .sending {
 						ProgressView()
@@ -122,7 +128,7 @@ struct LoginScreen: View {
 							.font(.medium16)
 							.foregroundColor(.grayHint)
 							.multilineTextAlignment(.center)
-
+						
 						HStack(spacing: 6) {
 							Button(action: viewModel.openTermsOfService) {
 								Text(.termsOfService)
@@ -159,14 +165,34 @@ struct LoginScreen: View {
 		.onChange(of: viewModel.loginType) { oldValue, newValue in
 			focus = newValue
 		}
+		.sheet(isPresented: $showPicker) {
+			CountryPickerView(
+				configuration: Configuration(
+					flagStyle: .circular,
+					labelFont: .medium16,
+					labelColor: .blackApp,
+					detailFont: .regular17,
+					navigationTitleText: "Pick a country code",
+				),
+				selectedCountry: Binding<Country?>(
+					get: { viewModel.countryCode },
+					set: { newValue in
+						if let country = newValue {
+							viewModel.countryCode = country
+							showPicker = false
+						}
+					}
+				)
+			)
+		}
 		.onAppear {
 			focus =  viewModel.loginType
 		}
 		.onDisappear {
 			focus = nil
 		}
-
-    }
+		
+	}
 	
 	// MARK: - Navigation handler (all in one place, easy to read)
 	private func handleNavigation(_ event: LoginViewModel.NavigationEvent) {
@@ -179,8 +205,8 @@ struct LoginScreen: View {
 }
 
 #Preview {
-    LoginScreen()
+	LoginScreen()
 		.environment(Router())
-
+	
 }
 

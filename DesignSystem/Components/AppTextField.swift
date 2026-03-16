@@ -133,7 +133,7 @@ struct AppTextField: View {
 					.foregroundColor(.redBoho)
 					.padding(.top, 4)
 					.transition(.opacity.combined(with: .move(edge: .top)))
-					.animation(.easeInOut(duration: 0.2), value: isValid)
+					.animation(.easeInOut(duration: 0.5), value: isValid)
 			}
 		}
 	}

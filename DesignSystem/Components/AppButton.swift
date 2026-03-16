@@ -77,7 +77,7 @@ struct AppButton: View {
 	init(
 		_ title: LocalizedStringResource,
 		style: AppButtonStyle = .primary,
-		font: Font? = nil,
+		font: Font = .medium16,
 		foregroundColor: Color? = nil,
 		maxWidth: CGFloat? = .infinity,
 		verticalPadding: CGFloat? = nil,
@@ -86,7 +86,7 @@ struct AppButton: View {
 	) {
 		self.title = title
 		self.style = style
-		self.font = font ?? style.font
+		self.font = font
 		self.foregroundColor = foregroundColor ?? style.foregroundColor
 		self.maxWidth = maxWidth
 		self.verticalPadding = verticalPadding ?? style.verticalPadding
@@ -100,11 +100,11 @@ struct AppButton: View {
 		Button(action: action) {
 			Text(title)
 				.font(font)
-				.foregroundColor(foregroundColor)
+				.foregroundStyle(foregroundColor)
 				.frame(maxWidth: maxWidth)
 				.padding(.vertical, verticalPadding)
 				.padding(.horizontal, horizontalPadding)
-				.background(backgroundView)
+				.background { backgroundView }
 				.clipShape(Capsule())
 		}
 	}
@@ -133,7 +133,7 @@ struct AppButton: View {
 			
 			AppButton("Skip", style: .secondary) { }
 			
-			AppButton("Custom", style: .primary, font: .semiBold16, verticalPadding: 12) { }
+			AppButton("Custom", style: .primary, font: .semiBold16, verticalPadding: 26) { }
 		}
 		.padding(.horizontal, 16)
 	}

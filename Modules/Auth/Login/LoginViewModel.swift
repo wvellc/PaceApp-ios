@@ -7,6 +7,7 @@
 
 import Combine
 import SwiftUI
+import CountryPicker
 
 // MARK: - LoginViewModel
 
@@ -28,7 +29,7 @@ final class LoginViewModel {
 	var email: String = ""
 	
 	/// The selected country dial code prefix.
-	var countryCode: String = "+62"
+	var countryCode: Country = .init(countryCode: "US")
 	
 	/// Loading state indicator for async operations.
 	var state: OTPState = .idle
@@ -101,7 +102,7 @@ final class LoginViewModel {
 	/// Returns the normalized phone number combining country code and digits only.
 	func normalizedPhone() -> String {
 		let digits = phoneNumber.filter(\.isNumber)
-		return countryCode + digits
+		return (countryCode.dialingCode ?? "") + digits
 	}
 	
 	/// Switches the login type and resets input + error state.
