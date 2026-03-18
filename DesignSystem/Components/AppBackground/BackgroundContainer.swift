@@ -16,7 +16,8 @@ struct BackgroundContainer<Content: View>: View {
             AppBackground()
                 .ignoresSafeArea()
             content
+				.safeAreaPadding()
         }
-        .toolbarBackground(.hidden, for: .navigationBar)
+//        .toolbarBackground(.hidden, for: .navigationBar)
     }
 }

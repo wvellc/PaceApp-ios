@@ -18,6 +18,7 @@
 		E61FA4262F67C706001DA088 /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61FA4252F67C706001DA088 /* WebView.swift */; };
 		E61FA42E2F67D252001DA088 /* String+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61FA42D2F67D252001DA088 /* String+Ext.swift */; };
 		E6B649522F67FAAF00612A01 /* CountryPicker in Frameworks */ = {isa = PBXBuildFile; productRef = E6B649512F67FAAF00612A01 /* CountryPicker */; };
+		E6B748E92F6A9D7C00202A2D /* OTPFieldView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6B748E82F6A9D7C00202A2D /* OTPFieldView.swift */; };
 		E6C332862F62915700224AA5 /* PaceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C332832F62915700224AA5 /* PaceApp.swift */; };
 		E6C332882F6291C500224AA5 /* Date+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C4BEFE2F618CE000C17C69 /* Date+Ext.swift */; };
 		E6C332892F6291C500224AA5 /* View+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C4BEFF2F618CE000C17C69 /* View+Ext.swift */; };
@@ -50,6 +51,7 @@
 		E61FA4212F67BE3C001DA088 /* AppTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTextField.swift; sourceTree = "<group>"; };
 		E61FA4252F67C706001DA088 /* WebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebView.swift; sourceTree = "<group>"; };
 		E61FA42D2F67D252001DA088 /* String+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Ext.swift"; sourceTree = "<group>"; };
+		E6B748E82F6A9D7C00202A2D /* OTPFieldView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPFieldView.swift; sourceTree = "<group>"; };
 		E6C332832F62915700224AA5 /* PaceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaceApp.swift; sourceTree = "<group>"; };
 		E6C3328D2F62920800224AA5 /* GlassButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassButton.swift; sourceTree = "<group>"; };
 		E6C334262F62B74B00224AA5 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
@@ -161,6 +163,7 @@
 		E6C4BEF62F61846D00C17C69 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				E6B748E82F6A9D7C00202A2D /* OTPFieldView.swift */,
 				E61FA4252F67C706001DA088 /* WebView.swift */,
 				E61FA4212F67BE3C001DA088 /* AppTextField.swift */,
 				E61F83B92F642A7000C215DF /* AppSegmentedControl.swift */,
@@ -345,6 +348,7 @@
 				E61F82232F63E6CC00C215DF /* AppBackground.swift in Sources */,
 				E61F83BA2F642A7000C215DF /* AppSegmentedControl.swift in Sources */,
 				E61F82282F63F50C00C215DF /* BackgroundContainer.swift in Sources */,
+				E6B748E92F6A9D7C00202A2D /* OTPFieldView.swift in Sources */,
 				E61F83AF2F641B0900C215DF /* CGFloat+Ext.swift in Sources */,
 				E6C332882F6291C500224AA5 /* Date+Ext.swift in Sources */,
 				E6C332892F6291C500224AA5 /* View+Ext.swift in Sources */,

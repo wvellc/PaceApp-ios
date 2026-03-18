@@ -34,8 +34,8 @@ enum AppButtonStyle {
 	
 	var verticalPadding: CGFloat {
 		switch self {
-			case .primary:   return 16
-			case .secondary: return 16
+			case .primary:   return 18
+			case .secondary: return 18
 		}
 	}
 	
@@ -105,8 +105,10 @@ struct AppButton: View {
 				.padding(.vertical, verticalPadding)
 				.padding(.horizontal, horizontalPadding)
 				.background { backgroundView }
+				.multilineTextAlignment(.center)
 				.clipShape(Capsule())
 		}
+		.frame(minHeight: 56)
 	}
 	
 	// MARK: - Background
@@ -133,7 +135,7 @@ struct AppButton: View {
 			
 			AppButton("Skip", style: .secondary) { }
 			
-			AppButton("Custom", style: .primary, font: .semiBold16, verticalPadding: 26) { }
+			AppButton("Custom", style: .primary, font: .semiBold16) { }
 		}
 		.padding(.horizontal, 16)
 	}

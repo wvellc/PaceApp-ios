@@ -34,7 +34,8 @@ struct PaceApp: App {
 		UINavigationBar.appearance().standardAppearance = appearance
 		UINavigationBar.appearance().scrollEdgeAppearance = appearance
 		UINavigationBar.appearance().compactAppearance = appearance
-
+		UINavigationBar.appearance().tintColor = UIColor.radiantBlue
+				
 		// Prefer a dark keyboard for text fields used in the app
 		UITextField.appearance().keyboardAppearance = .dark
 	}
@@ -49,8 +50,26 @@ struct PaceApp: App {
 						router.destination(for: dest)
 					}
 			}
+			.tint(.radiantBlue)
 			.preferredColorScheme(.light)
 			.environment(router)
+//			.navigationBarBackButtonHidden(true)
+//			.toolbar {
+//				ToolbarItem(placement: .navigationBarLeading) {
+//					Button(action: {
+//						// handle back (dismiss or pop)
+//					}) {
+//						ZStack {
+//							Circle()
+//								.fill(Color.white) // 👈 Background color (change this)
+//							
+//							Image(systemName: "chevron.left")
+//								.foregroundStyle(Color.blue) // 👈 Icon color
+//						}
+//						.frame(width: 36, height: 36)
+//					}
+//				}
+//			}
 		}
 	}
 }

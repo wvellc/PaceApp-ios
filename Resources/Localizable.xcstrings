@@ -32,10 +32,16 @@
         }
       }
     },
+    "Didn't receive OTP? Resend OTP in %@" : {
+
+    },
     "Email" : {
       "extractionState" : "manual"
     },
     "Email Address" : {
+      "extractionState" : "manual"
+    },
+    "Enter 6 digit verification code sent to your phone number" : {
       "extractionState" : "manual"
     },
     "Enter your email" : {
@@ -57,6 +63,9 @@
       "extractionState" : "manual"
     },
     "Login to Your Account" : {
+      "extractionState" : "manual"
+    },
+    "Next" : {
       "extractionState" : "manual"
     },
     "Pace" : {
@@ -99,6 +108,9 @@
       }
     },
     "Privacy Policy" : {
+      "extractionState" : "manual"
+    },
+    "Resend Code" : {
       "extractionState" : "manual"
     },
     "Search here..." : {

@@ -36,7 +36,7 @@ extension Router {
 				
 			case .login			: LoginScreen()
 			case .createAccount	: CreateAccountScreen()
-			case .verifyOTP		: EmptyView()
+			case .verifyOTP		: OTPVerificationScreen()
 
 				// ----------------------------------------------------------------
 				// MARK: Home
