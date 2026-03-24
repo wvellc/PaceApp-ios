@@ -114,8 +114,6 @@ struct OTPVerified: View {
 
 	// MARK: - Navigation
 	private func navigateToDashboard() {
-		// Cancel any pending redirect before switching root
-		autoRedirectTask?.cancel()
 		router.setRoot(.dashboard)
 	}
 }
