@@ -11,8 +11,8 @@ enum Destinations: Hashable, Codable {
 
     // MARK: - Auth flow
     case login
-	case createAccount
 	case verifyOTP
+	case OTPVerified
 	
     // MARK: - Home
 	case home

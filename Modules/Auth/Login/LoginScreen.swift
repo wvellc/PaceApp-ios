@@ -26,6 +26,7 @@ struct LoginScreen: View {
 	//Contry picker
 	@State private var showPicker = false
 	
+	
 	//MARK: Body
 	var body: some View {
 		BackgroundContainer {
@@ -110,18 +111,13 @@ struct LoginScreen: View {
 					}
 					
 					// Send OTP Button
-					AppButton(.sendOtp) {
+					AppButton(viewModel.state == .sending ? "Sending..." : .sendOtp) {
 						Task { await viewModel.sendOTP() }
 					}
 					.disabled(!viewModel.isInputValid)
 					.opacity(viewModel.isInputValid ? 1 : 0.5)
 					
-					
-					if viewModel.state == .sending {
-						ProgressView()
-							.tint(.white)
-					}
-					
+										
 					// Terms & Privacy
 					VStack(spacing: 6) {
 						Text(.byContinuingYouAgreeToOur)

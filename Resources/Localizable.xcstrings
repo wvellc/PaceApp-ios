@@ -4,6 +4,16 @@
     "" : {
 
     },
+    "%@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@"
+          }
+        }
+      }
+    },
     "%@ %@ %@" : {
       "localizations" : {
         "en" : {
@@ -32,8 +42,8 @@
         }
       }
     },
-    "Didn't receive OTP? Resend OTP in %@" : {
-
+    "Didn't receive OTP? Resend OTP in" : {
+      "extractionState" : "manual"
     },
     "Email" : {
       "extractionState" : "manual"
@@ -120,6 +130,9 @@
     "Send OTP" : {
       "extractionState" : "manual"
     },
+    "Sending..." : {
+
+    },
     "Terms of Service" : {
       "extractionState" : "manual"
     },
@@ -134,6 +147,12 @@
           }
         }
       }
+    },
+    "You will soon be directed to the main page." : {
+      "extractionState" : "manual"
+    },
+    "Your phone number has\nbeen verified." : {
+      "extractionState" : "manual"
     }
   },
   "version" : "1.1"

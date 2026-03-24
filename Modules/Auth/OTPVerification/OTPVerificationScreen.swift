@@ -10,15 +10,18 @@ import Combine
 
 /// OTP verification screen
 struct OTPVerificationScreen: View {
+	@Environment(Router.self) private var router
 	
 	@State private var otp: String = ""
 	@FocusState private var isOTPFieldFocused: Bool
+	@State private var isVerifyingOTP: Bool = false
 	
 	// MARK: - Resend Timer State
 	@State private var resendSecondsRemaining: Int = 60 * 2 // total seconds (2 min)
 	@State private var isResendAvailable: Bool = false
 	
 	private let resendCountdownStart: Int = 60 * 2
+	private var isOTPComplete: Bool { otp.count == Constant.Config.OTPLength }
 	
 	// Combine timer publisher (manual control, no autoconnect)
 	private let resendTimer = Timer.publish(every: 1, on: .main, in: .common)
@@ -40,14 +43,14 @@ struct OTPVerificationScreen: View {
 			
 			VSpace(height: 38)
 			
-			OTPFieldView(numberOfFields: Constant.Config.OTPLength, otp: .constant(""))
-				.onChange(of: otp) { oldOtp , newOtp in
+			OTPFieldView(numberOfFields: Constant.Config.OTPLength, otp: $otp)
+				.focused($isOTPFieldFocused)
+				.onChange(of: otp) { _, newOtp in
 					if newOtp.count == Constant.Config.OTPLength {
-						self.isOTPFieldFocused = false
-						// TODO: Verify OTP
+						isOTPFieldFocused = false
+						verifyOTPIfNeeded()
 					}
 				}
-				.focused($isOTPFieldFocused)
 			
 			VSpace(height: 24)
 			
@@ -61,20 +64,19 @@ struct OTPVerificationScreen: View {
 							.font(.semiBold14)
 					}
 				} else {
-					// Countdown text while waiting
-					Text(
-						"Didn't receive OTP? Resend OTP in \(Text(formattedTime(resendSecondsRemaining)).foregroundStyle(.whiteApp).font(.semiBold16))"
-					)
-					.foregroundStyle(.whiteApp.opacity(0.8))
-					.font(.semiBold14)
+					Text("\(String(localized: .didntReceiveOtpResendOtpIn)) \(Text(formattedTime(resendSecondsRemaining)).foregroundStyle(.whiteApp).font(.semiBold16))")
+						.foregroundStyle(.whiteApp.opacity(0.8))
+						.font(.semiBold14)
+
 				}
 			}
 			
 			VSpace(height: 34)
 			
 			AppButton(.next) {
-				// TODO: Verify OTP
+				verifyOTPIfNeeded()
 			}
+			.setDisabled(!isOTPComplete || isVerifyingOTP)
 			.ignoresSafeArea(.keyboard, edges: .bottom)
 			
 			Spacer(minLength: Constant.UI.defaultPadding)
@@ -144,6 +146,23 @@ struct OTPVerificationScreen: View {
 		startResendTimer()
 	}
 	
+	private func verifyOTPIfNeeded() {
+		guard isOTPComplete, !isVerifyingOTP else { return }
+		
+		// Dismiss the keyboard before starting verification
+		isOTPFieldFocused = false
+		isVerifyingOTP = true
+		
+		Task {
+			// Temporary success delay until real OTP verification is wired
+			try? await Task.sleep(for: .milliseconds(550))
+			await MainActor.run {
+				isVerifyingOTP = false
+				router.navigate(to: .OTPVerified, fadeIn: true)
+			}
+		}
+	}
+	
 	// MARK: - Helpers
 	
 	private func formattedTime(_ seconds: Int) -> String {
@@ -155,4 +174,5 @@ struct OTPVerificationScreen: View {
 
 #Preview {
 	OTPVerificationScreen()
+		.environment(Router())
 }
