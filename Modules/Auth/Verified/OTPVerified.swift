@@ -16,6 +16,7 @@ struct OTPVerified: View {
 	@State private var animateBadge = false
 	@State private var animateHalo = false
 
+	//MARK: Body
 	var body: some View {
 		ZStack {
 			Color.clear

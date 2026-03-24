@@ -17,10 +17,10 @@ struct OTPVerificationScreen: View {
 	@State private var isVerifyingOTP: Bool = false
 	
 	// MARK: - Resend Timer State
-	@State private var resendSecondsRemaining: Int = 60 * 2 // total seconds (2 min)
+	@State private var resendSecondsRemaining: Int = 60 * 1 // total seconds (2 min)
 	@State private var isResendAvailable: Bool = false
 	
-	private let resendCountdownStart: Int = 60 * 2
+	private let resendCountdownStart: Int = 60 * 1
 	private var isOTPComplete: Bool { otp.count == Constant.Config.OTPLength }
 	
 	// Combine timer publisher (manual control, no autoconnect)
@@ -86,7 +86,7 @@ struct OTPVerificationScreen: View {
 		
 		// MARK: - Lifecycle
 		.onAppear {
-			DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+			DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
 				self.isOTPFieldFocused = true
 			}
 			

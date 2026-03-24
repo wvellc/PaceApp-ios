@@ -73,7 +73,7 @@ final class LoginViewModel {
 	/// Attempts to send an OTP asynchronously.
 	@MainActor
 	func sendOTP() async {
-		guard isInputValid else {
+		guard isInputValid && state != .sending else {
 			return
 		}
 		
