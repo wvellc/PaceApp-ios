@@ -46,7 +46,7 @@ struct OTPVerificationScreen: View {
 			OTPFieldView(numberOfFields: Constant.Config.OTPLength, otp: $otp)
 				.focused($isOTPFieldFocused)
 				.onChange(of: otp) { _, newOtp in
-					if newOtp.count == Constant.Config.OTPLength {
+					if newOtp.count >= Constant.Config.OTPLength {
 						isOTPFieldFocused = false
 						verifyOTPIfNeeded()
 					}
