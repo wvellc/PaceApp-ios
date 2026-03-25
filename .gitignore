@@ -132,3 +132,4 @@ playground.xcworkspace
 # .env
 # .env.*
 /PaceApp.xcodeproj/project.xcworkspace/xcuserdata
+/PaceApp.xcodeproj/xcshareddata
