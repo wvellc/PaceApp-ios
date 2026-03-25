@@ -41,9 +41,13 @@ public struct GlassButton: View {
             .padding(.horizontal, 17)
         }
 		.contentShape(Capsule())
+		.background(
+			Capsule()
+				.fill(.blackApp.opacity(0.2))
+		)
 		
-		// Liquid glass effect
-		.glassEffect(.regular.tint(.black20), in: Capsule())
+//		// Liquid glass effect
+//		.glassEffect(.regular.tint(.black20), in: Capsule())
 		
 		// Neon gradient border
 		.overlay(
