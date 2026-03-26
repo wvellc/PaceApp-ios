@@ -28,6 +28,7 @@ extension Font {
 	// Medium
 	static let medium14: Font    = Gilroy.medium.size(14)
 	static let medium16: Font    = Gilroy.medium.size(16)
+	static let medium17: Font    = Gilroy.medium.size(17)
 	static let medium18: Font    = Gilroy.medium.size(18)
 	static let medium20: Font    = Gilroy.medium.size(20)
 	static let medium24: Font    = Gilroy.medium.size(24)
