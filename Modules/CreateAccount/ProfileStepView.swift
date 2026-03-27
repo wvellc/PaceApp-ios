@@ -8,92 +8,120 @@
 import SwiftUI
 import PhotosUI
 
+
 // MARK: - ProfileStepView
 
 /// Step 1 — photo upload + first / last name entry.
 struct ProfileStepView: View {
 
     @Bindable var viewModel: CreateAccountViewModel
+    @FocusState private var focusedField: Field?
+
+    private enum Field {
+        case firstName
+        case lastName
+    }
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack {
 
             // Subtitle
             Text("Set up your account to track your pace, performance, and progress in real time.")
-                .font(.medium18)
+				.font(.medium20)
                 .foregroundStyle(.whiteApp)
+				.lineSpacing(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.bottom, 40)
 
+		
+			VSpace(height: 32)
+			
             // Avatar picker
-            PhotosPicker(selection: $viewModel.selectedPhotoItem, matching: .images) {
+			PhotosPicker(selection: $viewModel.selectedPhotoItem, matching: .images) {
                 avatarView
             }
             .onChange(of: viewModel.selectedPhotoItem) { _, _ in
                 Task { await viewModel.loadPhoto() }
             }
-            .padding(.bottom, 32)
+            
+			VSpace(height: 42)
 
             // Name fields
             VStack(spacing: 16) {
                 AppTextField(
                     text: $viewModel.firstName,
-                    placeholder: "First Name",
+						placeholder: .firstName,
                     leadingView: AnyView(
-                        Image(systemName: "person.fill")
-                            .foregroundStyle(.grayHint)
+							Image(.icPerson)
                     ),
                     textContentType: .givenName,
-                    autocapitalization: .words
+                    autocapitalization: .words,
+						submitLabel: .next
                 )
+                .focused($focusedField, equals: .firstName)
+                .onSubmit {
+                    focusedField = .lastName
+                }
 
                 AppTextField(
                     text: $viewModel.lastName,
-                    placeholder: "Last Name",
+						placeholder: .lastName,
                     leadingView: AnyView(
-                        Image(systemName: "person.fill")
-                            .foregroundStyle(.grayHint)
+						Image(.icPerson)
                     ),
                     textContentType: .familyName,
-                    autocapitalization: .words
+                    autocapitalization: .words,
+						submitLabel: .done
                 )
+                .focused($focusedField, equals: .lastName)
+                .onSubmit {
+                    focusedField = nil
+                }
             }
 
             Spacer()
         }
         .padding(.horizontal, 16)
         .padding(.top, 24)
+		.onDisappear {
+			focusedField = nil
+		}
+
     }
 
     // MARK: - Avatar well
 
     @ViewBuilder
     private var avatarView: some View {
-        VStack(spacing: 8) {
+        let avatarShape = ProfilePhotoShape()
+
+        VStack(spacing: 16) {
             ZStack {
-                if let image = viewModel.profileImage {
-                    // Show selected photo
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 120, height: 120)
-                        .clipShape(RoundedRectangle(cornerRadius: 24))
-                } else {
-                    // Placeholder icon
-                    RoundedRectangle(cornerRadius: 24)
-                        .fill(.white)
-                        .frame(width: 120, height: 120)
-                        .overlay(
-                            Image(systemName: "camera.fill")
-                                .font(.system(size: 32))
-                                .foregroundStyle(.blue)
-                        )
-                }
+
+                avatarShape
+					.fill(.whiteApp)
+                    .frame(width: 100, height: 108)
+                    .overlay {
+                        if let image = viewModel.profileImage {
+                            image
+                                .resizable()
+                                .scaledToFill()
+								.frame(width: 100, height: 108)
+                                .clipShape(avatarShape)
+                        } else {
+							Image(.icCamera)
+								.frame(width: 54, height: 54)
+                        }
+                    }
             }
 
-            Text("Add Photo")
+			Text(.addPhoto)
                 .font(.medium16)
-                .foregroundStyle(.whiteApp)
+				.foregroundStyle(.whiteApp)
         }
     }
+}
+
+#Preview {
+	ProfileStepView(viewModel: CreateAccountViewModel())
+		.appBackground()
 }

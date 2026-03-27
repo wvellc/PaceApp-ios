@@ -93,6 +93,8 @@ struct OTPVerificationScreen: View {
 			startResendTimer() // Start timer when screen appears
 		}
 		.onDisappear {
+			isOTPFieldFocused = false
+
 			stopResendTimer() // Clean up to avoid memory leaks
 		}
 	}

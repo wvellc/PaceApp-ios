@@ -14,29 +14,26 @@ struct ConnectWatchStepView: View {
 
     let watchName: String
 
-    // Pulsing ring animation state
-    @State private var isPulsing = false
+    private let pulseDuration: TimeInterval = 2.6
+	private let pulseOffsets: [TimeInterval] = [0.0, 0.8, 1.6, 2.4]
 
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
 
             // Pulsing rings + watch icon
-            ZStack {
-                pulseRing(scale: isPulsing ? 1.6 : 1.0, opacity: isPulsing ? 0.0 : 0.15)
-                pulseRing(scale: isPulsing ? 1.35 : 1.0, opacity: isPulsing ? 0.0 : 0.25)
-                pulseRing(scale: isPulsing ? 1.1 : 1.0, opacity: isPulsing ? 0.0 : 0.35)
+            TimelineView(.animation) { context in
+                ZStack {
+                    ForEach(Array(pulseOffsets.enumerated()), id: \.offset) { index, delay in
+                        pulseRing(at: context.date, delay: delay, baseOpacity: 0.34 - (Double(index) * 0.07))
+                    }
 
-                // Watch face placeholder
-				Image(.icPaceWatch)
+                    Image(.icPaceWatch)
+                        .scaleEffect(watchScale(at: context.date))
+                        .shadow(color: .white.opacity(0.18), radius: 24)
+                }
             }
             .frame(width: 260, height: 260)
-            .onAppear {
-                withAnimation(
-                    .easeInOut(duration: 1.6)
-                    .repeatForever(autoreverses: false)
-                ) { isPulsing = true }
-            }
 
             VSpace(height: 32)
 
@@ -52,13 +49,33 @@ struct ConnectWatchStepView: View {
 
     // MARK: - Helpers
 
-    private func pulseRing(scale: CGFloat, opacity: Double) -> some View {
-        Circle()
+    private func pulseRing(at date: Date, delay: TimeInterval, baseOpacity: Double) -> some View {
+        let progress = pulseProgress(at: date, delay: delay)
+        let scale = 0.88 + (progress * 1.8)
+        let opacity = max(0, (1 - progress) * baseOpacity)
+
+        return Circle()
             .fill(Color.white.opacity(opacity))
             .frame(width: 200, height: 200)
             .scaleEffect(scale)
-            .animation(.easeInOut(duration: 1.6).repeatForever(autoreverses: false), value: isPulsing)
+            .blur(radius: progress * 3)
+    }
+
+    private func pulseProgress(at date: Date, delay: TimeInterval) -> CGFloat {
+        let elapsed = date.timeIntervalSinceReferenceDate - delay
+        let cycle = elapsed.truncatingRemainder(dividingBy: pulseDuration)
+        let normalized = cycle / pulseDuration
+        return CGFloat(normalized < 0 ? normalized + 1 : normalized)
+    }
+
+    private func watchScale(at date: Date) -> CGFloat {
+        let progress = pulseProgress(at: date, delay: 0)
+        return 1 + (sin(progress * .pi * 2) * 0.02)
     }
 }
 
+#Preview {
+    ConnectWatchStepView(watchName: "Forerunner® 165 Music")
+		.appBackground()
+}
 

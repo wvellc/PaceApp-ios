@@ -15,33 +15,31 @@ struct ConnectStravaStepView: View {
     @Bindable var viewModel: CreateAccountViewModel
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack {
 
             // Subtitle
             Text("Sync your activities and compete with friends for the segment.")
-                .font(.medium18)
-                .foregroundStyle(.whiteApp)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.bottom, 40)
+				.font(.medium20)
+				.foregroundStyle(.whiteApp)
+				.lineSpacing(10)
+				.frame(maxWidth: .infinity, alignment: .leading)
+
+			VSpace(height: 64)
 
             // Strava logo — replace Image(.icStrava) once asset is added
-            ZStack {
-                RoundedRectangle(cornerRadius: 22)
-                    .fill(Color.orange)
-                    .frame(width: 100, height: 100)
-                Image(systemName: "figure.run")
-                    .font(.system(size: 40, weight: .bold))
-                    .foregroundStyle(.white)
-            }
-            .padding(.bottom, 40)
+			Image(.stravaLogo)
+				.resizable()
+				.frame(width: 100, height: 108)
 
+			VSpace(height: 42)
+			
             // Profile URL field
             AppTextField(
                 text: $viewModel.stravaProfileURL,
                 placeholder: "strava.com/athletes/...",
                 leadingView: AnyView(
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .foregroundStyle(.grayHint)
+					Image(.icSync)
+						.frame(width: 24, height: 24)
                 ),
                 keyboardType: .URL,
                 autocapitalization: .never
@@ -52,4 +50,9 @@ struct ConnectStravaStepView: View {
         .padding(.horizontal, 16)
         .padding(.top, 24)
     }
+}
+
+#Preview {
+	ConnectStravaStepView(viewModel: CreateAccountViewModel())
+		.appBackground()
 }

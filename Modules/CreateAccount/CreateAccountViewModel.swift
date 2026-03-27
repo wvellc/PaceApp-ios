@@ -15,7 +15,6 @@ import PhotosUI
 final class CreateAccountViewModel {
 
     // MARK: - Step state
-
     /// The currently active onboarding step.
     var currentStep: CreateAccountStep = .profile
 
@@ -54,7 +53,7 @@ final class CreateAccountViewModel {
     enum SlideDirection {
         case forward, backward
     }
-
+	
     // MARK: - Actions
 
     /// Advance to the next step, or fire the finish event on the last step.
@@ -64,6 +63,7 @@ final class CreateAccountViewModel {
             withAnimation(.easeInOut(duration: 0.3)) { currentStep = next }
         } else {
             navigationEvent = .finish
+			
         }
     }
 

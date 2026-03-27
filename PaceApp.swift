@@ -28,7 +28,13 @@ struct PaceApp: App {
 				router.rootView()
 					.navigationDestination(for: Destinations.self) { dest in
 						router.destination(for: dest)
+							.onDisappear {
+								// Tells the entire app to stop editing
+								UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+							}
 					}
+					.dismissKeyboardOnTap()
+
 			}
 			.tint(.radiantBlue)
 			.preferredColorScheme(.light)

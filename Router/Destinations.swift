@@ -14,6 +14,9 @@ enum Destinations: Hashable, Codable {
 	case verifyOTP
 	case OTPVerified
 	
+	// MARK: - Account creation
+	case accountCreated
+	
     // MARK: - Home
 	case home
 	

@@ -70,13 +70,12 @@ struct CreateAccountScreen: View {
 						.foregroundStyle(.radiantBlue)
 						.padding(8)
 				}
-				.background(.white)
 			}
 		}
 		
 		ToolbarItem(placement: .principal) {
 			Text(viewModel.currentStep.title)
-				.font(.medium16)
+				.font(.medium17)
 				.foregroundStyle(.whiteApp)
 		}
 		
@@ -135,7 +134,7 @@ struct CreateAccountScreen: View {
 		switch event {
 			case .skip, .finish:
 				// TODO: route to the appropriate next destination once defined
-				router.navigateBack()
+				router.navigate(to: .accountCreated)
 		}
 	}
 }

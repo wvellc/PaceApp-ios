@@ -20,6 +20,7 @@ extension Router {
 			case .welcome: WelcomeScreen()
 			case .auth:       LoginScreen()
 			case .dashboard:  DashboardView()   //tab-bar
+			case .accountCreation: CreateAccountScreen()
 		}
 	}
 	
@@ -36,7 +37,8 @@ extension Router {
 				
 			case .login			: LoginScreen()
 			case .verifyOTP		: OTPVerificationScreen()
-			case .OTPVerified	: OTPVerified()
+			case .OTPVerified	: ComplationScreen(screenType: .otpVerified)
+			case .accountCreated: ComplationScreen(screenType: .accountCreation)
 
 				// ----------------------------------------------------------------
 				// MARK: Home

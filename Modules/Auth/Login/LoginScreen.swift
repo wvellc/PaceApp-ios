@@ -149,9 +149,6 @@ struct LoginScreen: View {
 			}
 			.frame(maxWidth: .infinity, maxHeight: .infinity)
 		}
-		.onTapGesture {
-			UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-		}
 		// Handles ALL navigation — ViewModel just fires events
 		.onChange(of: viewModel.navigationEvent) { _, event in
 			guard let event else { return }

@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import UIKit
 
 extension View {
     @ViewBuilder func modifyIf<Content: View>(
@@ -80,6 +81,10 @@ extension View {
             Circle().fill(color)
         }
     }
+
+    func dismissKeyboardOnTap() -> some View {
+        modifier(DismissKeyboardOnTap())
+    }
     
 }
 
@@ -152,6 +157,19 @@ private struct AddRoundedBackgroundColor: ViewModifier {
                             .addShadow(offsetX: 0, offsetY: 2)
                     })
             )
+    }
+}
+
+private struct DismissKeyboardOnTap: ViewModifier {
+    func body(content: Content) -> some View {
+        content.onTapGesture {
+            UIApplication.shared.sendAction(
+                #selector(UIResponder.resignFirstResponder),
+                to: nil,
+                from: nil,
+                for: nil
+            )
+        }
     }
 }
 
