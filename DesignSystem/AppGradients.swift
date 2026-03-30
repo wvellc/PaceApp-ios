@@ -12,8 +12,8 @@ enum AppGradients {
     // Background gradient
     static let background = LinearGradient(
         stops: [
-            Gradient.Stop(color: .radiantBlue, location: 0.0),
-            Gradient.Stop(color: .darkSeaBlue, location: 1.0)
+            Gradient.Stop(color: .darkSeaBlue, location: 0.0),
+            Gradient.Stop(color: .traditionalNavyBlue, location: 1.0)
         ],
         startPoint: UnitPoint(x: 0.5, y: 0.0),
         endPoint: UnitPoint(x: 0.5, y: 1.0)

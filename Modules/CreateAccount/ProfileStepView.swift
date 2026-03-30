@@ -82,6 +82,9 @@ struct ProfileStepView: View {
         }
         .padding(.horizontal, 16)
         .padding(.top, 24)
+		.onAppear {
+			focusedField = .firstName
+		}
 		.onDisappear {
 			focusedField = nil
 		}

@@ -160,7 +160,7 @@ struct OTPVerificationScreen: View {
 			try? await Task.sleep(for: .milliseconds(550))
 			await MainActor.run {
 				isVerifyingOTP = false
-				router.navigate(to: .OTPVerified, fadeIn: true)
+				router.navigate(to: .OTPVerified, animation: .easeIn)
 			}
 		}
 	}

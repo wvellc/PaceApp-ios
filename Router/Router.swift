@@ -32,9 +32,9 @@ final class Router {
     /// - Parameters:
     ///   - destination: The screen to navigate to.
     ///   - fadeIn: If `true`, uses a fade animation instead of the default iOS slide. Default is `false`.
-    func navigate(to destination: Destinations, fadeIn: Bool = false) {
-        if fadeIn {
-            withAnimation(.easeIn) {
+	func navigate(to destination: Destinations, animation: Animation? = nil) {
+		if animation != nil {
+            withAnimation(animation) {
                 path.append(destination)
             }
         } else {
@@ -70,9 +70,7 @@ final class Router {
     /// Replace the current root flow (auth → dashboard, etc.)
     /// and clear the navigation stack in one atomic update.
     func setRoot(_ newRoot: RootFlow) {
-        withAnimation(.default) {
-            root = newRoot
-            path = NavigationPath()
-        }
+		root = newRoot
+		path = NavigationPath()
     }
 }

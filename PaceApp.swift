@@ -39,23 +39,7 @@ struct PaceApp: App {
 			.tint(.radiantBlue)
 			.preferredColorScheme(.light)
 			.environment(router)
-//			.navigationBarBackButtonHidden(true)
-//			.toolbar {
-//				ToolbarItem(placement: .navigationBarLeading) {
-//					Button(action: {
-//						// handle back (dismiss or pop)
-//					}) {
-//						ZStack {
-//							Circle()
-//								.fill(Color.white) // 👈 Background color (change this)
-//							
-//							Image(systemName: "chevron.left")
-//								.foregroundStyle(Color.blue) // 👈 Icon color
-//						}
-//						.frame(width: 36, height: 36)
-//					}
-//				}
-//			}
+			.appBackground()
 		}
 	}
 	
@@ -68,6 +52,7 @@ struct PaceApp: App {
 		// Ensure the bar itself is clear and without a shadow line
 		appearance.backgroundColor = .clear
 		appearance.shadowColor = .clear
+		appearance.backButtonAppearance.configureWithDefault(for: .prominent)
 		
 		// Apply to all navigation bar states
 		UINavigationBar.appearance().standardAppearance = appearance
