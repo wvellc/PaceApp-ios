@@ -7,62 +7,39 @@
 
 import SwiftUI
 
+/// Main tab bar controller for the app, managing navigation between key sections.
 struct DashboardView: View {
+	
+	// MARK: State
+	/// Tracks the currently selected tab in the tab bar.
 	@State private var selectedTab: PaceTab = .home
 	
-	/*init() {
-		let appearance = UITabBarAppearance()
-		appearance.configureWithOpaqueBackground()
-		appearance.backgroundColor = UIColor.clear
-		appearance.backgroundEffect = .init(style: .systemMaterialLight)
-		
-		// Selected state
-		appearance.stackedLayoutAppearance.selected.iconColor = UIColor.whiteApp
-		appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
-			.foregroundColor: UIColor.whiteApp
-		]
-		
-		// Unselected state — set ALL three layout types
-		let unselectedColor = UIColor.fashionGray
-		
-		appearance.stackedLayoutAppearance.normal.iconColor = unselectedColor
-		appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
-			.foregroundColor: unselectedColor
-		]
-		appearance.inlineLayoutAppearance.normal.iconColor = unselectedColor
-		appearance.inlineLayoutAppearance.normal.titleTextAttributes = [
-			.foregroundColor: unselectedColor
-		]
-		appearance.compactInlineLayoutAppearance.normal.iconColor = unselectedColor
-		appearance.compactInlineLayoutAppearance.normal.titleTextAttributes = [
-			.foregroundColor: unselectedColor
-		]
-		
-		UITabBar.appearance().standardAppearance = appearance
-		UITabBar.appearance().scrollEdgeAppearance = appearance
-	}*/
-	
+	// MARK: Builder
+	/// Builds the tab bar interface using a TabView with multiple tabs.
 	var body: some View {
 		TabView(selection: $selectedTab) {
+			// Home tab
 			Tab(value: PaceTab.home) {
-				PlaceholderTabView(icon: PaceTab.home.systemIcon, title: PaceTab.home.title)
+				HomeScreen()
 			} label: {
 				tabLabel(for: PaceTab.home)
 			}
 			
-			
+			// History tab
 			Tab(value: PaceTab.history) {
 				PlaceholderTabView(icon: PaceTab.history.systemIcon, title: PaceTab.history.title)
 			} label: {
 				tabLabel(for: PaceTab.history)
 			}
 			
+			// Stats tab
 			Tab(value: PaceTab.stats) {
 				PlaceholderTabView(icon: PaceTab.stats.systemIcon, title: PaceTab.stats.title)
 			} label: {
 				tabLabel(for: PaceTab.stats)
 			}
 			
+			// Profile tab
 			Tab(value: PaceTab.profile) {
 				PlaceholderTabView(icon: PaceTab.profile.systemIcon, title: PaceTab.profile.title)
 			} label: {
@@ -74,6 +51,7 @@ struct DashboardView: View {
 	}
 	
 	// Helper to clean up repetition
+	/// Helper function for generating tab labels with conditional styling based on selection state.
 	private func tabLabel(for tab: PaceTab) -> some View {
 		let isSelected = selectedTab == tab
 		return Label {
@@ -86,38 +64,7 @@ struct DashboardView: View {
 		
 	}
 	
-	//
-	//	struct PaceTabLabel: View {
-	//		let tab: PaceTab
-	//		let isSelected: Bool
-	//		var badgeCount: Int = 0
-	//
-	//		var body: some View {
-	//			VStack(spacing: 4) {
-	//				ZStack(alignment: .topTrailing) {
-	//					Image(tab.assetImage)
-	//						.renderingMode(.template)
-	//						.resizable()
-	//						.scaledToFit()
-	//						.frame(width: 24, height: 24)
-	//
-	//					if badgeCount > 0 {
-	//						Text("\(badgeCount)")
-	//							.font(.system(size: 9, weight: .bold))
-	//							.foregroundStyle(.white)
-	//							.padding(3)
-	//							.background(Color.red, in: Circle())
-	//							.offset(x: 8, y: -6)
-	//					}
-	//				}
-	//
-	//				Text(tab.title)
-	//					.font(.system(size: 10, weight: isSelected ? .semibold : .regular))
-	//			}
-	//			.foregroundStyle(isSelected ? Color.white : Color.orange)
-	//		}
-	//	}
-}
+} // End of DashboardView
 
 
 struct PlaceholderTabView: View {
@@ -141,5 +88,4 @@ struct PlaceholderTabView: View {
 #Preview("Pace App") {
 	DashboardView()
 }
-
 
