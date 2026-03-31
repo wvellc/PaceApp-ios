@@ -52,7 +52,6 @@ struct PaceApp: App {
 		// Ensure the bar itself is clear and without a shadow line
 		appearance.backgroundColor = .clear
 		appearance.shadowColor = .clear
-		appearance.backButtonAppearance.configureWithDefault(for: .prominent)
 		
 		// Apply to all navigation bar states
 		UINavigationBar.appearance().standardAppearance = appearance

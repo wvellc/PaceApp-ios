@@ -80,16 +80,21 @@ struct CreateAccountScreen: View {
 		}
 		
 		if viewModel.currentStep.showsSkip {
-			ToolbarItem(placement: .topBarTrailing) {
+			let skipButton: ToolbarItem<(), Button<some View>> = ToolbarItem(placement: .topBarTrailing) {
 				Button(action: viewModel.onSkip) {
 					Text(.skip)
 						.font(.medium17)
 						.foregroundStyle(.grayHint)
 						.padding(8)
 				}
-				
 			}
-			.sharedBackgroundVisibility(.hidden)
+			
+			if #available(iOS 26.0, *) {
+				skipButton
+					.sharedBackgroundVisibility(.hidden)
+			} else {
+				skipButton
+			}
 		}
 	}
 	

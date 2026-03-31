@@ -39,7 +39,7 @@ struct OTPVerificationScreen: View {
 				.font(.medium20)
 				.foregroundColor(.whiteApp)
 				.multilineTextAlignment(.leading)
-				.lineHeight(.loose)
+				.lineSpacing(12)
 			
 			VSpace(height: 38)
 			
