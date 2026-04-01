@@ -18,6 +18,7 @@
 		E61FA4262F67C706001DA088 /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61FA4252F67C706001DA088 /* WebView.swift */; };
 		E61FA42E2F67D252001DA088 /* String+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61FA42D2F67D252001DA088 /* String+Ext.swift */; };
 		E684F1E72F769CDF0059C38F /* ProfilePhotoShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = E684F1E62F769CDF0059C38F /* ProfilePhotoShape.swift */; };
+		E6AE33272F7D4875009189CD /* AppNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6AE33262F7D4875009189CD /* AppNavigation.swift */; };
 		E6B649522F67FAAF00612A01 /* CountryPicker in Frameworks */ = {isa = PBXBuildFile; productRef = E6B649512F67FAAF00612A01 /* CountryPicker */; };
 		E6B748E92F6A9D7C00202A2D /* OTPFieldView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6B748E82F6A9D7C00202A2D /* OTPFieldView.swift */; };
 		E6C332862F62915700224AA5 /* PaceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C332832F62915700224AA5 /* PaceApp.swift */; };
@@ -53,6 +54,7 @@
 		E61FA4252F67C706001DA088 /* WebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebView.swift; sourceTree = "<group>"; };
 		E61FA42D2F67D252001DA088 /* String+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Ext.swift"; sourceTree = "<group>"; };
 		E684F1E62F769CDF0059C38F /* ProfilePhotoShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePhotoShape.swift; sourceTree = "<group>"; };
+		E6AE33262F7D4875009189CD /* AppNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNavigation.swift; sourceTree = "<group>"; };
 		E6B748E82F6A9D7C00202A2D /* OTPFieldView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPFieldView.swift; sourceTree = "<group>"; };
 		E6C332832F62915700224AA5 /* PaceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaceApp.swift; sourceTree = "<group>"; };
 		E6C3328D2F62920800224AA5 /* GlassButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassButton.swift; sourceTree = "<group>"; };
@@ -165,6 +167,7 @@
 		E6C4BEF62F61846D00C17C69 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				E6AE33262F7D4875009189CD /* AppNavigation.swift */,
 				E684F1E62F769CDF0059C38F /* ProfilePhotoShape.swift */,
 				E6B748E82F6A9D7C00202A2D /* OTPFieldView.swift */,
 				E61FA4252F67C706001DA088 /* WebView.swift */,
@@ -366,6 +369,7 @@
 				E61FA4262F67C706001DA088 /* WebView.swift in Sources */,
 				E61FA4202F67BDFD001DA088 /* ValidationProvider.swift in Sources */,
 				E61FA42E2F67D252001DA088 /* String+Ext.swift in Sources */,
+				E6AE33272F7D4875009189CD /* AppNavigation.swift in Sources */,
 				E6C4BEDF2F613E1300C17C69 /* AppGradients.swift in Sources */,
 				E6C332862F62915700224AA5 /* PaceApp.swift in Sources */,
 				E61F83B12F641BB400C215DF /* UIWindow+Ext.swift in Sources */,
@@ -500,7 +504,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 2NK8U47VYY;
+				DEVELOPMENT_TEAM = 6LK9SH63JD;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -548,7 +552,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 2NK8U47VYY;
+				DEVELOPMENT_TEAM = 6LK9SH63JD;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;

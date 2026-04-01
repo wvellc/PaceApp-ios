@@ -13,12 +13,14 @@ import SwiftUI
 extension Font {
 	
 	// ExtraBold
+	static let extraBold18: Font = Gilroy.extraBold.size(18)
 	static let extraBold34: Font = Gilroy.extraBold.size(34)
 	
 	// Bold
 	static let bold28: Font      = Gilroy.bold.size(28)
 	
 	// SemiBold
+	static let semiBold10: Font  = Gilroy.semiBold.size(10)
 	static let semiBold14: Font  = Gilroy.semiBold.size(14)
 	static let semiBold16: Font  = Gilroy.semiBold.size(16)
 	static let semiBold20: Font  = Gilroy.semiBold.size(20)
