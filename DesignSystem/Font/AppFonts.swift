@@ -21,8 +21,10 @@ extension Font {
 	
 	// SemiBold
 	static let semiBold10: Font  = Gilroy.semiBold.size(10)
+	static let semiBold11: Font  = Gilroy.semiBold.size(11)
 	static let semiBold14: Font  = Gilroy.semiBold.size(14)
 	static let semiBold16: Font  = Gilroy.semiBold.size(16)
+	static let semiBold17: Font  = Gilroy.semiBold.size(17)
 	static let semiBold20: Font  = Gilroy.semiBold.size(20)
 	static let semiBold24: Font  = Gilroy.semiBold.size(24)
 	static let semiBold32: Font  = Gilroy.semiBold.size(32)
@@ -36,6 +38,7 @@ extension Font {
 	static let medium24: Font    = Gilroy.medium.size(24)
 	
 	// Regular
+	static let regular13: Font   = Gilroy.regular.size(13)
 	static let regular17: Font   = Gilroy.regular.size(17)
 	
 	// Light

@@ -9,19 +9,74 @@ import SwiftUI
 
 @Observable
 final class HomeViewModel {
+    var metrics: [HomeMetric]
+    private var timer: Timer?
+	
+	var isHighPerformance: Bool = false
 
-    let metrics: [HomeMetric] = [
-        .init(symbolName: "heart.fill", value: "60", unit: "bpm"),
-        .init(symbolName: "scope", value: "12", unit: "hrs"),
-        .init(symbolName: "alarm", value: "-01:10", unit: "m /sec"),
-        .init(symbolName: "clock.fill", value: "7:20", unit: "m /sec"),
-        .init(symbolName: "figure.run.circle", value: "9:09", unit: "min/mile")
-    ]
+    init() {
+        self.metrics = [
+            .init(symbol: metricSymbol(high:  "icMatricsBpm", low:  "icMatricsBpmRed"), value: "60", unit: "bpm"),
+            .init(symbol: metricSymbol(high:  "icMatricsHrs", low: "icMatricsHrsRed"), value: "12", unit: "hrs"),
+            .init(symbol: metricSymbol(high:  "icMatricsGoalTime", low: "icMatricsGoalTimeRed"), value: "-01:10", unit: "m /sec"),
+            .init(symbol: metricSymbol(high:  "icMatricsRemaining", low: "icMatricsRemainingRed"), value: "7:20", unit: "m /sec"),
+            .init(symbol: metricSymbol(high:  "icMatricsPace", low: "icMatricsPaceRed"), value: "9:09", unit: "min/mile")
+        ]
+
+        // Start a timer to update values every second for prototyping
+        timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
+            self?.tick()
+        }
+    }
+
+    deinit {
+        timer?.invalidate()
+    }
+
+    private func tick() {
+        func twoDigits(_ n: Int) -> String { String(format: "%02d", n) }
+        isHighPerformance.toggle()
+
+        metrics = metrics.enumerated().map { index, metric in
+            // Choose symbol by common flag (no swapping)
+
+			switch index {
+            case 0: // bpm
+                let bpm = Int.random(in: 55...110)
+					return HomeMetric(symbol: metric.symbol, value: "\(bpm)", unit: "bpm")
+            case 1: // hrs
+                let hrs = Int.random(in: 6...16)
+                return HomeMetric(symbol: metric.symbol, value: "\(hrs)", unit: "hrs")
+            case 2: // goal time (signed mm:ss)
+                let negative = Bool.random()
+                let m = Int.random(in: 0...1)
+                let s = Int.random(in: 0...59)
+                let sign = negative ? "-" : ""
+                return HomeMetric(symbol: metric.symbol, value: "\(sign)\(twoDigits(m)):\(twoDigits(s))", unit: "m /sec")
+            case 3: // remaining (mm:ss)
+                let m = Int.random(in: 0...12)
+                let s = Int.random(in: 0...59)
+                return HomeMetric(symbol: metric.symbol, value: "\(m):\(twoDigits(s))", unit: "m /sec")
+            case 4: // pace (min/mile)
+                let m = Int.random(in: 7...12)
+                let s = Int.random(in: 0...59)
+                return HomeMetric(symbol: metric.symbol, value: "\(m):\(twoDigits(s))", unit: "min/mile")
+            default:
+                return HomeMetric(symbol: metric.symbol, value: metric.value, unit: metric.unit)
+            }
+        }
+    }
 }
 
 struct HomeMetric: Identifiable {
     let id = UUID()
-    let symbolName: String
+    let symbol: metricSymbol
     let value: String
     let unit: String
+}
+
+// Metric symbols
+struct metricSymbol {
+    let high: String
+    let low: String
 }
