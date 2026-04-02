@@ -13,44 +13,44 @@ struct RunActionCard: View {
 
     let action: RunAction
 
+	
     var body: some View {
-        Button(action: action.action) {
-            VStack(alignment: .leading, spacing: 0) {
-                Image(action.symbol)
-                    .frame(width: 70, height: 70)
-
-                Spacer(minLength: 10)
-
-                Text(action.title)
-                    .font(.semiBold17)
-                    .foregroundStyle(.darkCharcoal)
-                    .multilineTextAlignment(.leading)
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, minHeight: Self.cardHeight, maxHeight: Self.cardHeight, alignment: .topLeading)
-			.background(.whiteApp, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(alignment: .bottomTrailing) {
-                Image(.isRunPlaceholder)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 85.93, height: 102)
-                    .offset(x: 3, y: 12)
-            }
-        }
-        .buttonStyle(.plain)
-        .scaleEffect(isUserTapped ? 0.96 : 1)
+		
+		VStack(alignment: .leading, spacing: 0) {
+			Image(action.symbol)
+				.frame(width: 70, height: 70)
+			
+			Spacer(minLength: 10)
+			
+			Text(action.title)
+				.font(.semiBold17)
+				.foregroundStyle(.darkCharcoal)
+				.multilineTextAlignment(.leading)
+		}
+		.padding(16)
+		.frame(maxWidth: .infinity, minHeight: Self.cardHeight, maxHeight: Self.cardHeight, alignment: .topLeading)
+		.background(.whiteApp, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+		.overlay(alignment: .bottomTrailing) {
+			Image(.isRunPlaceholder)
+				.resizable()
+				.scaledToFit()
+				.frame(width: 85.93, height: 102)
+				.offset(x: 3, y: 12)
+		}
+        .scaleEffect(isUserTapped ? 0.92 : 1)
         .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isUserTapped)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    if !isUserTapped {
-                        isUserTapped = true
-                    }
-                }
-                .onEnded { _ in
-                    isUserTapped = false
-                }
-        )
+		.onTapGesture {
+			// Provide a quick press animation and trigger action after a slight delay
+			isUserTapped = true
+			
+			Task {
+				try? await Task.sleep(for: .milliseconds(80))
+				isUserTapped = false
+				
+				try? await Task.sleep(for: .milliseconds(100))
+				action.action()
+			}
+		}
     }
 }
 

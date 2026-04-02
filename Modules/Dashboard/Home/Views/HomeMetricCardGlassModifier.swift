@@ -11,7 +11,7 @@ struct HomeMetricCardGlassModifier: ViewModifier {
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
             content
-				.glassEffect(.regular.tint(.radiantBlue.opacity(0.2)).interactive(), in: Capsule())
+				.glassEffect(.clear.tint(.radiantBlue.opacity(0.2)).interactive(), in: Capsule())
         } else {
             content
                 .background(fallbackBackground)
