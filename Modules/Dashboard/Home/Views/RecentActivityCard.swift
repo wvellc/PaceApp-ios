@@ -46,15 +46,15 @@ struct RecentActivityCard: View {
 
             // Bottom metrics keep the three activity stats evenly distributed.
             HStack  {
-                activityMetric(title: "Distance", value: activity.distance)
+				activityMetric(title: .distanceStr, value: activity.distance)
 
                 Spacer(minLength: 12)
 
-                activityMetric(title: "Time", value: activity.duration)
+				activityMetric(title: .time, value: activity.duration)
 
                 Spacer(minLength: 12)
 
-                activityMetric(title: "Avg Pace", value: activity.avgPace)
+				activityMetric(title: .avgPace, value: activity.avgPace)
             }
         }
         .padding(.horizontal, 14)
@@ -65,7 +65,7 @@ struct RecentActivityCard: View {
 
     // MARK: Helpers
     // Renders a single bottom metric column used by distance, time, and pace.
-    private func activityMetric(title: String, value: String) -> some View {
+	private func activityMetric(title: LocalizedStringResource, value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
 					.font(.regular13)

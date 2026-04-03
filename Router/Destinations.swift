@@ -18,7 +18,7 @@ enum Destinations: Hashable, Codable {
 	case accountCreated
 	
     // MARK: - Home
-	case home
+	case createRunEvent
 	
     // MARK: - Profile
     case profile

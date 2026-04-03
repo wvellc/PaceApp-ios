@@ -7,13 +7,18 @@
 
 import SwiftUI
 
+///Home View Model
 @Observable
 final class HomeViewModel {
-    var metrics: [HomeMetric]
-    private var timer: Timer?
+ 
+	//MARK: Variables
 	
+	//Metrics
+	var metrics: [HomeMetric]
+    private var timer: Timer?
 	var isHighPerformance: Bool = false
 
+	//MARK: Intializer
     init() {
         self.metrics = [
             .init(symbol: metricSymbol(high:  "icMatricsBpm", low:  "icMatricsBpmRed"), value: "60", unit: "bpm"),
@@ -29,10 +34,12 @@ final class HomeViewModel {
         }
     }
 
+	//MARK: DeIntializer
     deinit {
         timer?.invalidate()
     }
 
+	//MARK: Methods
     private func tick() {
         func twoDigits(_ n: Int) -> String { String(format: "%02d", n) }
         isHighPerformance.toggle()

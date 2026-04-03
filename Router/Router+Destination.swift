@@ -41,10 +41,11 @@ extension Router {
 			case .accountCreated: ComplationScreen(screenType: .accountCreation)
 
 				// ----------------------------------------------------------------
-				// MARK: Home
+				// MARK: Dashbaord
 				// ----------------------------------------------------------------
 				
-			case .home			: EmptyView()
+			case .createRunEvent: CreateRunEventScreen()
+				
 				
 				// ----------------------------------------------------------------
 				// MARK: Profile

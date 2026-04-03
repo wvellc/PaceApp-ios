@@ -56,14 +56,7 @@ struct RunActionCard: View {
 
 struct RunAction: Identifiable {
 	let id = UUID()
-	let title: String
+	let title: LocalizedStringResource
 	let symbol: String
 	let action: () -> Void
-	
-	static let items: [RunAction] = [
-		RunAction(title: "New Run", symbol: "icNewRun", action: {}),
-		RunAction(title: "Favorite Run", symbol: "icFavoriteRun", action: {}),
-		RunAction(title: "Saved Run", symbol: "icSavedRun", action: {}),
-		RunAction(title: "Last Run", symbol: "icLastRun", action: {})
-	]
 }

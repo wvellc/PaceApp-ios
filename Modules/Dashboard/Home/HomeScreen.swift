@@ -7,12 +7,18 @@
 
 import SwiftUI
 
+///Home screen main view
 struct HomeScreen: View {
+	
+	//MARK: Variables
     @State private var viewModel = HomeViewModel()
     @State private var showPairWatch = false
-    private let runActions = RunAction.items
     private let recentActivities = RecentActivity.samples
 
+	@Environment(Router.self) private var router
+	
+	
+	//MARK: View Builder
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // MARK: App Navigation bar
@@ -94,7 +100,15 @@ struct HomeScreen: View {
 	//MARK: Run Action Grid
     private var runActionGrid: some View {
         let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 2)
-
+		let runActions : [RunAction] = [
+			RunAction(title: .newRun, symbol: "icNewRun", action: {
+				router.navigate(to: .createRunEvent)
+			}),
+			RunAction(title: .favoriteRun, symbol: "icFavoriteRun", action: {}),
+			RunAction(title: .savedRun, symbol: "icSavedRun", action: {}),
+			RunAction(title: .lastRun, symbol: "icLastRun", action: {})
+		]
+		
         return LazyVGrid(columns: columns, alignment: .center, spacing: 12) {
             ForEach(runActions) { action in
                 RunActionCard(action: action)

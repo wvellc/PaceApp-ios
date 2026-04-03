@@ -35,7 +35,7 @@ struct HomeMetricCard: View {
 					.animation(.easeInOut(duration: 0.25), value: isHighPerformance)
 
                 Text(metric.unit)
-					.font(.semiBold10)
+					.font(.semiBold11)
                     .foregroundStyle(isHighPerformance ? .fluorescentMint : .redBoho)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
@@ -46,7 +46,7 @@ struct HomeMetricCard: View {
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 21)
-        .frame(minWidth: 56, minHeight: 112)
+        .frame(minWidth: 56,maxWidth: 56, minHeight: 112)
         .modifier(HomeMetricCardGlassModifier())
     }
 }
