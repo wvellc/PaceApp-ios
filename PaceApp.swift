@@ -18,6 +18,7 @@ struct PaceApp: App {
 	init() {
 		// Apply a consistent transparent navigation bar style across the app
 		setNavigationAppearance()
+		configureSegmentedAppearance()
 	}
 	
 	// MARK: - Scene
@@ -61,6 +62,15 @@ struct PaceApp: App {
 		
 		// Prefer a dark keyboard for text fields used in the app
 		UITextField.appearance().keyboardAppearance = .dark
+	}
+
+	// Configure segmented control appearance once
+	fileprivate func configureSegmentedAppearance() {
+		let appearance = UISegmentedControl.appearance()
+		appearance.backgroundColor = .grayHint
+		appearance.selectedSegmentTintColor = .neonAquaBlue
+		appearance.setTitleTextAttributes([.foregroundColor: UIColor.whiteApp], for: .selected)
+		appearance.setTitleTextAttributes([.foregroundColor: UIColor.darkCharcoal], for: .normal)
 	}
 
 }

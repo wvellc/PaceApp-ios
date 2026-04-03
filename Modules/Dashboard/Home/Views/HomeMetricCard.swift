@@ -15,7 +15,7 @@ struct HomeMetricCard: View {
         VStack(spacing: 8) {
 			Image(isHighPerformance ? metric.symbol.high : metric.symbol.low)
 				.resizable()
-                .frame(width: 32, height: 32)
+                .frame(width: 50, height: 50)
 				.scaledToFill()
 				.scaleEffect(isHighPerformance ? 1.0 : 0.94)
 				.opacity(1.0)

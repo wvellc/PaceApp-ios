@@ -57,10 +57,10 @@ struct EventDetailsStepView: View {
     }
 }
 
-#Preview {
-	EventDetailsStepView(viewModel: CreateRunEventViewModel())
-		.padding()
-}
+//#Preview {
+//	EventDetailsStepView(viewModel: CreateRunEventViewModel())
+//		.padding()
+//}
 
 // MARK: - Date Picker Field
 
@@ -80,14 +80,14 @@ private struct DatePickerField: View {
 
                 Text(date.formatted(date: .abbreviated, time: .omitted))
 					.font(.medium20)
-					.foregroundColor(.blackApp)
+					.foregroundColor(.whiteApp)
 					
 
                 Spacer()
 
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 12))
-                    .foregroundColor(.white.opacity(0.5))
+                    .font(.medium20)
+                    .foregroundColor(.fashionGray)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 16)
@@ -97,10 +97,15 @@ private struct DatePickerField: View {
             )
         }
         .sheet(isPresented: $showPicker) {
-            DatePickerSheet(date: $date, minDate: minDate, maxDate: maxDate)
-				.fixedSize(horizontal: false, vertical: true)
-				.presentationDetents([.height(424)])
-                .presentationDragIndicator(.visible)
+			if #available(iOS 26.0, *) {
+				DatePickerSheet(date: $date, minDate: minDate, maxDate: maxDate)
+					.fixedSize(horizontal: false, vertical: true)
+					.presentationDetents([.height(424)])
+					.presentationDragIndicator(.visible)
+					.glassEffectTransition(.matchedGeometry)
+			} else {
+				// Fallback on earlier versions
+			}
         }
     }
 }
@@ -122,10 +127,9 @@ private struct DatePickerSheet: View {
 				
                 Spacer()
 				Button(.done) { dismiss() }
-					.font(.medium16)
+					.font(.semiBold17)
 					.foregroundColor(.radiantBlue)
             }
-            .padding(.horizontal, 20)
 
             DatePicker(
                 "",
@@ -135,8 +139,8 @@ private struct DatePickerSheet: View {
             )
 			.datePickerStyle(.graphical)
 			.tint(.radiantBlue)
-            .padding(.horizontal, 12)
-        }
-		.tint(.whiteApp)
+		}
+		.padding(.horizontal, Constant.UI.defaultPadding)
+
     }
 }

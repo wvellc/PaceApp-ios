@@ -20,6 +20,7 @@ struct RunEventHeaderCard: View {
 			Button(action: onInfoTap) {
 				Image("icInfo")
 				.frame(width: 24, height: 24)
+				.padding(11)
 
 			}
         }
@@ -225,10 +226,10 @@ struct RunContentCard<Content: View>: View {
         VStack(alignment: .leading, spacing: 16) {
             content
         }
-        .padding(20)
-        .background(Color.white)
-        .cornerRadius(20)
-        .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 4)
+        .padding(16)
+		.background(.whiteApp)
+		.cornerRadius(Constant.UI.cardCornerRadius)
+		.shadow(color: .radiantBlue.opacity(0.08), radius: 12, x: 0, y: 4)
     }
 }
 

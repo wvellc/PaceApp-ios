@@ -14,8 +14,8 @@ import Observation
 final class CreateRunEventViewModel {
 
     // MARK: Step 1 – Event Details
-    var eventName: String = ""
-    var location: String = ""
+    var eventName: String = "Fastest Pace"
+    var location: String = "Gorgiana, CA"
     var eventDate: Date = Date()
     var eventDetailsError: String? = nil
 

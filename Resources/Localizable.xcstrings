@@ -72,6 +72,9 @@
     "Distance" : {
 
     },
+    "Distance Type" : {
+
+    },
     "DistanceStr" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -217,10 +220,10 @@
       }
     },
     "Please specify your distance." : {
-
+      "extractionState" : "manual"
     },
     "Please specify your goal time." : {
-
+      "extractionState" : "manual"
     },
     "Privacy Policy" : {
       "extractionState" : "manual"
