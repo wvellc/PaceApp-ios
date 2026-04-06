@@ -12,23 +12,28 @@ struct LookBackIntervalsStepView: View {
 			}
 
             // Look-Back Intervals
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 0) {
                 HStack {
-                    Text("Look-Back Intervals")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(Color(hex: "1E3A8A"))
+					AppLabel(title: .lookBackIntervals, font: .semiBold20)
 
                     Spacer()
 
-                    Circle()
-                        .fill(Color.green)
-                        .frame(width: 8, height: 8)
+					// Green dot indicator
+					Button {
+						//TODO: Show toast message
+					} label: {
+						Image("icInfo")
+							.frame(width: 24, height: 24)
+							.padding(11)
+					}
+
                 }
 
                 HStack {
                     Picker("Intervals", selection: $viewModel.lookBackIntervals) {
                         ForEach(1...50, id: \.self) { val in
-                            Text("\(val)").tag(val)
+                            Text("\(val)")
+								.tag(val)
                         }
                     }
                     .pickerStyle(.wheel)
@@ -38,18 +43,15 @@ struct LookBackIntervalsStepView: View {
                     Spacer()
                 }
                 .padding(.horizontal, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color(hex: "DBEAFE"), lineWidth: 1.5)
-                        .background(Color.white.cornerRadius(12))
-                )
+				.cardBackground()
+
             }
+			.padding(.bottom, 8)
+
 
             // Event Type
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Event Type")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(Color(hex: "1E3A8A"))
+            VStack(alignment: .leading, spacing: 8) {
+				AppLabel(title: .eventType, font: .semiBold20)
 
                 Menu {
                     ForEach(EventType.allCases, id: \.self) { type in
@@ -69,13 +71,13 @@ struct LookBackIntervalsStepView: View {
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 13)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color(hex: "DBEAFE"), lineWidth: 1.5)
-                            .background(Color.white.cornerRadius(12))
-                    )
+					.cardBackground()
                 }
             }
         }
     }
+}
+
+#Preview {
+	LookBackIntervalsStepView(viewModel: CreateRunEventViewModel())
 }

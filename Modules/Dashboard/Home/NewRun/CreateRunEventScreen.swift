@@ -37,7 +37,7 @@ struct CreateRunEventScreen: View {
 
                     Spacer()
 
-                    Text("New Run")
+					Text(.newRun)
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(.white)
 

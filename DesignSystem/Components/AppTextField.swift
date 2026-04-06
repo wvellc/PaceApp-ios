@@ -35,6 +35,7 @@ struct AppTextField: View {
 	private var submitLabel: SubmitLabel
 	private var bgColor: Color
 	private var borderColor: Color
+	private var foregroundStyle: Color
 	
 	// MARK: - Init (Binding<String>)
 	init(
@@ -49,6 +50,7 @@ struct AppTextField: View {
 		submitLabel: SubmitLabel = .next,
 		bgColor: Color = .clear,
 		borderColor: Color = .whiteApp,
+		foregroundStyle: Color = .grayHint,
 		onValueChanged: ((String) -> Void)? = nil,
 	) {
 		self._text = text
@@ -63,6 +65,7 @@ struct AppTextField: View {
 		self.submitLabel = submitLabel
 		self.bgColor = bgColor
 		self.borderColor = borderColor
+		self.foregroundStyle = foregroundStyle
 	}
 	
 	// MARK: - Computed
@@ -99,7 +102,7 @@ struct AppTextField: View {
 				.textInputAutocapitalization(autocapitalization)
 				.submitLabel(submitLabel)
 				.autocorrectionDisabled(true)
-				.foregroundStyle(.grayHint)
+				.foregroundStyle(foregroundStyle)
 				.onChange(of: text) { _, newValue in
 					hasInteracted = true
 					isValid = newValue.trimmingCharacters(in: .whitespaces).isEmpty

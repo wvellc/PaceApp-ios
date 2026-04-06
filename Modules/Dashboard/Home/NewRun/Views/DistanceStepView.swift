@@ -18,9 +18,7 @@ struct DistanceStepView: View {
 				//TODO: Show Info toast
 			}
 
-			Text(.pleaseSpecifyYourDistance)
-				.font(.semiBold24)
-				.foregroundColor(.darkCharcoal)
+			AppLabel(title: .pleaseSpecifyYourDistance)
 
             // Km / Miles Toggle
             Picker("Distance Type", selection: $viewModel.distanceType) {
@@ -75,4 +73,3 @@ struct DistanceStepView: View {
 	DistanceStepView(viewModel: vm)
         .padding()
 }
-

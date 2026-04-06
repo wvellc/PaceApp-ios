@@ -97,15 +97,11 @@ private struct DatePickerField: View {
             )
         }
         .sheet(isPresented: $showPicker) {
-			if #available(iOS 26.0, *) {
-				DatePickerSheet(date: $date, minDate: minDate, maxDate: maxDate)
-					.fixedSize(horizontal: false, vertical: true)
-					.presentationDetents([.height(424)])
-					.presentationDragIndicator(.visible)
-					.glassEffectTransition(.matchedGeometry)
-			} else {
-				// Fallback on earlier versions
-			}
+			DatePickerSheet(date: $date, minDate: minDate, maxDate: maxDate)
+				.fixedSize(horizontal: false, vertical: true)
+				.presentationDetents([.height(424)])
+				.presentationDragIndicator(.visible)
+
         }
     }
 }

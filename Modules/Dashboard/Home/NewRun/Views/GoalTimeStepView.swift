@@ -11,13 +11,16 @@ struct GoalTimeStepView: View {
 				//TODO: Show Info toast
 			}
 
-			Text(.pleaseSpecifyYourGoalTime)
-				.font(.semiBold24)
-				.foregroundColor(.darkCharcoal)
-
+			AppLabel(title: .pleaseSpecifyYourGoalTime)
+			
             HStack(spacing: 0) {
 				
 				Spacer()
+					.frame(width: 24, height: 24)
+
+				
+				Spacer()
+				
 				
                 // Hours picker
                 Picker("Hours", selection: $viewModel.goalHours) {
@@ -35,7 +38,7 @@ struct GoalTimeStepView: View {
 
                 Text(":")
                     .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(Color(hex: "1E3A8A"))
+					.foregroundColor(.fashionGray)
                     .padding(.horizontal, 4)
 
                 // Minutes picker
@@ -45,7 +48,6 @@ struct GoalTimeStepView: View {
 							.tag(m)
 							.font(.medium18)
 							.foregroundStyle(.darkCharcoal)
-
                     }
                 }
                 .pickerStyle(.wheel)
@@ -59,11 +61,7 @@ struct GoalTimeStepView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color(hex: "DBEAFE"), lineWidth: 1.5)
-                    .background(Color.white.cornerRadius(12))
-            )
+			.cardBackground()
         }
     }
 }

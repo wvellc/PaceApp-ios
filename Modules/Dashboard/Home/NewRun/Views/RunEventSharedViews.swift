@@ -70,25 +70,6 @@ struct RunNextButton: View {
     let action: () -> Void
 
     var body: some View {
-//        Button(action: action) {
-//            Text(title)
-//                .font(.system(size: 17, weight: .semibold))
-//                .foregroundColor(.white)
-//                .frame(maxWidth: .infinity)
-//                .padding(.vertical, 18)
-//                .background(
-//                    LinearGradient(
-//                        colors: isEnabled
-//                            ? [Color(hex: "4A90E2"), Color(hex: "2563EB")]
-//                            : [Color.gray.opacity(0.4), Color.gray.opacity(0.3)],
-//                        startPoint: .leading,
-//                        endPoint: .trailing
-//                    )
-//                )
-//                .cornerRadius(30)
-//        }
-//        .disabled(!isEnabled)
-		
 		AppButton(title) {
 			action()
 		}
