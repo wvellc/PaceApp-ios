@@ -11,23 +11,24 @@ struct SegmentChoiceStepView: View {
 				//TODO: Show Info toast
 			}
 
-            Text("Do you want to run with segments?")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(Color(hex: "1E3A8A"))
+			
+			AppLabel(title: .doYouWantToRunWithSegments)
 
             HStack(spacing: 16) {
                 SegmentChoiceButton(
-                    title: "Yes",
+					title: .yes,
                     isSelected: viewModel.wantsSegments == true,
-                    color: Color(hex: "22C55E")
+					color: .fluorescentMint,
+					textColor: .darkCharcoal
                 ) {
                     viewModel.wantsSegments = true
                 }
 
                 SegmentChoiceButton(
-                    title: "No",
+					title: .no,
                     isSelected: viewModel.wantsSegments == false,
-                    color: Color(hex: "EF4444")
+					color: .redBoho,
+					textColor: .whiteApp
                 ) {
                     viewModel.wantsSegments = false
                 }
@@ -37,25 +38,28 @@ struct SegmentChoiceStepView: View {
 }
 
 private struct SegmentChoiceButton: View {
-    let title: String
+	let title: LocalizedStringResource
     let isSelected: Bool
     let color: Color
+	let textColor: Color
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.white)
+				.font(.medium18)
+				.foregroundColor(textColor)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
                 .background(
                     isSelected ? color : color.opacity(0.5)
                 )
-                .cornerRadius(12)
+                .cornerRadius(Constant.UI.defaultCornerRadius)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(isSelected ? color : Color.clear, lineWidth: 2)
+					RoundedRectangle(cornerRadius: Constant.UI.defaultCornerRadius)
+						.inset(by: 0.60)
+						.stroke(.fashionGray, lineWidth: 2)
+					
                 )
                 .scaleEffect(isSelected ? 1.03 : 1.0)
                 .animation(.spring(response: 0.25), value: isSelected)
@@ -63,3 +67,6 @@ private struct SegmentChoiceButton: View {
     }
 }
 
+#Preview {
+	SegmentChoiceStepView(viewModel: CreateRunEventViewModel())
+}

@@ -29,7 +29,7 @@ struct LookBackIntervalsStepView: View {
 
                 }
 
-                HStack {
+				HStack(alignment: .center) {
                     Picker("Intervals", selection: $viewModel.lookBackIntervals) {
                         ForEach(1...50, id: \.self) { val in
                             Text("\(val)")
@@ -62,17 +62,17 @@ struct LookBackIntervalsStepView: View {
                 } label: {
                     HStack {
                         Text(viewModel.eventType.rawValue)
-                            .font(.system(size: 15))
-                            .foregroundColor(Color(hex: "1E3A8A"))
+							.font(.medium18)
+							.foregroundColor(.darkCharcoal)
                         Spacer()
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 12))
-                            .foregroundColor(Color(hex: "6B7280"))
+						Image(.icDownArrow)
+							.frame(width: 24, height: 24)
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 13)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
 					.cardBackground()
                 }
+
             }
         }
     }

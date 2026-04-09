@@ -100,52 +100,53 @@ struct RunBackButton: View {
 // MARK: - Segment Time Picker Row
 
 struct SegmentTimePickerRow: View {
-    let label: String
+	let label: LocalizedStringResource
     @Binding var minutes: Int
     @Binding var seconds: Int
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(label)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(Color(hex: "1E3A8A"))
+			AppLabel(title: label, font: .semiBold20)
 
             HStack(spacing: 0) {
                 Picker("Minutes", selection: $minutes) {
                     ForEach(0..<60, id: \.self) { m in
-                        Text(String(format: "%02d", m)).tag(m)
+                        Text(String(format: "%02d", m))
+							.tag(m)
+							.font(.medium16)
+							.foregroundColor(.darkCharcoal)
+
                     }
                 }
                 .pickerStyle(.wheel)
-                .frame(width: 70, height: 90)
+				.frame(width: 100, height: 90)
                 .clipped()
 
                 Text(":")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundColor(Color(hex: "1E3A8A"))
+					.font(.medium20)
+					.foregroundColor(.darkCharcoal)
                     .padding(.horizontal, 4)
 
                 Picker("Seconds", selection: $seconds) {
                     ForEach(0..<60, id: \.self) { s in
-                        Text(String(format: "%02d", s)).tag(s)
+                        Text(String(format: "%02d", s))
+							.tag(s)
+							.font(.medium16)
+							.foregroundColor(.darkCharcoal)
+
                     }
                 }
                 .pickerStyle(.wheel)
-                .frame(width: 70, height: 90)
+				.frame(width: 100, height: 90)
                 .clipped()
 
                 Spacer()
 
-                Image(systemName: "drop.fill")
-                    .foregroundColor(Color(hex: "3B82F6"))
-                    .font(.system(size: 18))
+				Image(.icOvertime)
+					.frame(width: 24, height: 24)
             }
-            .padding(.horizontal, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color(hex: "DBEAFE"), lineWidth: 1.5)
-                    .background(Color.white.cornerRadius(12))
-            )
+            .padding(.horizontal, 16)
+			.cardBackground()
         }
     }
 }
@@ -153,21 +154,24 @@ struct SegmentTimePickerRow: View {
 // MARK: - Distance Picker Row
 
 struct SegmentDistancePickerRow: View {
-    let label: String
+	let label: LocalizedStringResource
     let unit: String
     let options: [Double]
     @Binding var selected: Double
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(label)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(Color(hex: "1E3A8A"))
+			AppLabel(title: label, font: .semiBold20)
+                
 
             HStack {
                 Picker("Distance", selection: $selected) {
                     ForEach(options, id: \.self) { val in
-                        Text(String(format: "%.1f", val)).tag(val)
+                        Text(String(format: "%.1f", val))
+							.tag(val)
+							.font(.medium16)
+							.foregroundColor(.darkCharcoal)
+
                     }
                 }
                 .pickerStyle(.wheel)
@@ -175,21 +179,17 @@ struct SegmentDistancePickerRow: View {
                 .clipped()
 
                 Text(unit)
-                    .font(.system(size: 14))
-                    .foregroundColor(Color(hex: "6B7280"))
+					.font(.medium18)
+					.foregroundColor(.darkCharcoal)
 
                 Spacer()
 
-                Image(systemName: "arrow.up.and.down.circle.fill")
-                    .foregroundColor(Color(hex: "3B82F6"))
-                    .font(.system(size: 18))
+				Image(.icDistance)
+					.frame(width: 24, height: 24)
+
             }
-            .padding(.horizontal, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color(hex: "DBEAFE"), lineWidth: 1.5)
-                    .background(Color.white.cornerRadius(12))
-            )
+            .padding(.horizontal, 16)
+			.cardBackground()
         }
     }
 }
@@ -198,13 +198,15 @@ struct SegmentDistancePickerRow: View {
 
 struct RunContentCard<Content: View>: View {
     let content: Content
-
-    init(@ViewBuilder content: () -> Content) {
+	let spacing: CGFloat
+	
+	init(@ViewBuilder content: () -> Content, spacing: CGFloat = 16) {
         self.content = content()
+		self.spacing = spacing
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: spacing) {
             content
         }
         .padding(16)

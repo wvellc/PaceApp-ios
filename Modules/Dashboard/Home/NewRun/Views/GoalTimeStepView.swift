@@ -37,9 +37,9 @@ struct GoalTimeStepView: View {
                 .clipped()
 
                 Text(":")
-                    .font(.system(size: 24, weight: .bold))
-					.foregroundColor(.fashionGray)
-                    .padding(.horizontal, 4)
+					.font(.medium20)
+					.foregroundColor(.darkCharcoal)
+					.padding(.horizontal, 4)
 
                 // Minutes picker
                 Picker("Minutes", selection: $viewModel.goalMinutes) {

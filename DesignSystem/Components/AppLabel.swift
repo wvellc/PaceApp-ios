@@ -25,7 +25,14 @@ struct AppLabel: View {
 		Text(title)
 			.font(font)
 			.foregroundColor(.darkCharcoal)
+			.tracking(0.54)
+			.lineSpacing(5)
+
 		
 	}
 }
 
+#Preview {
+	AppLabel(title: .doYouWantToRunWithSegments, font: .medium24)
+		.padding(.horizontal, 60)
+}
