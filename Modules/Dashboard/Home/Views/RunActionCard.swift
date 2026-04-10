@@ -8,12 +8,10 @@
 import SwiftUI
 
 struct RunActionCard: View {
-    private static let cardHeight: CGFloat = 152
     @State private var isUserTapped = false
 
     let action: RunAction
 
-	
     var body: some View {
 		
 		VStack(alignment: .leading, spacing: 0) {
@@ -28,7 +26,7 @@ struct RunActionCard: View {
 				.multilineTextAlignment(.leading)
 		}
 		.padding(16)
-		.frame(maxWidth: .infinity, minHeight: Self.cardHeight, maxHeight: Self.cardHeight, alignment: .topLeading)
+		.frame(maxWidth: .infinity, alignment: .topLeading)
 		.background(.whiteApp, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
 		.overlay(alignment: .bottomTrailing) {
 			Image(.isRunPlaceholder)

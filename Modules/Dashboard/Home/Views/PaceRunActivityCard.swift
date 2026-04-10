@@ -8,7 +8,7 @@
 import SwiftUI
 
 // MARK: - Recent Activity Card
-struct RecentActivityCard: View {
+struct PaceRunActivityCard: View {
     let activity: RecentActivity
 
     // MARK: Body
@@ -62,26 +62,27 @@ struct RecentActivityCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.whiteApp, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
-
-    // MARK: Helpers
-    // Renders a single bottom metric column used by distance, time, and pace.
-	private func activityMetric(title: LocalizedStringResource, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-					.font(.regular13)
-				.foregroundStyle(.fashionGray)
-				.tracking(0.26)
-
-
-            Text(value)
-                .font(.semiBold17)
-                .foregroundStyle(.darkCharcoal)
-				.tracking(0.34)
-
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
 }
+
+// MARK: Helpers
+// Renders a single bottom metric column used by distance, time, and pace.
+func activityMetric(title: LocalizedStringResource, value: String) -> some View {
+	VStack(alignment: .leading, spacing: 4) {
+		Text(title)
+			.font(.regular13)
+			.foregroundStyle(.fashionGray)
+			.tracking(0.26)
+		
+		
+		Text(value)
+			.font(.semiBold17)
+			.foregroundStyle(.darkCharcoal)
+			.tracking(0.34)
+		
+	}
+	.frame(maxWidth: .infinity, alignment: .leading)
+}
+
 
 // MARK: - Recent Activity Model
 struct RecentActivity: Identifiable {
@@ -93,7 +94,8 @@ struct RecentActivity: Identifiable {
     let avgPace: String
     let delta: String
     let deltaColor: Color
-
+	let location: String
+	
     // MARK: Sample Data
     // Sample content used by the dashboard preview state.
     static let samples: [RecentActivity] = [
@@ -101,19 +103,21 @@ struct RecentActivity: Identifiable {
             title: "Thursday Run",
             date: "29 Jan",
             distance: "5.00 mi",
-            duration: "0:45",
+            duration: "05:35:00",
             avgPace: "9:00 /mi",
             delta: "+01:10",
-			deltaColor: .redBoho
+			deltaColor: .redBoho,
+			location: "New York City"
         ),
         RecentActivity(
             title: "Saturday Run",
             date: "31 Jan",
             distance: "15.00 mi",
-            duration: "0:50",
+            duration: "12:35:03",
             avgPace: "3:20 /mi",
             delta: "-02:15",
-			deltaColor: .fluorescentMint
+			deltaColor: .fluorescentMint,
+			location: "Twin Falls"
         )
     ]
 }

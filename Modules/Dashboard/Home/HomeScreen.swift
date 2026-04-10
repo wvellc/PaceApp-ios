@@ -11,129 +11,171 @@ import SwiftUI
 struct HomeScreen: View {
 	
 	//MARK: Variables
-    @State private var viewModel = HomeViewModel()
-    @State private var showPairWatch = false
-    private let recentActivities = RecentActivity.samples
-
+	@State private var viewModel = HomeViewModel()
+	@State private var showPairWatch = false
+	private let recentActivities = RecentActivity.samples
+	
 	@Environment(Router.self) private var router
 	
 	
 	//MARK: View Builder
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // MARK: App Navigation bar
-            AppNavigation(trailing: {
-                Button(action: {
-                    // TODO: Show notification screen
-                }, label: {
-                    RoundedRectangle(cornerRadius: 100)
-                        .foregroundStyle(.whiteApp)
-                        .overlay(content: {
-                            Image(.icNotification)
-                                .resizable()
-                                .frame(width: 20, height: 20)
-                        })
-                })
-            })
-
+	var body: some View {
+		VStack(alignment: .leading, spacing: 0) {
+			// MARK: App Navigation bar
+			AppNavigation(trailing: {
+				Button(action: {
+					// TODO: Show notification screen
+				}, label: {
+					RoundedRectangle(cornerRadius: 100)
+						.foregroundStyle(.whiteApp)
+						.overlay(content: {
+							Image(.icNotification)
+								.resizable()
+								.frame(width: 20, height: 20)
+						})
+				})
+			})
+			
 			//MARK: Main scrollable content
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 0) {
-                    //User name & sync status
-                    VStack(alignment: .leading) {
-                        Text("GM, Jack")
-                            .font(.bold28)
-                            .foregroundColor(.whiteApp)
-                        Text("Not Synced Yet!")
-                            .font(.medium14)
-                            .foregroundColor(.white50)
-                    }
-
-                    // MARK: Home data & Pair watch view
-                    if showPairWatch {
-                        PairWatchView {
-                            showPairWatch = true
-                        }
-                    } else {
+			ScrollView(showsIndicators: false) {
+				VStack(alignment: .leading, spacing: 0) {
+					//User name & sync status
+					VStack(alignment: .leading) {
+						Text("GM, Jack")
+							.font(.bold28)
+							.foregroundColor(.whiteApp)
+						Text("Not Synced Yet!")
+							.font(.medium14)
+							.foregroundColor(.white50)
+					}
+					
+					// MARK: Home data & Pair watch view
+					if showPairWatch {
+						PairWatchView {
+							showPairWatch = true
+						}
+					} else {
 						VStack(alignment: .leading, spacing: 16) {
-                            // Metrics
-                            metricRow
-
-                            // Run Actions
-                            runActionGrid
-
-                            // Recent Activity
-                            recentActivitySection
-                        }
-                        .padding(.vertical, 16)
-
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 18)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .appBackground()
-    }
-
+							// Metrics
+							metricRow
+							
+							// Run Actions
+							runActionGrid
+							
+							// Recent Activity
+							UpcomingActivitySection
+						}
+						.padding(.vertical, 16)
+						
+					}
+				}
+				.padding(.horizontal, 16)
+				.padding(.bottom, 18)
+			}
+		}
+		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+		.appBackground()
+	}
+	
 	//MARK: Metric Row
-    private var metricRow: some View {
-        HStack {
-            ForEach(viewModel.metrics) { metric in
-                // Dynamic space
-                if metric.id != viewModel.metrics.first?.id {
-                    Spacer()
-                }
-
-                // Metric cards
-                HomeMetricCard(metric: metric, isHighPerformance: viewModel.isHighPerformance)
-
-                // Dynamic space
-                if metric.id != viewModel.metrics.last?.id {
-                    Spacer()
-                }
-            }
-        }
-    }
-
+	private var metricRow: some View {
+		HStack {
+			ForEach(viewModel.metrics) { metric in
+				// Dynamic space
+				if metric.id != viewModel.metrics.first?.id {
+					Spacer()
+				}
+				
+				// Metric cards
+				HomeMetricCard(metric: metric, isHighPerformance: viewModel.isHighPerformance)
+				
+				// Dynamic space
+				if metric.id != viewModel.metrics.last?.id {
+					Spacer()
+				}
+			}
+		}
+	}
+	
 	//MARK: Run Action Grid
-    private var runActionGrid: some View {
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 2)
-		let runActions : [RunAction] = [
-			RunAction(title: .newRun, symbol: "icNewRun", action: {
-				router.navigate(to: .createRunEvent)
-			}),
-			RunAction(title: .favoriteRun, symbol: "icFavoriteRun", action: {}),
-			RunAction(title: .savedRun, symbol: "icSavedRun", action: {}),
-			RunAction(title: .lastRun, symbol: "icLastRun", action: {})
-		]
-		
-        return LazyVGrid(columns: columns, alignment: .center, spacing: 12) {
-            ForEach(runActions) { action in
-                RunActionCard(action: action)
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
+	private var runActionGrid: some View {
+	    // Two flexible columns with consistent spacing
+	    let spacing: CGFloat = 16
+	    let columns = Array(repeating: GridItem(.flexible(), spacing: spacing), count: 2)
+	    let runActions: [RunAction] = [
+	        RunAction(title: .newRun, symbol: "icNewRun", action: {
+	            router.navigate(to: .createRunEvent)
+	        }),
+	        RunAction(title: .favoriteRun, symbol: "icFavoriteRun", action: {}),
+	    ]
 
-    // MARK: Recent Activity
-    private var recentActivitySection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(.recentActivity)
-                .font(.semiBold16)
-                .foregroundColor(.whiteApp)
+		return LazyVGrid(columns: columns, alignment: .center, spacing: spacing) {
+	        ForEach(runActions) { action in
+	            GeometryReader { geo in
+	                let side = geo.size.width
+					
+	                RunActionCard(action: action)
+	                    .frame(width: side, height: side)
+	            }
+				.aspectRatio(1, contentMode: .fit)
 
-            VStack(spacing: 16) {
-                ForEach(recentActivities) { activity in
-                    RecentActivityCard(activity: activity)
-                }
-            }
-        }
-    }
+	        }
+	    }
+		.fixedSize(horizontal: false, vertical: true)
+
+	}
+	
+	// MARK: Upcoming Activity
+	private var UpcomingActivitySection: some View {
+		VStack(alignment: .leading, spacing: 16) {
+			//Activity title
+			Text(.upcomingActivities)
+				.font(.semiBold16)
+				.foregroundColor(.whiteApp)
+
+			
+			VStack(spacing: 16) {
+				//Activity list
+				ForEach(recentActivities) { activity in
+					HStack(alignment: .top) {
+						Image(.icRunLeft)
+							.frame(width: 35.38, height: 42)
+
+						VStack(alignment: .leading, spacing: 16) {
+							
+							activityMetric(title: LocalizedStringResource(stringLiteral: activity.title) , value: activity.date)
+							
+							
+							activityMetric(
+								title: .location ,
+								value: activity.location
+							)
+						}
+						.frame(width: .infinity)
+
+						
+						// Bottom metrics keep the three activity stats evenly distributed.
+						VStack(alignment: .leading, spacing: 16)  {
+							activityMetric(title: .distanceStr, value: activity.distance)
+
+							activityMetric(title: .gaolTime, value: activity.duration)
+						}
+
+					}
+					.padding(.horizontal, 14)
+					.padding(.vertical, 12)
+					.frame(maxWidth: .infinity, alignment: .leading)
+					.background(.whiteApp, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+				}
+				
+			}
+		}
+	}
 }
 
+
 #Preview {
-    HomeScreen()
+	HomeScreen()
+		.environment(Router())
 }
 
