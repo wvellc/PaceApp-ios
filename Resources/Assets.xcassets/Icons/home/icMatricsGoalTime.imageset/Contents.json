@@ -1,23 +1,15 @@
 {
   "images" : [
     {
-      "filename" : "icMatricsGoalTime.png",
-      "idiom" : "universal",
-      "scale" : "1x"
-    },
-    {
-      "filename" : "icMatricsGoalTime@2x.png",
-      "idiom" : "universal",
-      "scale" : "2x"
-    },
-    {
-      "filename" : "icMatricsGoalTime@3x.png",
-      "idiom" : "universal",
-      "scale" : "3x"
+      "filename" : "icMatricsGoalTime.svg",
+      "idiom" : "universal"
     }
   ],
   "info" : {
     "author" : "xcode",
     "version" : 1
+  },
+  "properties" : {
+    "template-rendering-intent" : "template"
   }
 }

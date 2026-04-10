@@ -13,20 +13,20 @@ struct HomeMetricCard: View {
 	
     var body: some View {
         VStack(spacing: 8) {
-			Image(isHighPerformance ? metric.symbol.high : metric.symbol.low)
+			Image(metric.symbol)
 				.resizable()
-                .frame(width: 50, height: 50)
+                .frame(width: 32, height: 32)
+				.foregroundColor(isHighPerformance ? .fluorescentMint : .inferno)
 				.scaledToFill()
-				.scaleEffect(isHighPerformance ? 1.0 : 0.94)
-				.opacity(1.0)
+				.padding(.horizontal, 6)
 				.animation(.easeInOut(duration: 0.25), value: isHighPerformance)
 
             Spacer(minLength: 2)
 
             VStack(spacing: 2) {
                 Text(metric.value)
-					.font(.semiBold16)
-					.foregroundStyle(isHighPerformance ? .fluorescentMint : .redBoho)
+					.font(.semiBold17)
+					.foregroundStyle(isHighPerformance ? .fluorescentMint : .inferno)
                     .lineLimit(1)
 					.tracking(0.32)
                     .minimumScaleFactor(0.75)
@@ -46,7 +46,7 @@ struct HomeMetricCard: View {
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 21)
-        .frame(minWidth: 56,maxWidth: 56, minHeight: 112)
+        .frame(minWidth: 60,maxWidth: 60, minHeight: 112, maxHeight: 112)
         .modifier(HomeMetricCardGlassModifier())
     }
 }

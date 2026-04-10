@@ -57,13 +57,13 @@ struct EventDetailsStepView: View {
     }
 }
 
-//#Preview {
-//	EventDetailsStepView(viewModel: CreateRunEventViewModel())
-//		.padding()
-//}
+#Preview {
+	EventDetailsStepView(viewModel: CreateRunEventViewModel())
+		.padding()
+		.appBackground()
+}
 
 // MARK: - Date Picker Field
-
 private struct DatePickerField: View {
     @Binding var date: Date
     let minDate: Date
@@ -99,8 +99,9 @@ private struct DatePickerField: View {
         .sheet(isPresented: $showPicker) {
 			DatePickerSheet(date: $date, minDate: minDate, maxDate: maxDate)
 				.fixedSize(horizontal: false, vertical: true)
-				.presentationDetents([.height(424)])
+				.presentationDetents([.height(434)])
 				.presentationDragIndicator(.visible)
+				
 
         }
     }
@@ -119,13 +120,14 @@ private struct DatePickerSheet: View {
             HStack {
 				Text(.selectDate)
 					.font(.semiBold17)
-					.foregroundStyle(.whiteApp)
+					.foregroundStyle(.blackApp)
 				
                 Spacer()
 				Button(.done) { dismiss() }
 					.font(.semiBold17)
 					.foregroundColor(.radiantBlue)
             }
+			.padding(.top, 18)
 
             DatePicker(
                 "",
@@ -135,6 +137,8 @@ private struct DatePickerSheet: View {
             )
 			.datePickerStyle(.graphical)
 			.tint(.radiantBlue)
+			
+			
 		}
 		.padding(.horizontal, Constant.UI.defaultPadding)
 

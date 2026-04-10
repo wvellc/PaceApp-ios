@@ -21,11 +21,11 @@ final class HomeViewModel {
 	//MARK: Intializer
     init() {
         self.metrics = [
-            .init(symbol: metricSymbol(high:  "icMatricsBpm", low:  "icMatricsBpmRed"), value: "60", unit: "bpm"),
-            .init(symbol: metricSymbol(high:  "icMatricsHrs", low: "icMatricsHrsRed"), value: "12", unit: "hrs"),
-            .init(symbol: metricSymbol(high:  "icMatricsGoalTime", low: "icMatricsGoalTimeRed"), value: "-01:10", unit: "m /sec"),
-            .init(symbol: metricSymbol(high:  "icMatricsRemaining", low: "icMatricsRemainingRed"), value: "7:20", unit: "m /sec"),
-            .init(symbol: metricSymbol(high:  "icMatricsPace", low: "icMatricsPaceRed"), value: "9:09", unit: "min/mile")
+            .init(symbol: "icMatricsBpm", value: "60", unit: "bpm"),
+            .init(symbol: "icMatricsHrs", value: "12", unit: "hrs"),
+            .init(symbol: "icMatricsGoalTime", value: "-01:10", unit: "m /sec"),
+            .init(symbol: "icMatricsRemaining", value: "7:20", unit: "m /sec"),
+            .init(symbol: "icMatricsPace", value: "9:09", unit: "min/mile")
         ]
 
         // Start a timer to update values every second for prototyping
@@ -77,13 +77,7 @@ final class HomeViewModel {
 
 struct HomeMetric: Identifiable {
     let id = UUID()
-    let symbol: metricSymbol
+    let symbol: String
     let value: String
     let unit: String
-}
-
-// Metric symbols
-struct metricSymbol {
-    let high: String
-    let low: String
 }
