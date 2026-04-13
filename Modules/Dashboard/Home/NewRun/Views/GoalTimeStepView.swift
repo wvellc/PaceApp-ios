@@ -39,7 +39,7 @@ struct GoalTimeStepView: View {
                 Text(":")
 					.font(.medium20)
 					.foregroundColor(.darkCharcoal)
-					.padding(.horizontal, 4)
+					.padding(.horizontal, 2)
 
                 // Minutes picker
                 Picker("Minutes", selection: $viewModel.goalMinutes) {
@@ -53,7 +53,26 @@ struct GoalTimeStepView: View {
                 .pickerStyle(.wheel)
                 .frame(width: 80, height: 100)
                 .clipped()
-
+								
+				Text(":")
+					.font(.medium20)
+					.foregroundColor(.darkCharcoal)
+					.padding(.horizontal, 2)
+				
+				Picker("Seconds", selection: $viewModel.goalSeconds) {
+					ForEach(0..<60, id: \.self) { s in
+						Text(String(format: "%02d", s))
+							.tag(s)
+							.font(.medium16)
+							.foregroundColor(.darkCharcoal)
+						
+					}
+				}
+				.pickerStyle(.wheel)
+				.frame(width: 80, height: 90)
+				.clipped()
+				
+				
                 Spacer()
 
 				Image(.icOverTime)

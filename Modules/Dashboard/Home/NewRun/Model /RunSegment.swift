@@ -11,14 +11,15 @@ import Foundation
 struct RunSegment: Identifiable {
     let id: Int
     var distance: Double
+	var goalHours: Int
     var goalMinutes: Int
     var goalSeconds: Int
 
     var formattedGoalTime: String {
-        String(format: "%02d:%02d", goalMinutes, goalSeconds)
+        String(format: "%02d:%02d:%02d", goalHours, goalMinutes, goalSeconds)
     }
 
     var totalGoalSeconds: Int {
-        goalMinutes * 60 + goalSeconds
+		(goalHours * 3600) + (goalMinutes * 60) + goalSeconds
     }
 }

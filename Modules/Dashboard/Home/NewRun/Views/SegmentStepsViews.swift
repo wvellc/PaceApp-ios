@@ -52,7 +52,7 @@ private struct SegmentChoiceButton: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
                 .background(
-                    isSelected ? color : color.opacity(0.5)
+                    isSelected ? color : color.opacity(0.25)
                 )
                 .cornerRadius(Constant.UI.defaultCornerRadius)
                 .overlay(
@@ -61,7 +61,6 @@ private struct SegmentChoiceButton: View {
 						.stroke(.fashionGray, lineWidth: 2)
 					
                 )
-                .scaleEffect(isSelected ? 1.03 : 1.0)
                 .animation(.spring(response: 0.25), value: isSelected)
         }
     }

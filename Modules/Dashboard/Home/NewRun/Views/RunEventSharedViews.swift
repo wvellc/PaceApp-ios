@@ -101,6 +101,7 @@ struct RunBackButton: View {
 
 struct SegmentTimePickerRow: View {
 	let label: LocalizedStringResource
+    @Binding var hours: Int
     @Binding var minutes: Int
     @Binding var seconds: Int
 
@@ -108,7 +109,25 @@ struct SegmentTimePickerRow: View {
         VStack(alignment: .leading, spacing: 6) {
 			AppLabel(title: label, font: .semiBold20)
 
-            HStack(spacing: 0) {
+            HStack {
+				Picker("Hourse", selection: $hours) {
+					ForEach(0..<24, id: \.self) { m in
+						Text(String(format: "%02d", m))
+							.tag(m)
+							.font(.medium16)
+							.foregroundColor(.darkCharcoal)
+						
+					}
+				}
+				.pickerStyle(.wheel)
+				.frame(width: 80, height: 90)
+				.clipped()
+				
+				Text(":")
+					.font(.medium20)
+					.foregroundColor(.darkCharcoal)
+					.padding(.horizontal, 2)
+				
                 Picker("Minutes", selection: $minutes) {
                     ForEach(0..<60, id: \.self) { m in
                         Text(String(format: "%02d", m))
@@ -119,13 +138,13 @@ struct SegmentTimePickerRow: View {
                     }
                 }
                 .pickerStyle(.wheel)
-				.frame(width: 100, height: 90)
+				.frame(width: 80, height: 90)
                 .clipped()
 
                 Text(":")
 					.font(.medium20)
 					.foregroundColor(.darkCharcoal)
-                    .padding(.horizontal, 4)
+                    .padding(.horizontal, 2)
 
                 Picker("Seconds", selection: $seconds) {
                     ForEach(0..<60, id: \.self) { s in
@@ -137,7 +156,7 @@ struct SegmentTimePickerRow: View {
                     }
                 }
                 .pickerStyle(.wheel)
-				.frame(width: 100, height: 90)
+				.frame(width: 80, height: 90)
                 .clipped()
 
                 Spacer()
@@ -161,35 +180,80 @@ struct SegmentDistancePickerRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-			AppLabel(title: label, font: .semiBold20)
-                
+            AppLabel(title: label, font: .semiBold20)
 
             HStack {
-                Picker("Distance", selection: $selected) {
-                    ForEach(options, id: \.self) { val in
-                        Text(String(format: "%.1f", val))
-							.tag(val)
-							.font(.medium16)
-							.foregroundColor(.darkCharcoal)
-
+                // Integer part 0...999 with leading zeros (00, 01, ... 999)
+                Picker("Integer Distance", selection: Binding(
+                    get: {
+                        let clamped = max(0, min(999, Int(selected)))
+                        return clamped
+                    },
+                    set: { newValue in
+                        let fractional = selected - floor(selected)
+                        let clampedInt = max(0, min(999, newValue))
+                        selected = Double(clampedInt) + fractional
+                    }
+                )) {
+                    ForEach(0...99, id: \.self) { intVal in
+                        let text = intVal < 100 ? String(format: "%02d", intVal) : String(intVal)
+                        Text(text)
+                            .tag(intVal)
+                            .font(.medium16)
+                            .foregroundColor(.darkCharcoal)
                     }
                 }
                 .pickerStyle(.wheel)
-                .frame(width: 100, height: 90)
+                .frame(width: 80, height: 90)
+                .clipped()
+
+                Text(".")
+                    .font(.medium20)
+                    .foregroundColor(.darkCharcoal)
+                    .padding(.horizontal, 2)
+
+                // Fractional part in hundredths (00, 01, ... 99) representing .00 to .99
+                Picker("Fractional Distance", selection: Binding(
+                    get: {
+                        let fractional = selected - floor(selected)
+                        let hundredths = Int((fractional * 100).rounded())
+                        return max(0, min(99, hundredths))
+                    },
+                    set: { newValue in
+                        let clampedHundredths = max(0, min(99, newValue))
+                        let intPart = Int(selected)
+                        selected = Double(intPart) + Double(clampedHundredths) / 100.0
+                    }
+                )) {
+                    ForEach(0...99, id: \.self) { frac in
+                        Text(String(format: "%02d", frac))
+                            .tag(frac)
+                            .font(.medium16)
+                            .foregroundColor(.darkCharcoal)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(width: 80, height: 90)
                 .clipped()
 
                 Text(unit)
-					.font(.medium18)
-					.foregroundColor(.darkCharcoal)
+                    .font(.medium18)
+                    .foregroundColor(.darkCharcoal)
 
                 Spacer()
 
-				Image(.icDistance)
-					.frame(width: 24, height: 24)
-
+                Image(.icDistance)
+                    .frame(width: 24, height: 24)
             }
             .padding(.horizontal, 16)
-			.cardBackground()
+            .cardBackground()
+        }
+        .onChange(of: selected) {oldVaue, newValue in
+            // Clamp to 0...999.99
+            let clamped = max(0.0, min(999.99, newValue))
+            if clamped != selected {
+                selected = clamped
+            }
         }
     }
 }
@@ -242,3 +306,4 @@ extension Color {
         self.init(red: r, green: g, blue: b)
     }
 }
+

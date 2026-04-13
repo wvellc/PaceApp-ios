@@ -32,8 +32,8 @@ struct LookBackIntervalsStepView: View {
 				HStack(alignment: .center) {
                     Picker("Intervals", selection: $viewModel.lookBackIntervals) {
                         ForEach(1...50, id: \.self) { val in
-                            Text("\(val)")
-								.tag(val)
+                            Text(String(format: "%02d", val))
+                                .tag(val)
                         }
                     }
                     .pickerStyle(.wheel)
@@ -81,3 +81,4 @@ struct LookBackIntervalsStepView: View {
 #Preview {
 	LookBackIntervalsStepView(viewModel: CreateRunEventViewModel())
 }
+

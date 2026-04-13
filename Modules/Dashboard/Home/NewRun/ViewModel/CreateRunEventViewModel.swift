@@ -35,14 +35,15 @@ final class CreateRunEventViewModel {
 
     // MARK: Step 3 – Goal Time
     var goalHours: Int = 0
-    var goalMinutes: Int = 45
+    var goalMinutes: Int = 0
+	var goalSeconds: Int = 0
 
     var goalTimeFormatted: String {
-        String(format: "%02d:%02d", goalHours, goalMinutes)
+		String(format: "%02d:%02d:%02d", goalHours, goalMinutes, goalSeconds)
     }
 
     var totalGoalSeconds: Int {
-        goalHours * 3600 + goalMinutes * 60
+        (goalHours * 3600) + (goalMinutes * 60) + goalSeconds
     }
 
     // MARK: Step 4 – Segment Choice
@@ -171,24 +172,38 @@ final class CreateRunEventViewModel {
 
     // MARK: - Segment Building
 
-    func buildSegments() {
-        let perDist    = (distance / Double(segmentCount) * 10).rounded() / 10
-        let perSecs    = totalGoalSeconds / segmentCount
-        let perMinutes = perSecs / 60
-        let perSeconds = perSecs % 60
-
-        segments = (0..<segmentCount).map { index in
-            RunSegment(id: index, distance: perDist, goalMinutes: perMinutes, goalSeconds: perSeconds)
-        }
-    }
+	func buildSegments() {
+		guard segmentCount > 0 else {
+			segments = []
+			return
+		}
+		
+		let perDist = (distance / Double(segmentCount) * 10).rounded() / 10
+		
+		let perSecs = totalGoalSeconds / segmentCount
+		let perHrs = perSecs / 3600
+		let perMinutes = (perSecs % 3600) / 60
+		let perSeconds = perSecs % 60
+		
+		segments = (0..<segmentCount).map { index in
+			RunSegment(
+				id: index,
+				distance: perDist,
+				goalHours: perHrs,
+				goalMinutes: perMinutes,
+				goalSeconds: perSeconds
+			)
+		}
+	}
 
     func updateSegmentDistance(_ value: Double, at index: Int) {
         guard index < segments.count else { return }
         segments[index].distance = value
     }
 
-    func updateSegmentGoalTime(minutes: Int, seconds: Int, at index: Int) {
+	func updateSegmentGoalTime(hours:Int, minutes: Int, seconds: Int, at index: Int) {
         guard index < segments.count else { return }
+		segments[index].goalHours = hours
         segments[index].goalMinutes = minutes
         segments[index].goalSeconds = seconds
     }

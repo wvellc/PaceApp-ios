@@ -26,12 +26,29 @@ struct SegmentDetailStepView: View {
 						get: { segment.distance },
 						set: { viewModel.updateSegmentDistance($0, at: viewModel.currentSegmentIndex) }
 					)
+					
+					let hrsBinding = Binding<Int>(
+						get: {
+							segment.goalHours
+						},
+						set: {
+							viewModel
+								.updateSegmentGoalTime(
+									hours: $0,
+									minutes: segment.goalMinutes,
+									seconds: segment.goalSeconds,
+									at: viewModel.currentSegmentIndex
+								)
+						}
+					)
+					
 					let minBinding = Binding<Int>(
 						get: { segment.goalMinutes
 						},
 						set: {
 							viewModel
 								.updateSegmentGoalTime(
+									hours: segment.goalHours,
 									minutes: $0,
 									seconds: segment.goalSeconds,
 									at: viewModel.currentSegmentIndex
@@ -44,6 +61,7 @@ struct SegmentDetailStepView: View {
 						set: {
 							viewModel
 								.updateSegmentGoalTime(
+									hours: segment.goalHours,
 									minutes: segment.goalMinutes,
 									seconds: $0,
 									at: viewModel.currentSegmentIndex
@@ -62,6 +80,7 @@ struct SegmentDetailStepView: View {
 					// Goal Time Row
 					SegmentTimePickerRow(
 						label: "\(segmentLabel) Estimated Goal Finish Time",
+						hours: hrsBinding,
 						minutes: minBinding,
 						seconds: secBinding
 					)

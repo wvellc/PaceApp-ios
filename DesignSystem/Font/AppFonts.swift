@@ -17,6 +17,7 @@ extension Font {
 	static let extraBold34: Font = Gilroy.extraBold.size(34)
 	
 	// Bold
+	static let bold24: Font      = Gilroy.bold.size(24)
 	static let bold28: Font      = Gilroy.bold.size(28)
 	
 	// SemiBold
