@@ -6,16 +6,20 @@
 //
 
 import SwiftUI
-
+import ConnectIQ
 
 struct PairWatchView: View {
-	
+    @Environment(ConnectIQManager.self) private var ciqManager
+    
 	@State private var animateContent = false
 	@State private var animateBadge = false
 	@State private var animateHalo = false
 	
 	let onGetStarted: VoidOptionalCallback
-	
+    
+    //Monkey C app UUID
+    let myAppUUID = "7243fd4e-7a56-485b-8a27-7eb3e43638fc"
+    
 	init(
 		onGetStarted: @escaping VoidOptionalCallback
 	) {
@@ -51,7 +55,13 @@ struct PairWatchView: View {
 			VSpace(height: 70)
 			
 			AppButton(.getStarted, font: .medium20, verticalPadding: 20) {
-				onGetStarted()
+                ciqManager.findDevices()
+//                ConnectIQ.sharedInstance().showAppStoreForConnectMobile()
+                if let device = ciqManager.devices.first {
+                    ciqManager.connectToApp(uuidString: myAppUUID, device: device)
+                }
+                ciqManager.connectToApp(uuidString: myAppUUID, device: IQDevice(id: UUID(uuidString: "test"), modelName: "Xyz", friendlyName: "Abc") )
+                //onGetStarted()
 			}
 			.fadeInUp(isAnimated: $animateContent, delay: 0.42, duration: 0.8, from: 32)
 			

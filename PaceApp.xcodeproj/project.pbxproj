@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		18C565A92F8CDF3A007BD365 /* ConnectIQ in Frameworks */ = {isa = PBXBuildFile; productRef = 18C565A82F8CDF3A007BD365 /* ConnectIQ */; };
+		18C565AB2F8CE23E007BD365 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18C565AA2F8CE23D007BD365 /* AppDelegate.swift */; };
+		18C565AF2F8CED61007BD365 /* ConnectIQManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18C565AE2F8CED60007BD365 /* ConnectIQManager.swift */; };
 		E61F82232F63E6CC00C215DF /* AppBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F82222F63E6CC00C215DF /* AppBackground.swift */; };
 		E61F82282F63F50C00C215DF /* BackgroundContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F82272F63F50C00C215DF /* BackgroundContainer.swift */; };
 		E61F83AF2F641B0900C215DF /* CGFloat+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F83AE2F641B0900C215DF /* CGFloat+Ext.swift */; };
@@ -45,6 +48,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		18C565AA2F8CE23D007BD365 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		18C565AE2F8CED60007BD365 /* ConnectIQManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectIQManager.swift; sourceTree = "<group>"; };
 		E61F82222F63E6CC00C215DF /* AppBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBackground.swift; sourceTree = "<group>"; };
 		E61F82272F63F50C00C215DF /* BackgroundContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundContainer.swift; sourceTree = "<group>"; };
 		E61F83AE2F641B0900C215DF /* CGFloat+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CGFloat+Ext.swift"; sourceTree = "<group>"; };
@@ -122,6 +127,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E6B649522F67FAAF00612A01 /* CountryPicker in Frameworks */,
+				18C565A92F8CDF3A007BD365 /* ConnectIQ in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -233,7 +239,9 @@
 		E6C69B4E2F603C8D00ACED81 = {
 			isa = PBXGroup;
 			children = (
+				18C565AA2F8CE23D007BD365 /* AppDelegate.swift */,
 				E6C332832F62915700224AA5 /* PaceApp.swift */,
+				18C565AE2F8CED60007BD365 /* ConnectIQManager.swift */,
 				E6C4BEE62F615C2A00C17C69 /* PaceApp-Info.plist */,
 				E6C4BEFB2F618BFB00C17C69 /* Utility */,
 				E6C4BEF42F616CB600C17C69 /* DesignSystem */,
@@ -290,6 +298,7 @@
 			name = PaceApp;
 			packageProductDependencies = (
 				E6B649512F67FAAF00612A01 /* CountryPicker */,
+				18C565A82F8CDF3A007BD365 /* ConnectIQ */,
 			);
 			productName = PaceApp;
 			productReference = E6C69B572F603C8D00ACED81 /* PaceApp.app */;
@@ -307,6 +316,7 @@
 				TargetAttributes = {
 					E6C69B562F603C8D00ACED81 = {
 						CreatedOnToolsVersion = 26.3;
+						LastSwiftMigration = 2640;
 					};
 				};
 			};
@@ -321,6 +331,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				E6B649502F67FAAF00612A01 /* XCRemoteSwiftPackageReference "CountryPicker" */,
+				18C565A72F8CDF3A007BD365 /* XCRemoteSwiftPackageReference "connectiq-companion-app-sdk-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E6C69B582F603C8D00ACED81 /* Products */;
@@ -370,6 +381,8 @@
 				E6370ED42F83AACF00007CDF /* AppCardBackground.swift in Sources */,
 				E6C3328E2F62920800224AA5 /* GlassButton.swift in Sources */,
 				E6C3328A2F6291C500224AA5 /* GilroyFontModifier.swift in Sources */,
+				18C565AF2F8CED61007BD365 /* ConnectIQManager.swift in Sources */,
+				18C565AB2F8CE23E007BD365 /* AppDelegate.swift in Sources */,
 				E6C3328B2F6291C500224AA5 /* Gilroy+Font.swift in Sources */,
 				E6C3328C2F6291C500224AA5 /* AppFonts.swift in Sources */,
 				E6C4BEF82F61849700C17C69 /* LogoWithText.swift in Sources */,
@@ -510,6 +523,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 6LK9SH63JD;
@@ -521,6 +535,7 @@
 				INFOPLIST_FILE = "PaceApp-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "PACE APP";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "Allow Blutooth access to find and connect near by garmin watch";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -536,6 +551,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0.0;
+				OTHER_LDFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = net.paceapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -546,6 +562,7 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -558,6 +575,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 6LK9SH63JD;
@@ -569,6 +587,7 @@
 				INFOPLIST_FILE = "PaceApp-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "PACE APP";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "Allow Blutooth access to find and connect near by garmin watch";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -584,6 +603,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0.0;
+				OTHER_LDFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = net.paceapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -625,6 +645,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		18C565A72F8CDF3A007BD365 /* XCRemoteSwiftPackageReference "connectiq-companion-app-sdk-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/garmin/connectiq-companion-app-sdk-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.8.0;
+			};
+		};
 		E6B649502F67FAAF00612A01 /* XCRemoteSwiftPackageReference "CountryPicker" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/SURYAKANTSHARMA/CountryPicker.git";
@@ -636,6 +664,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		18C565A82F8CDF3A007BD365 /* ConnectIQ */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 18C565A72F8CDF3A007BD365 /* XCRemoteSwiftPackageReference "connectiq-companion-app-sdk-ios" */;
+			productName = ConnectIQ;
+		};
 		E6B649512F67FAAF00612A01 /* CountryPicker */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = E6B649502F67FAAF00612A01 /* XCRemoteSwiftPackageReference "CountryPicker" */;

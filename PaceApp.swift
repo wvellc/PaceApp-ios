@@ -9,10 +9,15 @@ import SwiftUI
 
 @main
 struct PaceApp: App {
+    
+    // SwiftUI to use your AppDelegate
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    
 	// MARK: - Properties
 	/// Central router that manages navigation path and destination resolution.
 	@State private var router = Router()
-	
+    @State private var ciqManager = ConnectIQManager.shared
+    
 	// MARK: - Initialization
 	/// Configure global UI appearance for navigation components on app launch.
 	init() {
@@ -41,7 +46,12 @@ struct PaceApp: App {
 			.preferredColorScheme(.light)
 			.environment(router)
 			.appBackground()
-		}
+            .environment(ciqManager)
+            .onOpenURL { url in
+                print("Received URL: \(url)")
+                ciqManager.handleOpenURL(url)
+            }
+        }
 	}
 	
 	// MARK: - Appearance Configuration
