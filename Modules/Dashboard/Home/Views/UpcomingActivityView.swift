@@ -25,9 +25,7 @@ struct UpcomingActivityView: View {
 					title: .location,
 					value: activity.location
 				)
-			}
-			.frame(width: .infinity)
-			
+			}			
 			
 			// Bottom metrics keep the three activity stats evenly distributed.
 			VStack(alignment: .leading, spacing: 16)  {

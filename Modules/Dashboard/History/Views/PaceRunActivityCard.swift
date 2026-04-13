@@ -15,12 +15,11 @@ struct PaceRunActivityCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Header row with run summary and pace delta badge.
-            HStack(alignment: .top, spacing: 12) {
+            HStack(alignment: .top, spacing: 8) {
 					Image(.icRunLeft)
-						.frame(width: 35.38, height: 42)
-					
+					.frame(width: 38, height: 38)
 
-                VStack(alignment: .leading, spacing: 2) {
+				VStack(alignment: .leading, spacing: 4) {
                     Text(activity.title)
 						.font(.regular13)
 						.foregroundStyle(.fashionGray)
@@ -38,14 +37,15 @@ struct PaceRunActivityCard: View {
 
                 Text(activity.delta)
 					.font(.semiBold11)
-                    .foregroundStyle(.whiteApp)
+					.foregroundStyle(activity.deltaColor == .fluorescentMint ? .blackApp : .whiteApp)
+					.multilineTextAlignment(.center)
                     .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 6)
                     .background(activity.deltaColor, in: Capsule())
             }
 
             // Bottom metrics keep the three activity stats evenly distributed.
-            HStack  {
+            HStack {
 				activityMetric(title: .distanceStr, value: activity.distance)
 
                 Spacer(minLength: 12)

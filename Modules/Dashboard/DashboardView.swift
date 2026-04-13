@@ -51,7 +51,7 @@ struct DashboardView: View {
                 .tag(PaceTab.home)
 
             // History tab
-            PlaceholderTabView(icon: PaceTab.history.systemIcon, title: PaceTab.history.title)
+			HistoryScreen()
                 .tabItem {
                     Image(PaceTab.history.assetImage(selected: selectedTab == .history))
                     Text(PaceTab.history.title)

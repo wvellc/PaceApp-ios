@@ -12,6 +12,7 @@ struct HistoryScreen: View {
 	
 	// MARK: Properties
 	@State private var viewModel = HistoryViewModel()
+	@FocusState var focusedField: Bool?
 	
 	// MARK: Body
 	var body: some View {
@@ -19,7 +20,7 @@ struct HistoryScreen: View {
 			// Navigation Bar
 			// MARK: App Navigation bar
 			AppNavigation()
-
+			
 			
 			// Search Bar
 			searchBar
@@ -37,33 +38,24 @@ struct HistoryScreen: View {
 // MARK: - Subviews
 private extension HistoryScreen {
 	
-	
-	
 	// MARK: Search Bar
 	var searchBar: some View {
-		HStack(spacing: 10) {
-			Image(systemName: "magnifyingglass")
-				.foregroundStyle(.fashionGray)
-				.font(.system(size: 16))
-			
-			TextField("", text: $viewModel.searchText, prompt:
-						Text("Search here...")
-				.foregroundStyle(.fashionGray)
-			)
-			.font(.regular13)
-			.foregroundStyle(.darkCharcoal)
-			.autocorrectionDisabled()
-			.textInputAutocapitalization(.never)
-			
-			Spacer()
-			
-			Image(systemName: "line.3.horizontal.decrease")
-				.foregroundStyle(.fashionGray)
-				.font(.system(size: 16))
+		//Event Name
+		AppTextField(
+			text: $viewModel.searchText,
+			placeholder: .searchHere,
+			leadingView: AnyView(Image(.icSearch)),
+			trailingView: AnyView(Button(action: {
+				viewModel.applyFilter()
+			}, label: {
+				Image(viewModel.hasFilteredContent ?  .icFilterApplied : .icFilter)
+			})),
+			submitLabel: .done
+		)
+		.focused($focusedField, equals: true)
+		.onSubmit {
+			focusedField = false
 		}
-		.padding(.horizontal, 14)
-		.padding(.vertical, 12)
-		.background(.whiteApp, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 	}
 	
 	// MARK: Activity List
