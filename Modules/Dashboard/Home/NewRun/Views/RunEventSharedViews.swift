@@ -195,7 +195,7 @@ struct SegmentDistancePickerRow: View {
                         selected = Double(clampedInt) + fractional
                     }
                 )) {
-                    ForEach(0...99, id: \.self) { intVal in
+                    ForEach(1...999, id: \.self) { intVal in
                         let text = intVal < 100 ? String(format: "%02d", intVal) : String(intVal)
                         Text(text)
                             .tag(intVal)
