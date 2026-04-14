@@ -7,9 +7,7 @@ struct GoalTimeStepView: View {
 
     var body: some View {
         RunContentCard {
-			RunEventHeaderCard {
-				//TODO: Show Info toast
-			}
+			RunEventHeaderCard()
 
 			AppLabel(title: .pleaseSpecifyYourGoalTime)
 			

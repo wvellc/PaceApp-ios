@@ -17,9 +17,7 @@ struct SegmentDetailStepView: View {
 	var body: some View {
 		RunContentCard(
 			content: {
-				RunEventHeaderCard {
-					//TODO: Show Info toast
-				}
+				RunEventHeaderCard()
 				
 				if let segment = currentSegment {
 					let distBinding = Binding<Double>(

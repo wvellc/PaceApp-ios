@@ -3,13 +3,33 @@ import SwiftUI
 // MARK: - Step 4: Segment Choice (Yes/No)
 
 struct SegmentChoiceStepView: View {
+	
+	//MARK: Property
     @Bindable var viewModel: CreateRunEventViewModel
+	
+	//MARK: Environment
+	@Environment(\.presentToast) var presentToast
 
+	//MARK: View Builder
     var body: some View {
         RunContentCard {
-			RunEventHeaderCard {
-				//TODO: Show Info toast
-			}
+			RunEventHeaderCard()
+				.overlay(alignment: .topTrailing) {
+					Button {
+						//Show Info toast
+						presentToast(
+							.info(
+								"Segment can divied your run into parts with different distance",
+								icon: Image(.icInfo)
+							)
+						)
+						
+					} label:{
+						Image("icInfo")
+							.frame(width: 24, height: 24)
+							.padding(11)
+					}
+				}
 
 			
 			AppLabel(title: .doYouWantToRunWithSegments)

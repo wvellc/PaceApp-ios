@@ -7,9 +7,7 @@ struct LookBackIntervalsStepView: View {
 
     var body: some View {
         RunContentCard {
-			RunEventHeaderCard {
-				//TODO: Show Info toast
-			}
+			RunEventHeaderCard()
 
             // Look-Back Intervals
             VStack(alignment: .leading, spacing: 0) {

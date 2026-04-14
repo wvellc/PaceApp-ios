@@ -14,9 +14,8 @@ struct SegmentCountStepView: View {
 
     var body: some View {
         RunContentCard {
-			RunEventHeaderCard {
-				//TODO: Show Info toast
-			}
+			RunEventHeaderCard()
+			
 
 			AppLabel(title: "Great! How many segments would you like for this run?")
 

@@ -4,33 +4,19 @@ import SwiftUI
 
 struct RunEventHeaderCard: View {
 	
-	let onInfoTap: () -> Void
-	
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Image("NewRunEventImage")
-                .resizable()
-                .scaledToFill()
-                .frame(maxWidth: .infinity)
-				.frame(height: 280)
-                .clipped()
-				.cornerRadius(Constant.UI.defaultCornerRadius)
-
-            // Green dot indicator
-			Button(action: onInfoTap) {
-				Image("icInfo")
-				.frame(width: 24, height: 24)
-				.padding(11)
-
-			}
-        }
+		Image("NewRunEventImage")
+			.resizable()
+			.scaledToFill()
+			.frame(maxWidth: .infinity)
+			.frame(height: 280)
+			.clipped()
+			.cornerRadius(Constant.UI.defaultCornerRadius)
     }
 }
 
 #Preview {
-	RunEventHeaderCard(onInfoTap: {
-		
-	})
+	RunEventHeaderCard()
 }
 
 // MARK: - Styled Input Field

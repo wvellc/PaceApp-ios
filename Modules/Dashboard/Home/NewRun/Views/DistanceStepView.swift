@@ -4,39 +4,31 @@ import SwiftUI
 
 struct DistanceStepView: View {
 	
-    @Bindable var viewModel: CreateRunEventViewModel
+	@Bindable var viewModel: CreateRunEventViewModel
 
-
-//    init(viewModel: CreateRunEventViewModel) {
-//        self._viewModel = Bindable(wrappedValue: viewModel)
-//        Self.configureSegmentedAppearance()
-//    }
-	
-    var body: some View {
-        RunContentCard {
-			RunEventHeaderCard {
-				//TODO: Show Info toast
-			}
-
+	var body: some View {
+		RunContentCard {
+			RunEventHeaderCard()
+			
 			AppLabel(title: .pleaseSpecifyYourDistance)
-
-            // Km / Miles Toggle
-            Picker("Distance Type", selection: $viewModel.distanceType) {
-                ForEach(DistanceType.allCases, id: \.self) { type in
+			
+			// Km / Miles Toggle
+			Picker("Distance Type", selection: $viewModel.distanceType) {
+				ForEach(DistanceType.allCases, id: \.self) { type in
 					Text(type.rawValue)
 						.tag(type)
 						.padding()
-                }
-            }
-            .pickerStyle(.segmented)
-            .onChange(of: viewModel.distanceType) { _, _ in
-                // Reset to a valid value in new range
-                viewModel.distance = viewModel.distanceRange.first ?? 1.0
-            }
+				}
+			}
+			.pickerStyle(.segmented)
+			.onChange(of: viewModel.distanceType) { _, _ in
+				// Reset to a valid value in new range
+				viewModel.distance = viewModel.distanceRange.first ?? 1.0
+			}
 			.tint(.radiantBlue)
-
-            // Distance Value Picker
-            HStack {
+			
+			// Distance Value Picker
+			HStack {
 				// Integer part 0...999 with leading zeros (00, 01, ... 999)
 				Picker("Integer Distance", selection: Binding(
 					get: {
@@ -93,27 +85,27 @@ struct DistanceStepView: View {
 				.frame(height: 100)
 				.clipped()
 				.tint(.darkCharcoal)
-
 				
-//                Text(viewModel.distanceType.rawValue)
-//					.font(.medium18)
-//					.foregroundColor(.darkCharcoal)
-//					.frame(width: 60)
-            }
-            .background(
-                RoundedRectangle(cornerRadius: 12)
+				
+				//                Text(viewModel.distanceType.rawValue)
+				//					.font(.medium18)
+				//					.foregroundColor(.darkCharcoal)
+				//					.frame(width: 60)
+			}
+			.background(
+				RoundedRectangle(cornerRadius: 12)
 					.stroke(.grayHint, lineWidth: 1)
-                    .background(Color.white.cornerRadius(12))
-            )
-        }
-    }
+					.background(Color.white.cornerRadius(12))
+			)
+		}
+	}
 }
 
 #Preview("DistanceStepView") {
-    let vm = CreateRunEventViewModel()
-//	vm.distanceType = .km
-//    vm.distance = vm.distanceRange.first ?? 1.0
-
+	let vm = CreateRunEventViewModel()
+	//	vm.distanceType = .km
+	//    vm.distance = vm.distanceRange.first ?? 1.0
+	
 	DistanceStepView(viewModel: vm)
-        .padding()
+		.padding()
 }
