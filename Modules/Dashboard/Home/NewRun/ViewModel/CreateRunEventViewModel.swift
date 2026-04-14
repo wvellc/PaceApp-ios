@@ -11,7 +11,10 @@ import Observation
 // MARK: - ViewModel
 
 @Observable
-final class CreateRunEventViewModel {
+class CreateRunEventViewModel {
+	
+	//MARK: Router
+	var router: Router?
 
     // MARK: Step 1 – Event Details
     var eventName: String = "Fastest Pace"
@@ -234,5 +237,6 @@ final class CreateRunEventViewModel {
     private func submitForm() {
         // TODO: Pass to coordinator / API layer
         print("Form submitted: \(eventName), \(location), \(eventDate)")
+		router?.navigateToRoot()
     }
 }

@@ -31,7 +31,7 @@ struct LookBackIntervalsStepView: View {
 
 				HStack(alignment: .center) {
                     Picker("Intervals", selection: $viewModel.lookBackIntervals) {
-                        ForEach(1...50, id: \.self) { val in
+						ForEach(1...(Int(viewModel.distance.rounded())), id: \.self) { val in
                             Text(String(format: "%02d", val))
                                 .tag(val)
                         }
@@ -53,25 +53,30 @@ struct LookBackIntervalsStepView: View {
             VStack(alignment: .leading, spacing: 8) {
 				AppLabel(title: .eventType, font: .semiBold20)
 
-                Menu {
-                    ForEach(EventType.allCases, id: \.self) { type in
-                        Button(type.rawValue) {
-                            viewModel.eventType = type
-                        }
-                    }
-                } label: {
-                    HStack {
-                        Text(viewModel.eventType.rawValue)
-							.font(.medium18)
-							.foregroundColor(.darkCharcoal)
-                        Spacer()
-						Image(.icDownArrow)
-							.frame(width: 24, height: 24)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-					.cardBackground()
-                }
+				HStack {
+					Text(viewModel.eventType.rawValue)
+						.font(.medium18)
+						.foregroundColor(.darkCharcoal)
+					Spacer()
+					Image(.icDownArrow)
+						.frame(width: 24, height: 24)
+				}
+				.padding(.horizontal, 16)
+				.padding(.vertical, 14)
+				.frame(maxWidth: .infinity)
+				.cardBackground()
+				.overlay(
+					Menu {
+						ForEach(EventType.allCases, id: \.self) { type in
+							Button(type.rawValue) {
+								viewModel.eventType = type
+							}
+						}
+					} label: {
+						Color.white.opacity(0.001)
+							.frame(maxWidth: .infinity, maxHeight: .infinity)
+					}
+				)
 
             }
         }

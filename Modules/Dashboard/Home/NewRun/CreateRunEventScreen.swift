@@ -10,9 +10,14 @@ import SwiftUI
 // MARK: - Main Screen
 
 struct CreateRunEventScreen: View {
-    @State private var viewModel = CreateRunEventViewModel()
+	
+	//MARK: Environment
+	@Environment(Router.self) private var router
     @Environment(\.dismiss) private var dismiss
 
+	@State private var viewModel = CreateRunEventViewModel()
+
+	//MARK: View Builder
     var body: some View {
         ZStack {
             // Deep blue background
@@ -83,11 +88,13 @@ struct CreateRunEventScreen: View {
                 )
             }
         }
+		.onAppear {
+			viewModel.router = self.router
+		}
         .navigationBarHidden(true)
     }
 
     // MARK: - Step Content Router
-
     @ViewBuilder
     private var stepContent: some View {
         switch viewModel.currentStep {
