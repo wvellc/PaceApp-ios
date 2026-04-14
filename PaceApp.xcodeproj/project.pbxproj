@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		18C565A92F8CDF3A007BD365 /* ConnectIQ in Frameworks */ = {isa = PBXBuildFile; productRef = 18C565A82F8CDF3A007BD365 /* ConnectIQ */; };
 		18C565AB2F8CE23E007BD365 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18C565AA2F8CE23D007BD365 /* AppDelegate.swift */; };
-		18C565AF2F8CED61007BD365 /* ConnectIQManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18C565AE2F8CED60007BD365 /* ConnectIQManager.swift */; };
 		E61F82232F63E6CC00C215DF /* AppBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F82222F63E6CC00C215DF /* AppBackground.swift */; };
 		E61F82282F63F50C00C215DF /* BackgroundContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F82272F63F50C00C215DF /* BackgroundContainer.swift */; };
 		E61F83AF2F641B0900C215DF /* CGFloat+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F83AE2F641B0900C215DF /* CGFloat+Ext.swift */; };
@@ -49,7 +48,6 @@
 
 /* Begin PBXFileReference section */
 		18C565AA2F8CE23D007BD365 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		18C565AE2F8CED60007BD365 /* ConnectIQManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectIQManager.swift; sourceTree = "<group>"; };
 		E61F82222F63E6CC00C215DF /* AppBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBackground.swift; sourceTree = "<group>"; };
 		E61F82272F63F50C00C215DF /* BackgroundContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundContainer.swift; sourceTree = "<group>"; };
 		E61F83AE2F641B0900C215DF /* CGFloat+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CGFloat+Ext.swift"; sourceTree = "<group>"; };
@@ -241,7 +239,6 @@
 			children = (
 				18C565AA2F8CE23D007BD365 /* AppDelegate.swift */,
 				E6C332832F62915700224AA5 /* PaceApp.swift */,
-				18C565AE2F8CED60007BD365 /* ConnectIQManager.swift */,
 				E6C4BEE62F615C2A00C17C69 /* PaceApp-Info.plist */,
 				E6C4BEFB2F618BFB00C17C69 /* Utility */,
 				E6C4BEF42F616CB600C17C69 /* DesignSystem */,
@@ -381,7 +378,6 @@
 				E6370ED42F83AACF00007CDF /* AppCardBackground.swift in Sources */,
 				E6C3328E2F62920800224AA5 /* GlassButton.swift in Sources */,
 				E6C3328A2F6291C500224AA5 /* GilroyFontModifier.swift in Sources */,
-				18C565AF2F8CED61007BD365 /* ConnectIQManager.swift in Sources */,
 				18C565AB2F8CE23E007BD365 /* AppDelegate.swift in Sources */,
 				E6C3328B2F6291C500224AA5 /* Gilroy+Font.swift in Sources */,
 				E6C3328C2F6291C500224AA5 /* AppFonts.swift in Sources */,
@@ -551,7 +547,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0.0;
-				OTHER_LDFLAGS = "";
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = net.paceapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -603,7 +599,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0.0;
-				OTHER_LDFLAGS = "";
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = net.paceapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;

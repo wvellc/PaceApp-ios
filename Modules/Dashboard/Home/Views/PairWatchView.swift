@@ -56,11 +56,11 @@ struct PairWatchView: View {
 			
 			AppButton(.getStarted, font: .medium20, verticalPadding: 20) {
                 ciqManager.findDevices()
-//                ConnectIQ.sharedInstance().showAppStoreForConnectMobile()
+                
                 if let device = ciqManager.devices.first {
                     ciqManager.connectToApp(uuidString: myAppUUID, device: device)
                 }
-                ciqManager.connectToApp(uuidString: myAppUUID, device: IQDevice(id: UUID(uuidString: "test"), modelName: "Xyz", friendlyName: "Abc") )
+                
                 //onGetStarted()
 			}
 			.fadeInUp(isAnimated: $animateContent, delay: 0.42, duration: 0.8, from: 32)

@@ -5,23 +5,28 @@
 //  Created by Wve Developer on 13/04/26.
 //
 
+//Imports
 import Foundation
 import ConnectIQ
 
+//Garmin watch connect manager
 @Observable
 class ConnectIQManager: NSObject {
     
+    // MARK: - Singleton
     static let shared = ConnectIQManager()
     
-     var devices: [IQDevice] = []
-     var receivedMessages: [String] = []
-     var showInstallGarminConnect: Bool = false
+    // MARK: - Variables
+    var devices: [IQDevice] = [IQDevice(id: UUID(uuidString: "test"), modelName: "Xyz", friendlyName: "Abc")]
+    var receivedMessages: [String] = []
+    var showInstallGarminConnect: Bool = false
     
     // Replace with the URL scheme you registered in Info.plist
     private let urlScheme = "connect"
     private let connectIQ = ConnectIQ.sharedInstance()
     private var targetApp: IQApp?
     
+    // MARK: - Lifecycle of class
     private override init() {
         super.init()
         // 1. Initialize the SDK
@@ -34,6 +39,7 @@ class ConnectIQManager: NSObject {
         connectIQ?.showDeviceSelection()
     }
     
+    //Handling open url after device connect from Garmin Connect app
     func handleOpenURL(_ url: URL) {
         guard url.scheme == urlScheme else { return }
         
@@ -51,6 +57,7 @@ class ConnectIQManager: NSObject {
     }
     
     // MARK: - App Communication
+    //Register events listener
     func connectToApp(uuidString: String, device: IQDevice) {
         guard let appUUID = UUID(uuidString: uuidString) else { return }
         guard let storeUUID = UUID(uuidString: "7243fd4e-7a56-485b-8a27-7eb3e43638fc") else { return }
@@ -62,6 +69,15 @@ class ConnectIQManager: NSObject {
         connectIQ?.register(forAppMessages: app, delegate: self)
     }
     
+    //Unregister events listener
+    func disconnectFromApp() {
+        if let device = targetApp?.device {
+            connectIQ?.unregister(forDeviceEvents: device, delegate: self)
+            targetApp = nil
+        }
+    }
+    
+    //Send data to watch
     func sendMessage(_ message: Any) {
         guard let app = targetApp else { return }
         
@@ -75,15 +91,27 @@ class ConnectIQManager: NSObject {
 
 // MARK: - Delegates
 extension ConnectIQManager: IQUIOverrideDelegate {
+    
+    //Needs to install garmin connect app
     func needsToInstallConnectMobile() {
-        DispatchQueue.main.async {
+        print("Needs To Install Connect Mobile")
+        Task {
             // Trigger UI to tell the user they need to install the Garmin App
             self.showInstallGarminConnect = true
+            
+            ToastManager.shared.present(.warning("Please install Garmin Connect to pair with your Garmin device."))
+            
+            // Delay for message display
+            try? await Task.sleep(for: .milliseconds(1050))
+            
+            ConnectIQ.sharedInstance().showAppStoreForConnectMobile()
         }
     }
 }
 
 extension ConnectIQManager: IQDeviceEventDelegate {
+    
+    //UI refresh when device status is change
     func deviceStatusChanged(_ device: IQDevice!, status: IQDeviceStatus) {
         print("Device \(device.uuid?.uuidString ?? "") changed status to: \(status.rawValue)")
         // Force a UI refresh if needed
@@ -94,7 +122,10 @@ extension ConnectIQManager: IQDeviceEventDelegate {
 }
 
 extension ConnectIQManager: IQAppMessageDelegate {
+    
+    //Recive data from the watch
     func receivedMessage(_ message: Any!, from app: IQApp!) {
+        print("Device received message \(message ?? "") from: \(app.device?.modelName ?? "unknown")")
         DispatchQueue.main.async {
             if let msgString = message as? String {
                 self.receivedMessages.append(msgString)
