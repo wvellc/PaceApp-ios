@@ -61,7 +61,7 @@ class ConnectIQManager: NSObject {
     func connectToApp(uuidString: String, device: IQDevice) {
         guard let appUUID = UUID(uuidString: uuidString) else { return }
         guard let storeUUID = UUID(uuidString: "7243fd4e-7a56-485b-8a27-7eb3e43638fc") else { return }
-
+        //bec1b23d90564b958370b9ded9266942
         let app = IQApp(uuid: appUUID, store: storeUUID, device: device)
         self.targetApp = app
         
@@ -99,7 +99,7 @@ extension ConnectIQManager: IQUIOverrideDelegate {
             // Trigger UI to tell the user they need to install the Garmin App
             self.showInstallGarminConnect = true
             
-            ToastManager.shared.present(.warning("Please install Garmin Connect to pair with your Garmin device."))
+            ToastManager.shared.present(.warning(String(localized: .pleaseInstallGarminConnectToPairWithYourGarminDevice)))
             
             // Delay for message display
             try? await Task.sleep(for: .milliseconds(1050))

@@ -259,6 +259,9 @@
         }
       }
     },
+    "Please install Garmin Connect to pair with your Garmin device." : {
+      "extractionState" : "manual"
+    },
     "Please specify your distance." : {
       "extractionState" : "manual"
     },
