@@ -196,6 +196,7 @@ struct SegmentDistancePickerRow: View {
                 Text(".")
                     .font(.medium20)
                     .foregroundColor(.darkCharcoal)
+					.baselineOffset(5) // Adjusts visual alignment of the dot
                     .padding(.horizontal, 2)
 
                 // Fractional part in hundredths (00, 01, ... 99) representing .00 to .99

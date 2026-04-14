@@ -13,7 +13,8 @@ import Foundation
 enum CreateAccountStep: Int, CaseIterable {
     case profile      // Step 1 — Add photo + name
     case connectWatch // Step 2 — Pair Garmin watch
-    case connectStrava // Step 3 — Link Strava
+    case setGait     // Step 3 — Choose gait preferences
+    case connectStrava // Step 4 — Link Strava
 
     // MARK: - Navigation helpers
 
@@ -34,6 +35,7 @@ enum CreateAccountStep: Int, CaseIterable {
         switch self {
         case .profile:       return "Create Account"
         case .connectWatch:  return "Connect Watch"
+        case .setGait:      return "Set Gait"
         case .connectStrava: return "Connect Strava"
         }
     }
@@ -43,8 +45,8 @@ enum CreateAccountStep: Int, CaseIterable {
     /// Label for the primary action button at the bottom of each step.
     var footerButtonTitle: LocalizedStringResource {
         switch self {
-        case .profile, .connectWatch: return "Next"
-        case .connectStrava:          return "Connect"
+        case .profile, .connectWatch, .setGait: return "Next"
+        case .connectStrava:                     return "Connect"
         }
     }
 

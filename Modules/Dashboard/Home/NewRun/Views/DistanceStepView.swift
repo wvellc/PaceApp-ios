@@ -59,6 +59,8 @@ struct DistanceStepView: View {
 				Text(".")
 					.font(.bold24)
 					.foregroundStyle(.darkCharcoal)
+					.baselineOffset(5) // Adjusts visual alignment of the dot
+
 				
 				// Fractional part in hundredths (00, 01, ... 99) representing .00 to .99
 				Picker("Fractional Distance", selection: Binding(

@@ -35,12 +35,17 @@ final class CreateAccountViewModel {
     /// Name of the detected / paired watch (placeholder for real pairing logic).
     var watchName: String = "Forerunner® 165 Music"
 
-    // MARK: - Step 3 — Connect Strava
+    // MARK: - Step 3 — Set Gait
+	var selectedGait: GaitType = .walking
+	var selectedUnit: String = "Meters"
+	var selectedStepLength: Double  = 2.0
+	
+	var units = ["Meters", "Feet"]
 
+    // MARK: - Step 4 — Connect Strava
     var stravaProfileURL: String = "strava.com/athletes/12345678"
 
     // MARK: - Navigation events (View reacts to these)
-
     var navigationEvent: NavigationEvent?
 
     enum NavigationEvent {

@@ -31,6 +31,7 @@ struct LookBackIntervalsStepView: View {
                     Picker("Intervals", selection: $viewModel.lookBackIntervals) {
 						ForEach(1...(Int(viewModel.distance.rounded())), id: \.self) { val in
                             Text(String(format: "%02d", val))
+								.font(.medium18)
                                 .tag(val)
                         }
                     }

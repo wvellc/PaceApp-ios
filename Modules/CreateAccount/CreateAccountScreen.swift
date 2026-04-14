@@ -107,6 +107,8 @@ struct CreateAccountScreen: View {
 				ProfileStepView(viewModel: viewModel)
 			case .connectWatch:
 				ConnectWatchStepView(watchName: viewModel.watchName)
+			case .setGait:
+				SetGaitStepView(viewModel: viewModel)
 			case .connectStrava:
 				ConnectStravaStepView(viewModel: viewModel)
 		}
