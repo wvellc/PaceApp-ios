@@ -85,6 +85,18 @@ extension View {
     func dismissKeyboardOnTap() -> some View {
         modifier(DismissKeyboardOnTap())
     }
+	
+	@ViewBuilder
+	func applySheetSizing(height: CGFloat) -> some View {
+		if #available(iOS 18.0, *) {
+			self
+			.presentationSizing(.fitted)
+			.presentationDetents([.height(height)])
+		} else {
+			// Fallback for iOS 16 & 17
+			self.presentationDetents([.height(height)])
+		}
+	}
     
 }
 

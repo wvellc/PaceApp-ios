@@ -5,6 +5,7 @@
 //  Created by FURKAN VIJAPURA on 4/10/26.
 //
 
+
 import SwiftUI
 
 // MARK: - History Screen
@@ -13,14 +14,14 @@ struct HistoryScreen: View {
 	// MARK: Properties
 	@State private var viewModel = HistoryViewModel()
 	@FocusState var focusedField: Bool?
+	@State private var isFilterSheetPresented = false
+	
 	
 	// MARK: Body
 	var body: some View {
 		VStack(spacing: 0) {
 			// Navigation Bar
-			// MARK: App Navigation bar
 			AppNavigation()
-			
 			
 			// Search Bar
 			searchBar
@@ -29,9 +30,44 @@ struct HistoryScreen: View {
 				.padding(.bottom, 8)
 			
 			// Activity List
-			activityList
+			if viewModel.activities.isEmpty {
+				
+				Spacer(minLength: 25)
+				
+				HistoryNoData()
+				
+				Spacer(minLength: 25)
+				Spacer(minLength: 25)
+
+			} else {
+				activityList
+			}
 		}
 		.appBackground()
+		// ── Filter Bottom Sheet ────────────────────────────────────
+		.sheet(isPresented: $isFilterSheetPresented) {
+			FilterSheetView(
+				distanceMin:    $viewModel.filterDistanceMin,
+				distanceMax:    $viewModel.filterDistanceMax,
+				filterDate:     $viewModel.filterDate,
+				filterLocation: $viewModel.filterLocation,
+				onApply: {
+					viewModel.applyFilter()
+				},
+				onClear: {
+					viewModel.clearFilter()
+					isFilterSheetPresented = false
+				},
+				onDismiss: {
+					isFilterSheetPresented = false
+				}
+			)
+			.applySheetSizing(height: 580)
+			.presentationBackground(.whiteApp)
+			.scrollDismissesKeyboard(.immediately)
+
+			
+		}
 	}
 }
 
@@ -40,16 +76,17 @@ private extension HistoryScreen {
 	
 	// MARK: Search Bar
 	var searchBar: some View {
-		//Event Name
 		AppTextField(
 			text: $viewModel.searchText,
 			placeholder: .searchHere,
 			leadingView: AnyView(Image(.icSearch)),
-			trailingView: AnyView(Button(action: {
-				viewModel.applyFilter()
-			}, label: {
-				Image(viewModel.hasFilteredContent ?  .icFilterApplied : .icFilter)
-			})),
+			trailingView: AnyView(
+				Button(action: {
+					isFilterSheetPresented = true
+				}, label: {
+					Image(viewModel.isFilterActive ? .icFilterApplied : .icFilter)
+				})
+			),
 			submitLabel: .done
 		)
 		.focused($focusedField, equals: true)

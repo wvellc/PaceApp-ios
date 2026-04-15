@@ -5,23 +5,42 @@
 //  Created by FURKAN VIJAPURA on 4/10/26.
 //
 
-
 import SwiftUI
 
 // MARK: - History ViewModel
 @Observable
 final class HistoryViewModel {
-
-    // MARK: Properties
-    var searchText: String = ""
+	
+	// MARK: Search
+	var searchText: String = ""
+	
 	var hasFilteredContent: Bool {
-		activities.contains(where: { $0.title.lowercased().contains(searchText.lowercased()) })
+		isFilterActive || activities.contains(where: {
+			$0.title.lowercased().contains(searchText.lowercased())
+		})
 	}
+	
+	// MARK: - Filter State
+	
+	/// Distance range (in miles). Absolute bounds: 0 – 150.
+	var filterDistanceMin: Double = 10
+	var filterDistanceMax: Double = 150
+	
+	/// Optional date selected by the user.
+	var filterDate: Date?
+	
+	/// Optional city / location string.
+	var filterLocation: String = ""
+	
+	/// Whether the filter is currently active (any value differs from defaults).
+	var isFilterActive: Bool = false
+	
+	// MARK: - Activities Data
 	
 	final var activities: [RecentActivity] = [
 		RecentActivity(
 			title: "Thursday Run",
-			date: "29 Jan",
+			date: makeDate(day: 29, month: 1),
 			distance: "5.00 mi",
 			duration: "0:45",
 			avgPace: "9:00 /mi",
@@ -31,7 +50,7 @@ final class HistoryViewModel {
 		),
 		RecentActivity(
 			title: "Saturday Long Run",
-			date: "31 Jan",
+			date: makeDate(day: 31, month: 1),
 			distance: "12.00 mi",
 			duration: "1:48",
 			avgPace: "9:00 /mi",
@@ -41,7 +60,7 @@ final class HistoryViewModel {
 		),
 		RecentActivity(
 			title: "Monday Recovery",
-			date: "02 Feb",
+			date: makeDate(day: 2, month: 2),
 			distance: "3.50 mi",
 			duration: "0:33",
 			avgPace: "9:30 /mi",
@@ -51,7 +70,7 @@ final class HistoryViewModel {
 		),
 		RecentActivity(
 			title: "Wednesday Tempo",
-			date: "04 Feb",
+			date: makeDate(day: 4, month: 2),
 			distance: "6.20 mi",
 			duration: "0:49",
 			avgPace: "7:55 /mi",
@@ -61,7 +80,7 @@ final class HistoryViewModel {
 		),
 		RecentActivity(
 			title: "Friday Easy Run",
-			date: "06 Feb",
+			date: makeDate(day: 6, month: 2),
 			distance: "4.00 mi",
 			duration: "0:35",
 			avgPace: "8:45 /mi",
@@ -71,7 +90,7 @@ final class HistoryViewModel {
 		),
 		RecentActivity(
 			title: "Sunday Long Run",
-			date: "08 Feb",
+			date: makeDate(day: 8, month: 2),
 			distance: "15.00 mi",
 			duration: "2:10",
 			avgPace: "8:40 /mi",
@@ -81,7 +100,7 @@ final class HistoryViewModel {
 		),
 		RecentActivity(
 			title: "Tuesday Intervals",
-			date: "10 Feb",
+			date: makeDate(day: 10, month: 2),
 			distance: "5.50 mi",
 			duration: "0:42",
 			avgPace: "7:38 /mi",
@@ -91,7 +110,7 @@ final class HistoryViewModel {
 		),
 		RecentActivity(
 			title: "Thursday Run",
-			date: "12 Feb",
+			date: makeDate(day: 12, month: 2),
 			distance: "8.00 mi",
 			duration: "1:12",
 			avgPace: "9:00 /mi",
@@ -100,22 +119,79 @@ final class HistoryViewModel {
 			location: "San Francisco"
 		)
 	]
-
-    // MARK: Computed
-    var filteredActivities: [RecentActivity] {
-        guard !searchText.trimmingCharacters(in: .whitespaces).isEmpty else {
-            return activities
-        }
-        let query = searchText.lowercased()
-        return activities.filter {
-            $0.title.lowercased().contains(query) ||
-            $0.date.lowercased().contains(query) ||
-            $0.location.lowercased().contains(query)
-        }
-    }
 	
-	//MARK: Applied filter
+	// MARK: - Computed: Filtered Activities
+	
+	var filteredActivities: [RecentActivity] {
+		var result = activities
+		
+		// 1. Search text filter
+		let query = searchText.trimmingCharacters(in: .whitespaces).lowercased()
+		if !query.isEmpty {
+			result = result.filter {
+				$0.title.lowercased().contains(query) ||
+				$0.displayDate.lowercased().contains(query) ||
+				$0.location.lowercased().contains(query)
+			}
+		}
+		
+		// 2. Distance filter (only when filter is active)
+		if isFilterActive {
+			result = result.filter { activity in
+				// Parse miles value from strings like "5.00 mi"
+				let milesValue = activity.distance
+					.replacingOccurrences(of: " mi", with: "")
+					.trimmingCharacters(in: .whitespaces)
+				if let miles = Double(milesValue) {
+					return miles >= filterDistanceMin && miles <= filterDistanceMax
+				}
+				return true
+			}
+			
+			// 3. Date filter
+			if let filterDate {
+				let calendar = Calendar.current
+				result = result.filter { activity in
+					calendar.isDate(activity.date, inSameDayAs: filterDate)
+				}
+			}
+			
+			// 4. Location filter
+			let locationQuery = filterLocation.trimmingCharacters(in: .whitespaces).lowercased()
+			if !locationQuery.isEmpty {
+				result = result.filter {
+					$0.location.lowercased().contains(locationQuery)
+				}
+			}
+		}
+		
+		return result
+	}
+	
+	// MARK: - Filter Actions
+	
+	/// Commits the current filter state and closes the sheet.
 	func applyFilter() {
-		//TODO: Applie filter from filter sheet
+		isFilterActive = true
+	}
+	
+	/// Resets all filter values to their defaults.
+	func clearFilter() {
+		filterDistanceMin = 10
+		filterDistanceMax = 150
+		filterDate        = nil
+		filterLocation    = ""
+		isFilterActive    = false
+	}
+}
+
+private extension HistoryViewModel {
+	static func makeDate(day: Int, month: Int, year: Int = 2026) -> Date {
+		let calendar = Calendar(identifier: .gregorian)
+		let components = DateComponents(year: year, month: month, day: day)
+		guard let date = calendar.date(from: components) else {
+			fatalError("Invalid HistoryViewModel activity date.")
+		}
+		return date
 	}
 }

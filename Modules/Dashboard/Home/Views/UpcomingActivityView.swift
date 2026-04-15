@@ -18,7 +18,10 @@ struct UpcomingActivityView: View {
 			
 			VStack(alignment: .leading, spacing: 16) {
 				
-				activityMetric(title: LocalizedStringResource(stringLiteral: activity.title) , value: activity.date)
+				activityMetric(
+					title: LocalizedStringResource(stringLiteral: activity.title),
+					value: activity.displayDate
+				)
 				
 				
 				activityMetric(

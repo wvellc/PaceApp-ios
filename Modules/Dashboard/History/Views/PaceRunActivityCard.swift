@@ -24,7 +24,7 @@ struct PaceRunActivityCard: View {
 						.font(.regular13)
 						.foregroundStyle(.fashionGray)
 
-                    Text(activity.date)
+                    Text(activity.displayDate)
 						.font(.semiBold17)
                         .foregroundStyle(.darkCharcoal)
                         .lineLimit(1)
@@ -81,43 +81,4 @@ func activityMetric(title: LocalizedStringResource, value: String) -> some View 
 		
 	}
 	.frame(maxWidth: .infinity, alignment: .leading)
-}
-
-
-// MARK: - Recent Activity Model
-struct RecentActivity: Identifiable {
-    let id = UUID()
-    let title: String
-    let date: String
-    let distance: String
-    let duration: String
-    let avgPace: String
-    let delta: String
-    let deltaColor: Color
-	let location: String
-	
-    // MARK: Sample Data
-    // Sample content used by the dashboard preview state.
-    static let samples: [RecentActivity] = [
-        RecentActivity(
-            title: "Thursday Run",
-            date: "29 Jan",
-            distance: "5.00 mi",
-            duration: "05:35:00",
-            avgPace: "9:00 /mi",
-            delta: "+01:10",
-			deltaColor: .redBoho,
-			location: "New York City"
-        ),
-        RecentActivity(
-            title: "Saturday Run",
-            date: "31 Jan",
-            distance: "15.00 mi",
-            duration: "12:35:03",
-            avgPace: "3:20 /mi",
-            delta: "-02:15",
-			deltaColor: .fluorescentMint,
-			location: "Twin Falls"
-        )
-    ]
 }
