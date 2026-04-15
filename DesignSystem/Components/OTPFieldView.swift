@@ -90,7 +90,9 @@ struct OTPFieldView: View {
     }
     
     private func updateOTPString() {
-        otp = pins.joined()
+		DispatchQueue.main.async {
+			otp = pins.joined()
+		}
     }
 }
 
@@ -190,10 +192,15 @@ struct OTPTextField: UIViewRepresentable {
                        shouldChangeCharactersIn range: NSRange,
                        replacementString string: String) -> Bool {
             guard string.count <= 1 else { return false }
-            text = string
-            if !string.isEmpty {
-                onCommit() // move to next field
-            }
+			
+			DispatchQueue.main.async { [ self] in
+				text = string
+				if !string.isEmpty {
+					onCommit() // move to next field
+				}
+
+			}
+			
             return false // we manage text manually
         }
     }
