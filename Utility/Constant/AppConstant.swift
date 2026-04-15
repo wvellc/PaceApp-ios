@@ -32,7 +32,7 @@ struct Constant {
 		static let defaultKeyboardToolBarHeight = CGFloat(44)
 		
 		//Radius
-		static let defaultCornerRadius	= CGFloat(8)
+		static let defaultCornerRadius	= CGFloat(12)
 		static let cardCornerRadius 		= CGFloat(12)
 		
 		//Border

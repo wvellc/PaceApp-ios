@@ -179,7 +179,7 @@ struct LoginScreen: View {
 			)
 		}
 		.onAppear {
-			DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+			DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
 				focus =  viewModel.loginType
 			}
 		}

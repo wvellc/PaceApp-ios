@@ -93,6 +93,13 @@ enum AppSession {
 //		set { saveObject(newValue, forKey: .configDetails) }
 //	}
 	
+	
+	// USER GAIT DATA (Utilizing the Generic Object Handlers)
+	static var userGaitData: GaitUserData? {
+		get { readObject(forKey: .userGait, as: GaitUserData.self) }
+		set { saveObject(newValue, forKey: .userGait) }
+	}
+	
 	// MARK: - Management Methods
 	
 	/// Remove stored session using key

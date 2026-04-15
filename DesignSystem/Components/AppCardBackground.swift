@@ -43,7 +43,7 @@ extension View {
 	///   - bg: Background fill color. Default is `.whiteApp`.
 	/// - Returns: A view with the card background styling applied.
 	func cardBackground(
-		radius: CGFloat = 8,
+		radius: CGFloat = 12,
 		stroke: Color = .fashionGray,
 		lineWidth: CGFloat = 1.2,
 		bg: Color = .whiteApp

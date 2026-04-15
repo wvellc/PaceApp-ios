@@ -24,7 +24,7 @@ final class Router {
     var path = NavigationPath()
 
     /// The app's current root flow.
-	var root: RootFlow = .dashboard
+	var root: RootFlow = .welcome
 
     // MARK: Push / Pop
 

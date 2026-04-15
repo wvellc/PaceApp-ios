@@ -37,10 +37,6 @@ final class CreateAccountViewModel {
 
     // MARK: - Step 3 — Set Gait
 	var selectedGait: GaitType = .walking
-	var selectedUnit: String = "Meters"
-	var selectedStepLength: Double  = 2.0
-	
-	var units = ["Meters", "Feet"]
 
     // MARK: - Step 4 — Connect Strava
     var stravaProfileURL: String = "strava.com/athletes/12345678"
