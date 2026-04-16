@@ -10,7 +10,7 @@ import Foundation
 // MARK: - Segment Model
 struct RunSegment: Identifiable {
     let id: Int
-    var distance: Double
+    var distance: Float
 	var goalHours: Int
     var goalMinutes: Int
     var goalSeconds: Int

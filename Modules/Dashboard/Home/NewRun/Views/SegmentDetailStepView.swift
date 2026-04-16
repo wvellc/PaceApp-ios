@@ -20,7 +20,7 @@ struct SegmentDetailStepView: View {
 				RunEventHeaderCard()
 				
 				if let segment = currentSegment {
-					let distBinding = Binding<Double>(
+					let distBinding = Binding<Float>(
 						get: { segment.distance },
 						set: { viewModel.updateSegmentDistance($0, at: viewModel.currentSegmentIndex) }
 					)
@@ -71,7 +71,6 @@ struct SegmentDetailStepView: View {
 					SegmentDistancePickerRow(
 						label: "\(segmentLabel) Distance",
 						unit: viewModel.distanceType.rawValue,
-						options: viewModel.segmentDistanceRange,
 						selected: distBinding
 					)
 					
@@ -84,14 +83,13 @@ struct SegmentDetailStepView: View {
 					)
 					
 					// Validation error (only on last segment)
-					if viewModel.isOnLastSegment,
-					   let error = viewModel.segmentValidationError {
+					if let error = viewModel.segmentValidationError {
 						HStack(spacing: 6) {
 							Image(systemName: "exclamationmark.circle.fill")
-								.foregroundColor(Color(hex: "EF4444"))
+								.foregroundColor(.redBoho)
 							Text(error)
-								.font(.system(size: 13))
-								.foregroundColor(Color(hex: "EF4444"))
+								.font(.regular13)
+								.foregroundColor(.redBoho)
 						}
 						.padding(.top, 4)
 					}

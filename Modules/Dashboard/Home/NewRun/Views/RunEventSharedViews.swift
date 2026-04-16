@@ -96,7 +96,7 @@ struct SegmentTimePickerRow: View {
 			AppLabel(title: label, font: .semiBold20)
 
             HStack {
-				Picker("Hourse", selection: $hours) {
+				Picker("Hours", selection: $hours) {
 					ForEach(0..<24, id: \.self) { m in
 						Text(String(format: "%02d", m))
 							.tag(m)
@@ -161,8 +161,7 @@ struct SegmentTimePickerRow: View {
 struct SegmentDistancePickerRow: View {
 	let label: LocalizedStringResource
     let unit: String
-    let options: [Double]
-    @Binding var selected: Double
+    @Binding var selected: Float
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -175,13 +174,13 @@ struct SegmentDistancePickerRow: View {
                         let clamped = max(0, min(999, Int(selected)))
                         return clamped
                     },
-                    set: { newValue in
+                    set: { (newValue: Int) in
                         let fractional = selected - floor(selected)
                         let clampedInt = max(0, min(999, newValue))
-                        selected = Double(clampedInt) + fractional
+                        selected = Float(clampedInt) + fractional
                     }
                 )) {
-                    ForEach(1...999, id: \.self) { intVal in
+                    ForEach(0...999, id: \.self) { intVal in
                         let text = intVal < 100 ? String(format: "%02d", intVal) : String(intVal)
                         Text(text)
                             .tag(intVal)
@@ -206,10 +205,10 @@ struct SegmentDistancePickerRow: View {
                         let hundredths = Int((fractional * 100).rounded())
                         return max(0, min(99, hundredths))
                     },
-                    set: { newValue in
+                    set: { (newValue: Int) in
                         let clampedHundredths = max(0, min(99, newValue))
                         let intPart = Int(selected)
-                        selected = Double(intPart) + Double(clampedHundredths) / 100.0
+						selected = Float(intPart) + Float(clampedHundredths) / 100.0
                     }
                 )) {
                     ForEach(0...99, id: \.self) { frac in
