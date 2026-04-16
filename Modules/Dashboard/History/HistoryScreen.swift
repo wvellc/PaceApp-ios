@@ -30,18 +30,19 @@ struct HistoryScreen: View {
 				.padding(.bottom, 8)
 			
 			// Activity List
-			if viewModel.activities.isEmpty {
-				
-				Spacer(minLength: 25)
-				
-				HistoryNoData()
-				
-				Spacer(minLength: 25)
-				Spacer(minLength: 25)
-
-			} else {
-				activityList
+			Group {
+				if viewModel.filteredActivities.isEmpty {
+					Spacer(minLength: 25)
+					HistoryNoData()
+						.transition(.opacity)
+					Spacer(minLength: 25)
+					Spacer()
+				} else {
+					activityList
+						.transition(.opacity)
+				}
 			}
+			.animation(.easeInOut(duration: 0.25), value: viewModel.filteredActivities.isEmpty)
 		}
 		.appBackground()
 		// ── Filter Bottom Sheet ────────────────────────────────────
@@ -114,3 +115,4 @@ private extension HistoryScreen {
 #Preview {
 	HistoryScreen()
 }
+

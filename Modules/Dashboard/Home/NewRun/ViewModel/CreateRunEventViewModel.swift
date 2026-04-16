@@ -7,6 +7,7 @@
 
 import Foundation
 import Observation
+import Combine
 
 // MARK: - ViewModel
 
@@ -17,17 +18,17 @@ class CreateRunEventViewModel {
 	var router: Router?
 
     // MARK: Step 1 – Event Details
-    var eventName: String = "Fastest Pace"
-    var location: String = "Gorgiana, CA"
+    var eventName: String = ""
+    var location: String = ""
     var eventDate: Date = Date()
-    var eventDetailsError: String? = nil
+	var focusedField: EventDetailsStepViewField?
 
     var minDate: Date { Date() }
     var maxDate: Date { Calendar.current.date(byAdding: .year, value: 10, to: Date()) ?? Date() }
 
     // MARK: Step 2 – Distance
     var distanceType: DistanceType = .miles
-    var distance: Double = 12.0
+    var distance: Double = 1.0
 
     var distanceRange: [Double] {
         switch distanceType {
@@ -50,12 +51,12 @@ class CreateRunEventViewModel {
     }
 
     // MARK: Step 4 – Segment Choice
-    var wantsSegments: Bool? = nil
+	var wantsSegments: Bool = false
 
     // MARK: Step 5 – Segment Count
-    var segmentCount: Int = 1
-    let minSegments = 1
-    let maxSegments = 99
+    var segmentCount: Int = 2
+    let minSegments = 2
+    let maxSegments = 20
 
     // MARK: Step 6+ – Segment Details
     var segments: [RunSegment] = []
@@ -83,11 +84,12 @@ class CreateRunEventViewModel {
             currentStep = .goalTime
 
         case .goalTime:
-            currentStep = .segmentChoice
+			if validateGoalTime() {
+				currentStep = .segmentChoice
+			}
 
         case .segmentChoice:
-            guard let wants = wantsSegments else { return }
-            currentStep = wants ? .segmentCount : .lookBackIntervals
+            currentStep = wantsSegments ? .segmentCount : .lookBackIntervals
 
         case .segmentCount:
             buildSegments()
@@ -138,19 +140,38 @@ class CreateRunEventViewModel {
     }
 
     // MARK: - Validation
-
     func validateEventDetails() -> Bool {
         if eventName.trimmingCharacters(in: .whitespaces).isEmpty {
-            eventDetailsError = "Event name is required."
+			
+			DispatchQueue.main.async {
+				self.focusedField = .eventName
+			}
+			
+			ToastManager.shared.present(.warning("Event name is required."))
             return false
         }
+		
         if location.trimmingCharacters(in: .whitespaces).isEmpty {
-            eventDetailsError = "Location is required."
+			
+			DispatchQueue.main.async {
+				self.focusedField = .location
+			}
+			
+			ToastManager.shared.present(.warning("Location is required."))
             return false
         }
-        eventDetailsError = nil
+		
+		focusedField = nil
         return true
     }
+	
+	func validateGoalTime() -> Bool {
+		if totalGoalSeconds == 0 {
+			ToastManager.shared.present(.warning("Goal time is required."))
+			return false
+		}
+		return true
+	}
 
     func validateCurrentSegment() -> Bool {
         guard currentSegmentIndex < segments.count else { return false }

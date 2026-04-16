@@ -16,9 +16,10 @@ struct HistoryNoData: View {
 		VStack {
 			
 			Image(.icEmptyHistory)
-				.frame(width: 180, height: 180)
-				.padding(.bottom, 32)
-				.InteractiveSpringScaleIn(isAnimated: $animateContent)
+				.resizable()
+				.frame(width: 140, height: 140)
+				.padding(.bottom, 40)
+				.InteractiveSpringScaleIn(isAnimated: $animateContent, duration: 0.3)
 			
 			VStack(spacing: 18) {
 				Text("Ready for your first run!")

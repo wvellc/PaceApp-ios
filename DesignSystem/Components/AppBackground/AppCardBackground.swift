@@ -44,7 +44,7 @@ extension View {
 	/// - Returns: A view with the card background styling applied.
 	func cardBackground(
 		radius: CGFloat = 12,
-		stroke: Color = .fashionGray,
+		stroke: Color = .grayHint,
 		lineWidth: CGFloat = 1.2,
 		bg: Color = .whiteApp
 	) -> some View {

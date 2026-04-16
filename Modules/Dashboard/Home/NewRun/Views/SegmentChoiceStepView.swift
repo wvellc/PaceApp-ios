@@ -48,7 +48,7 @@ struct SegmentChoiceStepView: View {
 					title: .no,
                     isSelected: viewModel.wantsSegments == false,
 					color: .redBoho,
-					textColor: .whiteApp
+					textColor: viewModel.wantsSegments != false ? .blackApp : .whiteApp
                 ) {
                     viewModel.wantsSegments = false
                 }
@@ -71,9 +71,7 @@ private struct SegmentChoiceButton: View {
 				.foregroundColor(textColor)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(
-                    isSelected ? color : color.opacity(0.25)
-                )
+                .background(color)
                 .cornerRadius(Constant.UI.defaultCornerRadius)
                 .overlay(
 					RoundedRectangle(cornerRadius: Constant.UI.defaultCornerRadius)
@@ -81,6 +79,7 @@ private struct SegmentChoiceButton: View {
 						.stroke(.fashionGray, lineWidth: 2)
 					
                 )
+				.opacity(isSelected ? 1 : 0.25)
                 .animation(.spring(response: 0.25), value: isSelected)
         }
     }

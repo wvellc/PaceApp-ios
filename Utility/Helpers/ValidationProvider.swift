@@ -22,7 +22,7 @@ struct ValidationProvider {
 			case .none:
 				return true
 			case .name:
-				return matches(text, regex: "^[a-zA-ZÀ-ÿ' -]{2,}$")
+				return matches(text, regex: "^[a-zA-ZÀ-ÿ' -]{1,}$")
 			case .email:
 				return matches(text, regex: "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}")
 			case .password:
@@ -35,6 +35,8 @@ struct ValidationProvider {
 				return matches(text, regex: "^[a-zA-Z0-9]+$")
 			case .custom(let regex):
 				return matches(text, regex: regex)
+			case .location:
+				return matches(text, regex: "^[\\p{L}\\s\\-\\']{1,50}$")
 		}
 	}
 	

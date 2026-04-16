@@ -49,7 +49,7 @@ struct AppTextField: View {
 		autocapitalization: TextInputAutocapitalization = .sentences,
 		submitLabel: SubmitLabel = .next,
 		bgColor: Color = .clear,
-		borderColor: Color = .whiteApp,
+		borderColor: Color = .grayHint,
 		foregroundStyle: Color = .grayHint,
 		onValueChanged: ((String) -> Void)? = nil,
 	) {
@@ -82,7 +82,7 @@ struct AppTextField: View {
 		VStack(alignment: .leading, spacing: 0) {
 			
 			// Field container
-			HStack(alignment: .center, spacing: 8) {
+			HStack(alignment: .center, spacing: 10) {
 				
 				// Leading icon
 				if let leadingView {

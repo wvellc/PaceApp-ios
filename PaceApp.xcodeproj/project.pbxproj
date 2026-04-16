@@ -9,6 +9,9 @@
 /* Begin PBXBuildFile section */
 		18C565A92F8CDF3A007BD365 /* ConnectIQ in Frameworks */ = {isa = PBXBuildFile; productRef = 18C565A82F8CDF3A007BD365 /* ConnectIQ */; };
 		18C565AB2F8CE23E007BD365 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18C565AA2F8CE23D007BD365 /* AppDelegate.swift */; };
+		E60361D22F90A9EF0036538C /* DualRangeSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E60361D12F90A9EF0036538C /* DualRangeSlider.swift */; };
+		E60361D42F90B3130036538C /* DatePickerField.swift in Sources */ = {isa = PBXBuildFile; fileRef = E60361D32F90B3130036538C /* DatePickerField.swift */; };
+		E60361D62F90B32F0036538C /* DatePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E60361D52F90B32F0036538C /* DatePickerSheet.swift */; };
 		E61F82232F63E6CC00C215DF /* AppBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F82222F63E6CC00C215DF /* AppBackground.swift */; };
 		E61F82282F63F50C00C215DF /* BackgroundContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F82272F63F50C00C215DF /* BackgroundContainer.swift */; };
 		E61F83AF2F641B0900C215DF /* CGFloat+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F83AE2F641B0900C215DF /* CGFloat+Ext.swift */; };
@@ -48,6 +51,9 @@
 
 /* Begin PBXFileReference section */
 		18C565AA2F8CE23D007BD365 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		E60361D12F90A9EF0036538C /* DualRangeSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DualRangeSlider.swift; sourceTree = "<group>"; };
+		E60361D32F90B3130036538C /* DatePickerField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePickerField.swift; sourceTree = "<group>"; };
+		E60361D52F90B32F0036538C /* DatePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePickerSheet.swift; sourceTree = "<group>"; };
 		E61F82222F63E6CC00C215DF /* AppBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBackground.swift; sourceTree = "<group>"; };
 		E61F82272F63F50C00C215DF /* BackgroundContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundContainer.swift; sourceTree = "<group>"; };
 		E61F83AE2F641B0900C215DF /* CGFloat+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CGFloat+Ext.swift"; sourceTree = "<group>"; };
@@ -137,6 +143,7 @@
 			children = (
 				E61F82272F63F50C00C215DF /* BackgroundContainer.swift */,
 				E61F82222F63E6CC00C215DF /* AppBackground.swift */,
+				E6370ED32F83AACF00007CDF /* AppCardBackground.swift */,
 			);
 			path = AppBackground;
 			sourceTree = "<group>";
@@ -175,7 +182,10 @@
 		E6C4BEF62F61846D00C17C69 /* Components */ = {
 			isa = PBXGroup;
 			children = (
-				E6370ED32F83AACF00007CDF /* AppCardBackground.swift */,
+				E61F82242F63E97800C215DF /* AppBackground */,
+				E60361D52F90B32F0036538C /* DatePickerSheet.swift */,
+				E60361D32F90B3130036538C /* DatePickerField.swift */,
+				E60361D12F90A9EF0036538C /* DualRangeSlider.swift */,
 				E6AE33262F7D4875009189CD /* AppNavigation.swift */,
 				E684F1E62F769CDF0059C38F /* ProfilePhotoShape.swift */,
 				E6B748E82F6A9D7C00202A2D /* OTPFieldView.swift */,
@@ -183,7 +193,6 @@
 				E61FA4212F67BE3C001DA088 /* AppTextField.swift */,
 				E61F83B92F642A7000C215DF /* AppSegmentedControl.swift */,
 				E61F83B72F64277400C215DF /* AppButton.swift */,
-				E61F82242F63E97800C215DF /* AppBackground */,
 				E6C3328D2F62920800224AA5 /* GlassButton.swift */,
 				E6C4BEF72F61849700C17C69 /* LogoWithText.swift */,
 				E6C4BEF92F618A2800C17C69 /* Spacing.swift */,
@@ -368,6 +377,8 @@
 				E684F1E72F769CDF0059C38F /* ProfilePhotoShape.swift in Sources */,
 				E61F83B82F64277400C215DF /* AppButton.swift in Sources */,
 				E61F82232F63E6CC00C215DF /* AppBackground.swift in Sources */,
+				E60361D62F90B32F0036538C /* DatePickerSheet.swift in Sources */,
+				E60361D22F90A9EF0036538C /* DualRangeSlider.swift in Sources */,
 				E61F83BA2F642A7000C215DF /* AppSegmentedControl.swift in Sources */,
 				E61F82282F63F50C00C215DF /* BackgroundContainer.swift in Sources */,
 				E6B748E92F6A9D7C00202A2D /* OTPFieldView.swift in Sources */,
@@ -385,6 +396,7 @@
 				E6C4BEFA2F618A2800C17C69 /* Spacing.swift in Sources */,
 				E61FA4262F67C706001DA088 /* WebView.swift in Sources */,
 				E61FA4202F67BDFD001DA088 /* ValidationProvider.swift in Sources */,
+				E60361D42F90B3130036538C /* DatePickerField.swift in Sources */,
 				E61FA42E2F67D252001DA088 /* String+Ext.swift in Sources */,
 				E6AE33272F7D4875009189CD /* AppNavigation.swift in Sources */,
 				E6C4BEDF2F613E1300C17C69 /* AppGradients.swift in Sources */,

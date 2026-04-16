@@ -10,6 +10,7 @@
 
 enum ValidationType {
 	case name
+	case location
 	case email
 	case password
 	case confirmPassword(new: String)
@@ -21,6 +22,7 @@ enum ValidationType {
 	var validationMessage: String {
 		switch self {
 			case .name:             return "Please enter a valid name."
+			case .location:         return "Enter a valid location (e.g. City)."
 			case .email:            return "Please enter a valid email address."
 			case .password:         return "Min 8 chars with uppercase, lowercase, digit & special character."
 			case .confirmPassword:  return "Passwords do not match."
@@ -31,3 +33,4 @@ enum ValidationType {
 		}
 	}
 }
+
