@@ -35,7 +35,7 @@ struct AppSegmentedControl<Segment: Hashable>: View {
 	private let font: Font
 	private let selectedForeground: Color
 	private let unselectedForeground: Color
-	private let selectedBackground: Color
+	private let selectedFill: AnyShapeStyle
 	private let trackBackground: Color
 	private let cornerRadius: CGFloat
 	private let verticalPadding: CGFloat
@@ -51,7 +51,9 @@ struct AppSegmentedControl<Segment: Hashable>: View {
 	///   - font: Segment label font. Default `.medium16`.
 	///   - selectedForeground: Text color for the active segment. Default `.whiteApp`.
 	///   - unselectedForeground: Text color for inactive segments. Default `.whiteApp` at 50%.
-	///   - selectedBackground: Fill color behind the active segment. Default vivid blue.
+	///   - selectedFill: Fill style for the active segment indicator.
+	///   - selectedGradientStart: Leading color for the default active segment gradient.
+	///   - selectedBackground: Trailing color for the default active segment gradient.
 	///   - trackBackground: The track color behind all segments. Default `white` at 10%.
 	///   - cornerRadius: Corner radius for both track and indicator. Default `12`.
 	///   - verticalPadding: Padding inside each segment label. Default `12`.
@@ -59,10 +61,12 @@ struct AppSegmentedControl<Segment: Hashable>: View {
 	init(
 		selection: Binding<Segment>,
 		segments: [(key: Segment, title: String)],
-		font: Font = .medium16,
+		font: Font = .medium14,
 		selectedForeground: Color = .whiteApp,
 		unselectedForeground: Color = .whiteApp.opacity(0.5),
-		selectedBackground: Color = Color(red: 43/255, green: 135/255, blue: 255/255),
+		selectedFill: AnyShapeStyle? = nil,
+		selectedGradientStart: Color = Color(red: 31/255, green: 151/255, blue: 234/255),
+		selectedBackground: Color = Color(red: 14/255, green: 118/255, blue: 189/255),
 		trackBackground: Color = Color.white.opacity(0.1),
 		cornerRadius: CGFloat = 12,
 		verticalPadding: CGFloat = 12,
@@ -73,7 +77,13 @@ struct AppSegmentedControl<Segment: Hashable>: View {
 		self.font = font
 		self.selectedForeground = selectedForeground
 		self.unselectedForeground = unselectedForeground
-		self.selectedBackground = selectedBackground
+		self.selectedFill = selectedFill ?? AnyShapeStyle(
+			LinearGradient(
+				colors: [selectedGradientStart, selectedBackground],
+				startPoint: .top,
+				endPoint: .bottom
+			)
+		)
 		self.trackBackground = trackBackground
 		self.cornerRadius = cornerRadius
 		self.verticalPadding = verticalPadding
@@ -130,16 +140,19 @@ struct AppSegmentedControl<Segment: Hashable>: View {
 			Text(title)
 				.font(font)
 				.foregroundColor(isSelected ? selectedForeground : unselectedForeground)
-				.frame(maxWidth: .infinity)
+				.frame(maxWidth: .infinity, maxHeight: .infinity)
 				.padding(.vertical, verticalPadding)
+				.contentShape(Rectangle())
 				.background {
 					if isSelected {
 						RoundedRectangle(cornerRadius: cornerRadius - 2)
-							.fill(selectedBackground)
+							.fill(selectedFill)
 							.matchedGeometryEffect(id: "segmentIndicator", in: segmentNamespace)
 					}
 				}
 		}
+		.frame(maxWidth: .infinity)
+		.contentShape(Rectangle())
 		.buttonStyle(.plain)
 	}
 }

@@ -136,7 +136,7 @@ struct CreateRunEventScreen: View {
 
         case .segmentDetails:
             SegmentDetailStepView(viewModel: viewModel)
-                .id(viewModel.currentSegmentIndex) // Force re-render on segment change
+//                .id(viewModel.currentSegmentIndex) // Force re-render on segment change
                 .transition(.asymmetric(
                     insertion: .move(edge: .trailing),
                     removal: .move(edge: .leading)

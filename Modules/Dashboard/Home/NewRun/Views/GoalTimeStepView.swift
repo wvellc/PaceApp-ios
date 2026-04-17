@@ -13,7 +13,7 @@ struct GoalTimeStepView: View {
 			
             HStack(spacing: 0) {
 				
-				Spacer()
+				Color.white.opacity(0.005)
 					.frame(width: 24, height: 24)
 
 				
@@ -76,7 +76,6 @@ struct GoalTimeStepView: View {
 				Image(.icOverTime)
                     .frame(width: 24, height: 24)
             }
-            .padding(.horizontal, 12)
             .padding(.vertical, 4)
 			.cardBackground()
         }

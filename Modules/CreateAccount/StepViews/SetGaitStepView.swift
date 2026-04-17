@@ -53,9 +53,7 @@ struct SetGaitStepView: View {
 				.lineSpacing(10)
 				.multilineTextAlignment(.leading)
 			
-			Spacer()
-			
-			VStack(spacing: 40) {
+			VStack(spacing: 24) {
 				// Running gait selector — saves to AppSession on change
 				GaitSelectionView(type: .running) { data in
 					AppSession.userGaitData?.runningData = data
@@ -122,107 +120,82 @@ struct GaitSelectionView: View {
 	// MARK: Body
 	
 	var body: some View {
-		VStack(alignment: .leading, spacing: 8) {
+		VStack(alignment: .leading, spacing: 16) {
 			
 			// Section label e.g. "Walking" / "Running"
 			Text(type.rawValue)
 				.font(.semiBold17)
 				.foregroundColor(.whiteApp)
 			
-			VStack(spacing: 12) {
-				
-				// MARK: Unit Dropdown (Meters / Feet)
-				HStack {
-					Text(selectedUnit)
-						.font(.medium18)
-						.foregroundColor(.whiteApp)
-					Spacer()
-					Image(.icDownArrow)
-						.frame(width: 24, height: 24)
-				}
-				.padding(.horizontal, 16)
-				.padding(.vertical, 14)
-				.frame(maxWidth: .infinity)
-				.overlay(
-					// Invisible full-area tap target that opens the Menu
-					Picker(selection: $selectedUnit) {
-						ForEach(units, id: \.self) { unit in
-							Button {
-								selectedUnit = unit
-								notifyChange()
-							} label: {
-								Text(unit).font(.medium18)
-							}
-						}
-					} label: {
-						Color.white.opacity(0.001)
-							.frame(maxWidth: .infinity, maxHeight: .infinity)
-					}
-						.pickerStyle(.segmented)
-				)
-				
-				// MARK: Step Length Wheel Picker (integer . fractional)
-				HStack(spacing: 0) {
-					
-					// --- Integer Picker (00–09) ---
-					Picker("Integer Part", selection: Binding(
-						get: { Int(selectedStepLength) },
-						set: { newValue in
-							// Preserve the fractional part when integer changes
-							let fractionalPart = selectedStepLength.truncatingRemainder(dividingBy: 1)
-							selectedStepLength = Double(newValue) + fractionalPart
-							notifyChange()
-						}
-					)) {
-						ForEach(0...9, id: \.self) { intVal in
-							// Show two-digit format for values under 100 (e.g. 02, 07)
-							Text(intVal < 100 ? String(format: "%02d", intVal) : "\(intVal)")
-								.tag(intVal)
-								.font(.medium18)
-								.foregroundStyle(.whiteApp)
-						}
-					}
-					.pickerStyle(.wheel)
-					.frame(maxWidth: .infinity)
-					.frame(height: 100)
-					.clipped()
-					
-					// Decimal point separator
-					Text(".")
-						.font(.bold24)
-						.baselineOffset(5) // Visually aligns dot to the centre of the picker digits
-						.foregroundStyle(.whiteApp)
-					
-					// --- Fractional Picker (0–9) ---
-					Picker("Fractional Part", selection: Binding(
-						get: {
-							// Use rounded() to avoid floating-point precision issues (e.g. 0.999999)
-							Int((selectedStepLength.truncatingRemainder(dividingBy: 1) * 10).rounded())
-						},
-						set: { newValue in
-							// Preserve the integer part when fractional digit changes
-							let integerPart = floor(selectedStepLength)
-							selectedStepLength = integerPart + (Double(newValue) / 10.0)
-							notifyChange()
-						}
-					)) {
-						ForEach(0...9, id: \.self) { frac in
-							Text(String(format: "%d", frac))
-								.tag(frac)
-								.font(.medium18)
-								.foregroundStyle(.whiteApp)
-						}
-					}
-					.pickerStyle(.wheel)
-					.frame(maxWidth: .infinity)
-					.frame(height: 100)
-					.clipped()
-				}
-				.foregroundStyle(.darkCharcoal)
-				.padding(.horizontal, 16)
-				.frame(maxWidth: .infinity)
-				.cardBackground(stroke: .whiteApp, bg: .clear)
+			AppSegmentedControl(
+				selection: $selectedUnit,
+				segments: units.map { (key: $0, title: $0) }
+			)
+			.onChange(of: selectedUnit) { _, _ in
+				notifyChange()
 			}
+			
+			// MARK: Step Length Wheel Picker (integer . fractional)
+			HStack(spacing: 0) {
+				
+				// --- Integer Picker (00–09) ---
+				Picker("Integer Part", selection: Binding(
+					get: { Int(selectedStepLength) },
+					set: { newValue in
+						// Preserve the fractional part when integer changes
+						let fractionalPart = selectedStepLength.truncatingRemainder(dividingBy: 1)
+						selectedStepLength = Double(newValue) + fractionalPart
+						notifyChange()
+					}
+				)) {
+					ForEach(0...9, id: \.self) { intVal in
+						// Show two-digit format for values under 100 (e.g. 02, 07)
+						Text(intVal < 100 ? String(format: "%02d", intVal) : "\(intVal)")
+							.tag(intVal)
+							.font(.medium18)
+							.foregroundStyle(.whiteApp)
+					}
+				}
+				.pickerStyle(.wheel)
+				.frame(maxWidth: .infinity)
+				.frame(height: 100)
+				.clipped()
+				
+				// Decimal point separator
+				Text(".")
+					.font(.bold24)
+					.baselineOffset(5) // Visually aligns dot to the centre of the picker digits
+					.foregroundStyle(.whiteApp)
+				
+				// --- Fractional Picker (0–9) ---
+				Picker("Fractional Part", selection: Binding(
+					get: {
+						// Use rounded() to avoid floating-point precision issues (e.g. 0.999999)
+						Int((selectedStepLength.truncatingRemainder(dividingBy: 1) * 10).rounded())
+					},
+					set: { newValue in
+						// Preserve the integer part when fractional digit changes
+						let integerPart = floor(selectedStepLength)
+						selectedStepLength = integerPart + (Double(newValue) / 10.0)
+						notifyChange()
+					}
+				)) {
+					ForEach(0...9, id: \.self) { frac in
+						Text(String(format: "%d", frac))
+							.tag(frac)
+							.font(.medium18)
+							.foregroundStyle(.whiteApp)
+					}
+				}
+				.pickerStyle(.wheel)
+				.frame(maxWidth: .infinity)
+				.frame(height: 100)
+				.clipped()
+			}
+			.foregroundStyle(.darkCharcoal)
+			.padding(.horizontal, 16)
+			.frame(maxWidth: .infinity)
+			.cardBackground(stroke: .whiteApp, bg: .clear)
 		}
 	}
 }

@@ -104,7 +104,7 @@ struct CreateAccountScreen: View {
 			case .pairWatch:
 				PairWatchStepView()
 			case .chooseYourModel:
-				ChooseDevicesStepView(selectedWatch: $viewModel.selectedWatch)
+				ChooseDevicesStepView(viewModel: viewModel)
 			case .showConnectedWatch:
 				ConnectWatchStepView(watch: viewModel.selectedWatch)
 			case .setGait:

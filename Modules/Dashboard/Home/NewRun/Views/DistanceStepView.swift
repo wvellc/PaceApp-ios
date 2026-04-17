@@ -13,14 +13,20 @@ struct DistanceStepView: View {
 			AppLabel(title: .pleaseSpecifyYourDistance)
 			
 			// Km / Miles Toggle
-			Picker("Distance Type", selection: $viewModel.distanceType) {
-				ForEach(DistanceType.allCases, id: \.self) { type in
-					Text(type.rawValue)
-						.tag(type)
-						.padding()
-				}
-			}
-			.pickerStyle(.segmented)
+//			Picker("Distance Type", selection: $viewModel.distanceType) {
+//				ForEach(DistanceType.allCases, id: \.self) { type in
+//					Text(type.rawValue)
+//						.tag(type)
+//						.padding()
+//				}
+//			}
+//			.pickerStyle(.segmented)
+			AppSegmentedControl(
+				selection: $viewModel.distanceType,
+				segments: DistanceType.allCases.map { (key: $0, title: $0.rawValue) },
+				unselectedForeground: .darkCharcoal,
+				trackBackground: .grayHint
+			)
 			.onChange(of: viewModel.distanceType) { _, _ in
 				// Reset to a valid value in new range
 				viewModel.distance = viewModel.distanceRange.first ?? 1.0

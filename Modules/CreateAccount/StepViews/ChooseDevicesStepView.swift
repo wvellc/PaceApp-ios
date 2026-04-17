@@ -13,7 +13,7 @@ import SwiftUI
 /// The user selects one before tapping "Pair".
 struct ChooseDevicesStepView: View {
 
-	@Binding var vm: CreateAccountViewModel
+	@Bindable var viewModel: CreateAccountViewModel
 
 
     var body: some View {
@@ -22,15 +22,13 @@ struct ChooseDevicesStepView: View {
 
             // Device list
             VStack(spacing: 16) {
-				ForEach($vm.discoveredDevices, id: \.id) { device in
+				ForEach(viewModel.discoveredDevices) { device in
 					WatchDeviceRow(
-						device: device.wrappedValue,
-						selectedWatch: $vm.selectedWatch   // ← pass binding
+						device: device,
+						isSelected: viewModel.selectedWatch?.id == device.id
 					) {
-						vm.selectedWatch = device.wrappedValue
+						viewModel.selectedWatch = device
 					}
-					.id(vm.selectedWatch?.id == device.id) // forces redraw on selection change
-
 				}
             }
 
@@ -38,8 +36,8 @@ struct ChooseDevicesStepView: View {
         }
 		.clipped()
         .onAppear {
-            if vm.selectedWatch == nil {
-				vm.selectedWatch = vm.discoveredDevices.first
+            if viewModel.selectedWatch == nil {
+				viewModel.selectedWatch = viewModel.discoveredDevices.first
             }
         }
     }
@@ -49,13 +47,9 @@ struct ChooseDevicesStepView: View {
 
 struct WatchDeviceRow: View {
 	let device: WatchDevice
-	@Binding var selectedWatch: WatchDevice?   // ← Binding, not Bool
+	let isSelected: Bool
 	let onTap: () -> Void
-	
-	private var isSelected: Bool {
-		selectedWatch?.id == device.id         // ← computed live
-	}
-	
+
 	var body: some View {
 		Button(action: onTap) {
 			HStack(spacing: 16) {
@@ -74,7 +68,6 @@ struct WatchDeviceRow: View {
 				
 				Spacer()
 				
-				// ✅ Now reacts to binding changes
 				Image(isSelected ? .icRadioSelected : .icRadioUnSelected)
 					.resizable()
 					.frame(width: 24, height: 24)

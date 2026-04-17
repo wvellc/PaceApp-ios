@@ -31,7 +31,7 @@ final class CreateAccountViewModel {
 	var discoveredDevices: [WatchDevice] = [
 		WatchDevice(model: "Forerunner 245", nickname: "Jack's Watch"),
 		WatchDevice(model: "Forerunner 165", nickname: "Nick Watch"),
-		WatchDevice(model: "fenix 8", nickname: "Jack's Watch 2"),
+		WatchDevice(model: "Fenix 8", nickname: "Jack's Watch 2"),
 	]
 
 	/// Watch selected on the ChooseYourModel screen.
@@ -73,7 +73,15 @@ final class CreateAccountViewModel {
 	func onBack() {
 		guard let previous = currentStep.previous else { return }
 		slideDirection = .backward
-		withAnimation(.easeInOut(duration: 0.3)) { currentStep = previous }
+		withAnimation(.easeInOut(duration: 0.3)) {
+			switch currentStep {
+				case .setGait:
+					currentStep = .pairWatch
+				default:
+					currentStep = previous
+			}
+		}
+		
 	}
 	
 	/// Skip jumps past pairWatch + chooseYourModel directly to showConnectedWatch.

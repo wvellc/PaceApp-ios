@@ -9,9 +9,9 @@ struct RunEventHeaderCard: View {
 			.resizable()
 			.scaledToFill()
 			.frame(maxWidth: .infinity)
-			.frame(height: 280)
-			.clipped()
+			.frame(height: 280, alignment: .top)
 			.cornerRadius(Constant.UI.defaultCornerRadius)
+			.clipped()
     }
 }
 
