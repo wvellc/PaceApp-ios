@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		18C565A92F8CDF3A007BD365 /* ConnectIQ in Frameworks */ = {isa = PBXBuildFile; productRef = 18C565A82F8CDF3A007BD365 /* ConnectIQ */; };
 		18C565AB2F8CE23E007BD365 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18C565AA2F8CE23D007BD365 /* AppDelegate.swift */; };
+		18E0166C2F925F7300A486AB /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 18E0166B2F925F7300A486AB /* PrivacyInfo.xcprivacy */; };
 		E60361D22F90A9EF0036538C /* DualRangeSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E60361D12F90A9EF0036538C /* DualRangeSlider.swift */; };
 		E60361D42F90B3130036538C /* DatePickerField.swift in Sources */ = {isa = PBXBuildFile; fileRef = E60361D32F90B3130036538C /* DatePickerField.swift */; };
 		E60361D62F90B32F0036538C /* DatePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E60361D52F90B32F0036538C /* DatePickerSheet.swift */; };
@@ -52,6 +53,7 @@
 
 /* Begin PBXFileReference section */
 		18C565AA2F8CE23D007BD365 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		18E0166B2F925F7300A486AB /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		E60361D12F90A9EF0036538C /* DualRangeSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DualRangeSlider.swift; sourceTree = "<group>"; };
 		E60361D32F90B3130036538C /* DatePickerField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePickerField.swift; sourceTree = "<group>"; };
 		E60361D52F90B32F0036538C /* DatePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePickerSheet.swift; sourceTree = "<group>"; };
@@ -249,6 +251,7 @@
 		E6C69B4E2F603C8D00ACED81 = {
 			isa = PBXGroup;
 			children = (
+				18E0166B2F925F7300A486AB /* PrivacyInfo.xcprivacy */,
 				18C565AA2F8CE23D007BD365 /* AppDelegate.swift */,
 				E6C332832F62915700224AA5 /* PaceApp.swift */,
 				E6C4BEE62F615C2A00C17C69 /* PaceApp-Info.plist */,
@@ -365,6 +368,7 @@
 				E6C4BEF12F616B8800C17C69 /* Gilroy-Medium.ttf in Resources */,
 				E6C4BEF22F616B8800C17C69 /* Gilroy-Light.ttf in Resources */,
 				E6C4BEF32F616B8800C17C69 /* Gilroy-Regular.ttf in Resources */,
+				18E0166C2F925F7300A486AB /* PrivacyInfo.xcprivacy in Resources */,
 				E6C334272F62B74B00224AA5 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -542,7 +546,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 6LK9SH63JD;
 				ENABLE_APP_SANDBOX = YES;
@@ -553,7 +557,8 @@
 				INFOPLIST_FILE = "PaceApp-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "PACE APP";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
-				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "Allow Blutooth access to find and connect near by garmin watch";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Please allow Bluetooth access so PaceApp can find and connect to your Garmin watch for real-time pace, heart rate, and workout tracking.";
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "PaceApp uses Bluetooth to discover and connect to your Garmin watch for real-time pace, heart rate, and workout tracking.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -596,7 +601,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 6LK9SH63JD;
 				ENABLE_APP_SANDBOX = YES;
@@ -607,7 +612,8 @@
 				INFOPLIST_FILE = "PaceApp-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "PACE APP";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
-				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "Allow Blutooth access to find and connect near by garmin watch";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Please allow Bluetooth access so PaceApp can find and connect to your Garmin watch for real-time pace, heart rate, and workout tracking.";
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "PaceApp uses Bluetooth to discover and connect to your Garmin watch for real-time pace, heart rate, and workout tracking.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
