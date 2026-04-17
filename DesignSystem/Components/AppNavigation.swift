@@ -57,3 +57,36 @@ struct AppNavigation<Leading: View, Trailing: View>: View {
 	}
 }
 
+struct AppBackButtonStyle: ViewModifier {
+	let onTap: VoidOptionalCallback
+	
+	func body(content: Content) -> some View {
+		content
+			.navigationBarBackButtonHidden(true) // Hide system button
+			.toolbar {
+				ToolbarItem(placement: .topBarLeading) {
+					Button {
+						onTap()
+					} label: {
+						Image(systemName: "chevron.left")
+							.font(.system(size: 16, weight: .semibold))
+							.foregroundStyle(.radiantBlue)
+							.frame(width: 22, height: 22)
+							.padding( 8)
+							.background(.whiteApp) // Custom background
+							.frame(width: 32, height: 32)
+							.cornerRadius(100) // 3. Custom corner radius
+					}
+					
+				}
+				.hideGlassBackgroundIfAvailable()
+			}
+	}
+}
+
+// Extension for easy global use
+extension View {
+	func globalBackButton(onTap:@escaping VoidOptionalCallback) -> some View {
+		modifier(AppBackButtonStyle(onTap: onTap))
+	}
+}

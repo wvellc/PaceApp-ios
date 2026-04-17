@@ -134,7 +134,7 @@ struct AppSegmentedControl<Segment: Hashable>: View {
 				.padding(.vertical, verticalPadding)
 				.background {
 					if isSelected {
-						RoundedRectangle(cornerRadius: cornerRadius)
+						RoundedRectangle(cornerRadius: cornerRadius - 2)
 							.fill(selectedBackground)
 							.matchedGeometryEffect(id: "segmentIndicator", in: segmentNamespace)
 					}

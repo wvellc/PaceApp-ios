@@ -64,6 +64,7 @@ struct CreateRunEventScreen: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 24)
                 }
+				.scrollBounceBehavior(.basedOnSize)
 
                 Spacer(minLength: 0)
 

@@ -10,8 +10,6 @@ import SwiftUI
 // MARK: - CreateAccountScreen
 
 /// Root container for the multi-step Create Account onboarding flow.
-/// Hosts the shared top toolbar, step content with slide transitions,
-/// and the shared footer action button.
 struct CreateAccountScreen: View {
 	
 	// MARK: - Environment
@@ -29,23 +27,21 @@ struct CreateAccountScreen: View {
 			GeometryReader { geo in
 				VStack(spacing: 0) {
 					
-					//Navigation bar spacing
+					// Navigation bar spacing
 					VSpace(height: geo.safeAreaInsets.top, isProportional: false)
 					
 					// Step content with slide transition
 					stepContent
 						.transition(slideTransition)
-						.id(viewModel.currentStep) // triggers transition on step change
+						.id(viewModel.currentStep)
 					
 					// Shared footer button
 					footerButton
 						.padding(.horizontal, 16)
 						.padding(.bottom, geo.safeAreaInsets.bottom + 32)
-					
 				}
 			}
 		}
-		// Intercept system back so the ViewModel controls direction
 		.navigationTitle(viewModel.currentStep.title)
 		.navigationBarBackButtonHidden(true)
 		.navigationBarTitleDisplayMode(.inline)
@@ -66,8 +62,8 @@ struct CreateAccountScreen: View {
 			ToolbarItem(placement: .topBarLeading) {
 				Button(action: viewModel.onBack) {
 					Image(systemName: "chevron.left")
-						.font(.system(size: 17, weight: .semibold))
-						.foregroundStyle(.radiantBlue)
+						.font(.system(size: 16, weight: .semibold))
+						.foregroundStyle(.whiteApp)
 						.padding(8)
 				}
 			}
@@ -85,7 +81,7 @@ struct CreateAccountScreen: View {
 					Text(.skip)
 						.font(.medium17)
 						.foregroundStyle(.grayHint)
-						.padding(8)
+//						.padding(8)
 				}
 			}
 			
@@ -105,8 +101,12 @@ struct CreateAccountScreen: View {
 		switch viewModel.currentStep {
 			case .profile:
 				ProfileStepView(viewModel: viewModel)
-			case .connectWatch:
-				ConnectWatchStepView(watchName: viewModel.watchName)
+			case .pairWatch:
+				PairWatchStepView()
+			case .chooseYourModel:
+				ChooseDevicesStepView(selectedWatch: $viewModel.selectedWatch)
+			case .showConnectedWatch:
+				ConnectWatchStepView(watch: viewModel.selectedWatch)
 			case .setGait:
 				SetGaitStepView(viewModel: viewModel)
 			case .connectStrava:
@@ -117,14 +117,13 @@ struct CreateAccountScreen: View {
 	// MARK: - Footer Button
 	
 	private var footerButton: some View {
-		AppButton(viewModel.currentStep.footerButtonTitle) {
+		AppButton(LocalizedStringResource(stringLiteral: viewModel.currentStep.footerButtonTitle)) {
 			viewModel.onFooterTapped()
 		}
 	}
 	
-	// MARK: - Slide transition
+	// MARK: - Slide Transition
 	
-	/// Slides content left on forward navigation and right on backward navigation.
 	private var slideTransition: AnyTransition {
 		let insertion: AnyTransition = viewModel.slideDirection == .forward
 		? .move(edge: .trailing)
@@ -135,12 +134,11 @@ struct CreateAccountScreen: View {
 		return .asymmetric(insertion: insertion, removal: removal)
 	}
 	
-	// MARK: - Navigation handler
+	// MARK: - Navigation Handler
 	
 	private func handleNavigation(_ event: CreateAccountViewModel.NavigationEvent) {
 		switch event {
 			case .skip, .finish:
-				// TODO: route to the appropriate next destination once defined
 				router.navigate(to: .accountCreated)
 		}
 	}

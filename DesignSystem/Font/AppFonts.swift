@@ -40,6 +40,7 @@ extension Font {
 	
 	// Regular
 	static let regular13: Font   = Gilroy.regular.size(13)
+	static let regular16: Font   = Gilroy.regular.size(16)
 	static let regular17: Font   = Gilroy.regular.size(17)
 	
 	// Light

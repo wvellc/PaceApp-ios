@@ -73,10 +73,10 @@ class CreateRunEventViewModel {
 	
 	//MARK: Initializer
 	init() {
-#if DEBUG
-		eventName = "Pace event"
-		location = "London"
-#endif
+		#if DEBUG
+			eventName = "Pace event"
+			location = "London"
+		#endif
 	}
 	
 	

@@ -24,6 +24,7 @@
 		E61FA42E2F67D252001DA088 /* String+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61FA42D2F67D252001DA088 /* String+Ext.swift */; };
 		E6370ED22F83A70000007CDF /* AppLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6370ED12F83A70000007CDF /* AppLabel.swift */; };
 		E6370ED42F83AACF00007CDF /* AppCardBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6370ED32F83AACF00007CDF /* AppCardBackground.swift */; };
+		E64DD7C02F92193B001233EA /* ToolBar+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E64DD7BF2F92193B001233EA /* ToolBar+Ext.swift */; };
 		E684F1E72F769CDF0059C38F /* ProfilePhotoShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = E684F1E62F769CDF0059C38F /* ProfilePhotoShape.swift */; };
 		E6AE33272F7D4875009189CD /* AppNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6AE33262F7D4875009189CD /* AppNavigation.swift */; };
 		E6B649522F67FAAF00612A01 /* CountryPicker in Frameworks */ = {isa = PBXBuildFile; productRef = E6B649512F67FAAF00612A01 /* CountryPicker */; };
@@ -66,6 +67,7 @@
 		E61FA42D2F67D252001DA088 /* String+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Ext.swift"; sourceTree = "<group>"; };
 		E6370ED12F83A70000007CDF /* AppLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLabel.swift; sourceTree = "<group>"; };
 		E6370ED32F83AACF00007CDF /* AppCardBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCardBackground.swift; sourceTree = "<group>"; };
+		E64DD7BF2F92193B001233EA /* ToolBar+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ToolBar+Ext.swift"; sourceTree = "<group>"; };
 		E684F1E62F769CDF0059C38F /* ProfilePhotoShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePhotoShape.swift; sourceTree = "<group>"; };
 		E6AE33262F7D4875009189CD /* AppNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNavigation.swift; sourceTree = "<group>"; };
 		E6B748E82F6A9D7C00202A2D /* OTPFieldView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPFieldView.swift; sourceTree = "<group>"; };
@@ -216,6 +218,7 @@
 		E6C4BEFC2F618C5200C17C69 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
+				E64DD7BF2F92193B001233EA /* ToolBar+Ext.swift */,
 				E61FA42D2F67D252001DA088 /* String+Ext.swift */,
 				E61F83B02F641BB400C215DF /* UIWindow+Ext.swift */,
 				E61F83AE2F641B0900C215DF /* CGFloat+Ext.swift */,
@@ -399,6 +402,7 @@
 				E60361D42F90B3130036538C /* DatePickerField.swift in Sources */,
 				E61FA42E2F67D252001DA088 /* String+Ext.swift in Sources */,
 				E6AE33272F7D4875009189CD /* AppNavigation.swift in Sources */,
+				E64DD7C02F92193B001233EA /* ToolBar+Ext.swift in Sources */,
 				E6C4BEDF2F613E1300C17C69 /* AppGradients.swift in Sources */,
 				E6C332862F62915700224AA5 /* PaceApp.swift in Sources */,
 				E61F83B12F641BB400C215DF /* UIWindow+Ext.swift in Sources */,
