@@ -20,61 +20,72 @@ struct HomeScreen: View {
 	
 	//MARK: View Builder
 	var body: some View {
-		VStack(alignment: .leading, spacing: 0) {
-			// MARK: App Navigation bar
-			AppNavigation(trailing: {
-				Button(action: {
-					// TODO: Show notification screen
-				}, label: {
-					RoundedRectangle(cornerRadius: 100)
-						.foregroundStyle(.whiteApp)
-						.overlay(content: {
-							Image(.icNotification)
-								.resizable()
-								.frame(width: 20, height: 20)
-						})
+		ZStack {
+			VStack(alignment: .leading, spacing: 0) {
+				// MARK: App Navigation bar
+				AppNavigation(trailing: {
+					Button(action: {
+						// TODO: Show notification screen
+					}, label: {
+						RoundedRectangle(cornerRadius: 100)
+							.foregroundStyle(.whiteApp)
+							.overlay(content: {
+								Image(.icNotification)
+									.resizable()
+									.frame(width: 20, height: 20)
+							})
+					})
 				})
-			})
-			
-			//MARK: Main scrollable content
-			ScrollView(showsIndicators: false) {
-				VStack(alignment: .leading, spacing: 0) {
-					//User name & sync status
-					VStack(alignment: .leading) {
-						Text("GM, Jack")
-							.font(.bold28)
-							.foregroundColor(.whiteApp)
-						Text("Not Synced Yet!")
-							.font(.medium14)
-							.foregroundColor(.white50)
-					}
-					
-					// MARK: Home data & Pair watch view
-					if showPairWatch {
-						PairWatchView {
-							showPairWatch = true
+				
+				//MARK: Main scrollable content
+				ScrollView(showsIndicators: false) {
+					VStack(alignment: .leading, spacing: 0) {
+						//User name & sync status
+						VStack(alignment: .leading) {
+							Text("GM, Jack")
+								.font(.bold28)
+								.foregroundColor(.whiteApp)
+							Text("Not Synced Yet!")
+								.font(.medium14)
+								.foregroundColor(.white50)
 						}
-					} else {
-						VStack(alignment: .leading, spacing: 16) {
-							// Metrics
-							metricRow
-							
-							// Run Actions
-							runActionGrid
-							
-							// Recent Activity
-							UpcomingActivitySection
-						}
-						.padding(.vertical, 16)
 						
+						// MARK: Home data & Pair watch view
+						if showPairWatch {
+							PairWatchView {
+								showPairWatch = true
+							}
+						} else {
+							VStack(alignment: .leading, spacing: 16) {
+								// Metrics
+								metricRow
+								
+								// Run Actions
+								runActionGrid
+								
+								// Recent Activity
+								UpcomingActivitySection
+							}
+							.padding(.vertical, 16)
+							
+						}
 					}
+					.padding(.horizontal, 16)
+					.padding(.bottom, 18)
 				}
-				.padding(.horizontal, 16)
-				.padding(.bottom, 18)
+			}
+			.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+			.appBackground()
+			
+			if viewModel.showMetricPopup {
+				MetricsPopupView(
+					isPresented: $viewModel.showMetricPopup,
+					metrics: viewModel.metrics,
+					startingIndex: viewModel.selectedMetricIndex
+				)
+				.zIndex(20)
 			}
 		}
-		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-		.appBackground()
 	}
 	
 	//MARK: Metric Row
@@ -87,7 +98,9 @@ struct HomeScreen: View {
 				}
 				
 				// Metric cards
-				HomeMetricCard(metric: metric, isHighPerformance: viewModel.isHighPerformance)
+				HomeMetricCard(metric: metric, isHighPerformance: viewModel.isHighPerformance) {
+					viewModel.didTapMetric(metric)
+				}
 				
 				// Dynamic space
 				if metric.id != viewModel.metrics.last?.id {
