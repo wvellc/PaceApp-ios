@@ -16,31 +16,47 @@ struct NotificationsScreen: View {
 	//MARK: View Builder
 	var body: some View {
 		// Notifications List
-		List {
-			ForEach(viewModel.notifications) { notification in
-				NotificationCard(notification: notification)
-				// Remove default list padding and backgrounds to make it look like a floating card
-					.listRowInsets(EdgeInsets(top: 8, leading: Constant.UI.defaultPadding, bottom: 8, trailing: Constant.UI.defaultPadding))
-					.listRowBackground(Color.clear)
-					.listRowSeparator(.hidden)
-				
-				
-				//Swipe to Delete (Matches the second image)
-					.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-						Button(role: .destructive) {
-							withAnimation {
-								viewModel.delete(notification: notification)
+		VStack {
+			if !viewModel.notifications.isEmpty {
+				List {
+					ForEach(viewModel.notifications) { notification in
+						NotificationCard(notification: notification)
+						// Remove default list padding and backgrounds to make it look like a floating card
+							.listRowInsets(EdgeInsets(top: 8, leading: Constant.UI.defaultPadding, bottom: 8, trailing: Constant.UI.defaultPadding))
+							.listRowBackground(Color.clear)
+							.listRowSeparator(.hidden)
+						
+						
+						//Swipe to Delete (Matches the second image)
+							.swipeActions(edge: .trailing, allowsFullSwipe: true) {
+								Button(role: .destructive) {
+									withAnimation {
+										viewModel.delete(notification: notification)
+									}
+								} label: {
+									Image(.icDelete)
+								}
+								.tint(.redBoho)
 							}
-						} label: {
-							Image(.icDelete)
-						}
-						.tint(.redBoho)
+					}
+				}
+				.listStyle(.plain)
+				.padding(.top, Constant.UI.defaultPadding / 2)
+				
+			} else {
+
+				Rectangle()
+					.foregroundStyle(.clear)
+					.safeAreaPadding()
+					.overlay {
+						NoDataView(
+							icon: .icEmptyNotification,
+							title: .noNotificationsYet,
+							description: .youDontHaveAnyNotificationsRightNow
+						)
 					}
 			}
 		}
-		.listStyle(.plain)
-		.padding(.top, Constant.UI.defaultPadding / 2)
-			
 		//Custom Navigation Bar Buttons
 		.navigationTitle(.notifications)
 		.navigationBarTitleDisplayMode(.inline)
@@ -54,21 +70,25 @@ struct NotificationsScreen: View {
 					.foregroundColor(.whiteApp)
 			}
 			
-			ToolbarItem(placement: .topBarTrailing) {
-				Button(action: { viewModel.clearAllNotification() }) {
-					Image(.icClearAll)
-						.resizable()
-						.scaledToFit()
-						.foregroundStyle(.whiteApp)
-						.frame(width: 19.20, height: 19.20)
+			if !viewModel.notifications.isEmpty {
+				ToolbarItem(placement: .topBarTrailing) {
+					Button(action: { viewModel.clearAllNotification() }) {
+						Image(.icClearAll)
+							.resizable()
+							.scaledToFit()
+							.foregroundStyle(.whiteApp)
+							.frame(width: 19.20, height: 19.20)
+					}
 				}
 			}
+			
 			
 		}
 		.toolbarBackground(.hidden, for: .navigationBar)
 		.appBackground()
-		
 	}
+	
+	
 }
 
 #Preview {
