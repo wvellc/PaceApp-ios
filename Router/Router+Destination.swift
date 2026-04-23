@@ -45,7 +45,7 @@ extension Router {
 				// ----------------------------------------------------------------
 				
 			case .createRunEvent: CreateRunEventScreen()
-				
+			case .notifications	: NotificationsScreen()
 				
 				// ----------------------------------------------------------------
 				// MARK: Profile

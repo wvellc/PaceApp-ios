@@ -17,4 +17,13 @@ extension Date: @retroactive RawRepresentable {
 	public init?(rawValue: String) {
 		self = Date.formatter.date(from: rawValue) ?? Date()
 	}
+	
+	func timeAgoDisplay() -> String {
+		let formatter = RelativeDateTimeFormatter()
+		// .short gives you "min" instead of "minutes" to match your design
+		formatter.unitsStyle = .short
+		formatter.dateTimeStyle = .numeric
+		return formatter.localizedString(for: self, relativeTo: Date())
+	}
+
 }

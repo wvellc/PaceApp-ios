@@ -59,19 +59,26 @@ struct PaceApp: App {
 	/// Sets up UINavigationBar and text input appearance used throughout the app.
 	fileprivate func setNavigationAppearance() {
 		let appearance = UINavigationBarAppearance()
-		// Start from a transparent background configuration
+		
+		// 1. Base Configuration
 		appearance.configureWithTransparentBackground()
-		// Ensure the bar itself is clear and without a shadow line
 		appearance.backgroundColor = .clear
-		appearance.shadowColor = .clear
+		appearance.shadowColor = .clear // Removes the bottom separator line
 		
-		// Apply to all navigation bar states
-		UINavigationBar.appearance().standardAppearance = appearance
-		UINavigationBar.appearance().scrollEdgeAppearance = appearance
-		UINavigationBar.appearance().compactAppearance = appearance
-		UINavigationBar.appearance().tintColor = UIColor.radiantBlue
+		// 2. Set Text Attributes ON the appearance object (Modern approach)
+		appearance.titleTextAttributes = [.foregroundColor: UIColor.whiteApp]
+		appearance.largeTitleTextAttributes = [.foregroundColor: UIColor.whiteApp]
 		
-		// Prefer a dark keyboard for text fields used in the app
+		// 3. Apply the configured appearance globally
+		let navBarProxy = UINavigationBar.appearance()
+		navBarProxy.standardAppearance = appearance
+		navBarProxy.scrollEdgeAppearance = appearance
+		navBarProxy.compactAppearance = appearance
+		
+		// 4. Set global tint (affects back buttons and navigation icons)
+		navBarProxy.tintColor = .whiteApp
+		
+		// 5. Global Keyboard Appearance
 		UITextField.appearance().keyboardAppearance = .dark
 	}
 

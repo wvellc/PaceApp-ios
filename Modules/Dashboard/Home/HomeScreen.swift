@@ -25,7 +25,8 @@ struct HomeScreen: View {
 				// MARK: App Navigation bar
 				AppNavigation(trailing: {
 					Button(action: {
-						// TODO: Show notification screen
+						//Show notification screen
+						router.navigate(to: .notifications)
 					}, label: {
 						RoundedRectangle(cornerRadius: 100)
 							.foregroundStyle(.whiteApp)

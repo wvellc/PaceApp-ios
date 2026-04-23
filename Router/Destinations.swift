@@ -19,6 +19,7 @@ enum Destinations: Hashable, Codable {
 	
     // MARK: - Home
 	case createRunEvent
+	case notifications
 	
     // MARK: - Profile
     case profile
