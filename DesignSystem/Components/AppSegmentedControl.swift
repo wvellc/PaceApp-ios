@@ -7,31 +7,12 @@
 
 import SwiftUI
 
-/// A reusable segmented control with an animated sliding selection indicator.
-///
-/// Generic over any `Hashable` & `CaseIterable` type whose segments are
-/// identified by their `String` titles.
-///
-/// Usage:
-/// ```swift
-/// @State private var selected: LoginType = .phoneNumber
-///
-/// AppSegmentedControl(
-///     selection: $selected,
-///     titles: [.email: "Email", .phoneNumber: "Phone Number"]
-/// )
-/// ```
 struct AppSegmentedControl<Segment: Hashable>: View {
-
-	// MARK: - Properties
-
+	
+	// MARK: - Properties (Untouched)
 	@Binding var selection: Segment
 	@Namespace private var segmentNamespace
-
-	/// Ordered segments and their display titles.
 	private let segments: [(key: Segment, title: String)]
-
-	/// Visual configuration
 	private let font: Font
 	private let selectedForeground: Color
 	private let unselectedForeground: Color
@@ -40,24 +21,13 @@ struct AppSegmentedControl<Segment: Hashable>: View {
 	private let cornerRadius: CGFloat
 	private let verticalPadding: CGFloat
 	private let height: CGFloat?
-
+	
+	// MARK: - Drag state
+	@State private var segmentWidth: CGFloat = 0
+	/// Using a CGFloat? to represent the absolute X position of the finger during drag
+	@State private var dragLocationX: CGFloat? = nil
+	
 	// MARK: - Init
-
-	/// Creates an `AppSegmentedControl`.
-	///
-	/// - Parameters:
-	///   - selection: Binding to the currently selected segment.
-	///   - segments: Ordered array of `(key, title)` pairs.
-	///   - font: Segment label font. Default `.medium16`.
-	///   - selectedForeground: Text color for the active segment. Default `.whiteApp`.
-	///   - unselectedForeground: Text color for inactive segments. Default `.whiteApp` at 50%.
-	///   - selectedFill: Fill style for the active segment indicator.
-	///   - selectedGradientStart: Leading color for the default active segment gradient.
-	///   - selectedBackground: Trailing color for the default active segment gradient.
-	///   - trackBackground: The track color behind all segments. Default `white` at 10%.
-	///   - cornerRadius: Corner radius for both track and indicator. Default `12`.
-	///   - verticalPadding: Padding inside each segment label. Default `12`.
-	///   - height: Explicit height constraint. Default `44`.
 	init(
 		selection: Binding<Segment>,
 		segments: [(key: Segment, title: String)],
@@ -89,15 +59,8 @@ struct AppSegmentedControl<Segment: Hashable>: View {
 		self.verticalPadding = verticalPadding
 		self.height = height
 	}
-
-	// MARK: - Convenience init (dictionary)
-
-	/// Convenience initializer that accepts a dictionary and an explicit ordering.
-	///
-	/// - Parameters:
-	///   - selection: Binding to the currently selected segment.
-	///   - titles: Dictionary mapping each segment to its display title.
-	///   - order: The order in which segments should appear.
+	
+	// MARK: - Convenience init
 	init(
 		selection: Binding<Segment>,
 		titles: [Segment: String],
@@ -110,63 +73,119 @@ struct AppSegmentedControl<Segment: Hashable>: View {
 			}
 		)
 	}
-
+	
 	// MARK: - Body
-
 	var body: some View {
-		HStack(spacing: 0) {
-			ForEach(segments.indices, id: \.self) { index in
-				let segment = segments[index]
-				segmentButton(segment.key, title: segment.title)
-			}
-		}
-		.padding(4)
-		.background(trackBackground)
-		.clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-		.frame(height: height)
-	}
-
-	// MARK: - Segment Button
-
-	private func segmentButton(_ key: Segment, title: String) -> some View {
-		let isSelected = selection == key
-		return Button {
-			HapticManager.shared.light()
+		GeometryReader { geo in
+			let horizontalPadding: CGFloat = 4
+			let totalAvailableWidth = geo.size.width - (horizontalPadding * 2)
+			let cellWidth = totalAvailableWidth / CGFloat(segments.count)
+			let selectedIndex = segments.firstIndex(where: { $0.key == selection }) ?? 0
 			
-			withAnimation(.easeInOut(duration: 0.25)) {
-				selection = key
-			}
-		} label: {
-			Text(title)
-				.font(font)
-				.foregroundColor(isSelected ? selectedForeground : unselectedForeground)
-				.frame(maxWidth: .infinity, maxHeight: .infinity)
-				.padding(.vertical, verticalPadding)
-				.contentShape(Rectangle())
-				.background {
-					if isSelected {
-						RoundedRectangle(cornerRadius: cornerRadius - 2)
-							.fill(selectedFill)
-							.matchedGeometryEffect(id: "segmentIndicator", in: segmentNamespace)
+			// Calculate pillX at the top level of the body so both ZStack and Gesture can see it
+			let currentPillX: CGFloat = {
+				if let dragX = dragLocationX {
+					let centerAdjust = cellWidth / 2
+					let raw = dragX - centerAdjust - horizontalPadding
+					return min(max(raw, 0), totalAvailableWidth - cellWidth)
+				}
+				return CGFloat(selectedIndex) * cellWidth
+			}()
+			
+			ZStack(alignment: .leading) {
+				RoundedRectangle(cornerRadius: cornerRadius)
+					.fill(trackBackground)
+				
+				// Selection Pill
+				RoundedRectangle(cornerRadius: cornerRadius - 2)
+					.fill(selectedFill)
+					.frame(width: cellWidth)
+					.padding(horizontalPadding)
+					.offset(x: currentPillX) // Use the locally computed value
+					.animation(dragLocationX != nil ? .interactiveSpring() : .spring(response: 0.3, dampingFraction: 0.75), value: currentPillX)
+				
+				HStack(spacing: 0) {
+					ForEach(segments.indices, id: \.self) { index in
+						Text(segments[index].title)
+							.font(font)
+							.foregroundColor(selection == segments[index].key ? selectedForeground : unselectedForeground)
+							.frame(maxWidth: .infinity, maxHeight: .infinity)
+							.contentShape(Rectangle())
+							.onTapGesture {
+								HapticManager.shared.light()
+								withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+									selection = segments[index].key
+								}
+							}
 					}
 				}
+				.padding(horizontalPadding)
+			}
+			.focusable(false)
+			.gesture(
+				DragGesture(minimumDistance: 0, coordinateSpace: .local)
+					.onChanged { value in
+						dragLocationX = value.location.x
+					}
+					.onEnded { _ in
+						// 1. Calculate where the pill center is at the moment of release
+						let pillCenter = currentPillX + (cellWidth / 2)
+						
+						// 2. Identify the target index based on the "50% area" logic
+						let targetIndex = Int((pillCenter / cellWidth).rounded(.down))
+						let clampedIndex = max(0, min(targetIndex, segments.count - 1))
+						
+						// 3. Get the key for the potential new selection
+						let newSelection = segments[clampedIndex].key
+						
+						// 4. Only trigger haptic and binding update if the selection has actually changed
+						if selection != newSelection {
+							HapticManager.shared.light()
+							withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+								selection = newSelection
+							}
+						}
+						
+						// 5. Always clear the drag state to snap the pill (either to new or old position)
+						withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+							dragLocationX = nil
+						}
+					}
+			)
 		}
-		.frame(maxWidth: .infinity)
-		.contentShape(Rectangle())
-		.buttonStyle(.plain)
+		.frame(height: height)
+	}
+	
+	// MARK: - Segment Button
+	private func segmentButton(_ key: Segment, title: String) -> some View {
+		let isSelected = selection == key
+		return Text(title)
+			.font(font)
+			.foregroundColor(isSelected ? selectedForeground : unselectedForeground)
+			.frame(maxWidth: .infinity, maxHeight: .infinity)
+			.padding(.vertical, verticalPadding)
+			.contentShape(Rectangle())
+			.onTapGesture {
+				HapticManager.shared.light()
+				withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+					selection = key
+				}
+			}
 	}
 }
-
 // MARK: - Preview
 
 #Preview {
+	
+	@Previewable @State var selected: LoginType = .email
+	
 	ZStack {
 		Color.darkSeaBlue
 
 		VStack(spacing: 32) {
 			// Example with LoginType
 			AppSegmentedControl(
-				selection: .constant(LoginType.phoneNumber),
+				selection: $selected,
 				segments: [
 					(key: LoginType.email, title: "Email"),
 					(key: LoginType.phoneNumber, title: "Phone Number")
