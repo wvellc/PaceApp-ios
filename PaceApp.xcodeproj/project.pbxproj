@@ -98,6 +98,26 @@
 		E6F888EE2F9A2FFC00F17F95 /* NoDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoDataView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		E634523C2F9BAA1D003D6C31 /* Exceptions for "Modules" folder in "PaceApp" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Dashboard/Profile/ViewModel/ProfileViewModel+Ext.swift",
+			);
+			target = E6C69B562F603C8D00ACED81 /* PaceApp */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		E634523D2F9BAA1D003D6C31 /* Exceptions for "Modules" folder in "Copy Bundle Resources" phase from "PaceApp" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = E6C69B552F603C8D00ACED81 /* Resources */;
+			membershipExceptions = (
+				"Dashboard/Profile/ViewModel/ProfileViewModel+Ext.swift",
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		E61F83B52F64264C00C215DF /* Model */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -126,6 +146,10 @@
 		};
 		E6C69B6E2F603E4D00ACED81 /* Modules */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E634523C2F9BAA1D003D6C31 /* Exceptions for "Modules" folder in "PaceApp" target */,
+				E634523D2F9BAA1D003D6C31 /* Exceptions for "Modules" folder in "Copy Bundle Resources" phase from "PaceApp" target */,
+			);
 			path = Modules;
 			sourceTree = "<group>";
 		};

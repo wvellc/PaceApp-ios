@@ -19,7 +19,7 @@ extension Router {
 		switch root {
 			case .welcome: WelcomeScreen()
 			case .auth:       LoginScreen()
-			case .dashboard:  DashboardView()   //tab-bar
+			case .dashboard:  TabBarScreen()   //tab-bar
 			case .accountCreation: CreateAccountScreen()
 		}
 	}
@@ -51,14 +51,14 @@ extension Router {
 				// MARK: Profile
 				// ----------------------------------------------------------------
 				
-			case .profile		: EmptyView()
+			case .editProfile	: EditProfileScreen()
 		
 				
 				// ----------------------------------------------------------------
 				// MARK: Settings
 				// ----------------------------------------------------------------
 				
-			case .settings		: EmptyView()
+			case .settings		: SettingScreen()
 			case .termsOfService:
 				AppWebViewScreen(
 					requestUrl: NetworkConst.WebUrl.termsOfService

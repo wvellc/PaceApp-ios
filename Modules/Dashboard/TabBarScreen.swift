@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// Main tab bar controller for the app, managing navigation between key sections.
-struct DashboardView: View {
+struct TabBarScreen: View {
 
     // MARK: State
     /// Tracks the currently selected tab in the tab bar.
@@ -67,7 +67,7 @@ struct DashboardView: View {
                 .tag(PaceTab.stats)
 
             // Profile tab
-            PlaceholderTabView(icon: PaceTab.profile.systemIcon, title: PaceTab.profile.title)
+			ProfileScreen()
                 .tabItem {
                     Image(PaceTab.profile.assetImage(selected: selectedTab == .profile))
                     Text(PaceTab.profile.title)
@@ -98,5 +98,5 @@ struct PlaceholderTabView: View {
 }
 
 #Preview("Pace App") {
-    DashboardView()
+    TabBarScreen()
 }
