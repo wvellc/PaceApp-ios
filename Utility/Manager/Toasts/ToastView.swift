@@ -29,7 +29,7 @@ struct ToastView: View {
 			// Message
 			Text(toast.message)
 				.font(.medium14)
-				.foregroundColor(.black)
+				.foregroundColor(.blackApp)
 				.lineLimit(3)
 				.fixedSize(horizontal: false, vertical: true)
 			

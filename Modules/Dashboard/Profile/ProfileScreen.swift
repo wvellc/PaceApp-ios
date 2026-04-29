@@ -93,7 +93,9 @@ struct ProfileScreen: View {
 			VSpace(height: 16)
 			
 			// Name
-			Text(viewModel.userName)
+			Text(
+				"\(viewModel.firstName ?? "")\(viewModel.firstName != nil ? " " : "")\(viewModel.lastName ?? "")"
+			)
 				.font(.bold24)
 				.foregroundStyle(.whiteApp)
 			

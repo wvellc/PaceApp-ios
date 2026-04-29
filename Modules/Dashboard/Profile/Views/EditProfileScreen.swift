@@ -11,13 +11,19 @@ import PhotosUI
 struct EditProfileScreen: View {
 	
 	@Environment(Router.self) private var router
+	@FocusState private var focusedField: Field?
 	
+	private enum Field {
+		case firstName
+		case lastName
+	}
+
 	// Shared ProfileViewModel passed from ProfileScreen
-	@Bindable var viewModel: ProfileViewModel
+	let viewModel: ProfileViewModel
 	
 	// MARK: - Local edit state
-	@State private var firstNameInput: String = ""
-	@State private var lastNameInput: String = ""
+	@State private var firstName: String = ""
+	@State private var lastName: String = ""
 	@State private var selectedPhotoItem: PhotosPickerItem? = nil
 	@State private var selectedImage: UIImage? = nil
 	@State private var isPhotoPickerPresented: Bool = false
@@ -49,8 +55,8 @@ struct EditProfileScreen: View {
 		.navigationTitle("Edit Profile")
 		.onAppear {
 			// Populate local state from viewModel
-			firstNameInput = $viewModel.firstName.wrappedValue
-			lastNameInput = viewModel.lastName.wrappedValue
+			firstName = viewModel.firstName ?? ""
+			lastName = viewModel.lastName ?? ""
 		}
 		.photosPicker(
 			isPresented: $isPhotoPickerPresented,
@@ -144,18 +150,37 @@ struct EditProfileScreen: View {
 	
 	@ViewBuilder
 	private var inputSection: some View {
-		VStack(spacing: 14) {
-			// First Name Field
-			profileTextField(
-				placeholder: "First Name",
-				text: $firstNameInput
+		// Name fields
+		VStack(spacing: 16) {
+			AppTextField(
+				text: $firstName,
+				placeholder: .firstName,
+				leadingView: AnyView(
+					Image(.icPerson)
+				),
+				textContentType: .givenName,
+				autocapitalization: .words,
+				submitLabel: .next
 			)
+			.focused($focusedField, equals: .firstName)
+			.onSubmit {
+				focusedField = .lastName
+			}
 			
-			// Last Name Field
-			profileTextField(
-				placeholder: "Last Name",
-				text: $lastNameInput
+			AppTextField(
+				text: $lastName,
+				placeholder: .lastName,
+				leadingView: AnyView(
+					Image(.icPerson)
+				),
+				textContentType: .familyName,
+				autocapitalization: .words,
+				submitLabel: .done
 			)
+			.focused($focusedField, equals: .lastName)
+			.onSubmit {
+				focusedField = nil
+			}
 		}
 	}
 	
@@ -165,11 +190,11 @@ struct EditProfileScreen: View {
 	private var updateButton: some View {
 		
 		AppButton("Update Profile") {
-			viewModel.updateProfile(
-				firstName: firstNameInput,
-				lastName: lastNameInput,
-				selectedImage: selectedImage
-			)
+//			viewModel.updateProfile(
+//				firstName: firstNameInput,
+//				lastName: lastNameInput,
+//				selectedImage: selectedImage
+//			)
 			router.navigateBack()
 		}
 	}
@@ -181,3 +206,4 @@ struct EditProfileScreen: View {
 	EditProfileScreen(viewModel: ProfileViewModel())
 		.environment(Router())
 }
+
