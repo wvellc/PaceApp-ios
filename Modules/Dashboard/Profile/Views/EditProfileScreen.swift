@@ -19,8 +19,9 @@ struct EditProfileScreen: View {
 	}
 
 	// Shared ProfileViewModel passed from ProfileScreen
-	let viewModel: ProfileViewModel
+	@Environment(ProfileViewModel.self) var viewModel
 	
+	// or @EnvironmentObject var viewModel: ProfileViewModel
 	// MARK: - Local edit state
 	@State private var firstName: String = ""
 	@State private var lastName: String = ""
@@ -190,11 +191,11 @@ struct EditProfileScreen: View {
 	private var updateButton: some View {
 		
 		AppButton("Update Profile") {
-//			viewModel.updateProfile(
-//				firstName: firstNameInput,
-//				lastName: lastNameInput,
-//				selectedImage: selectedImage
-//			)
+			viewModel.updateProfile(
+				firstName: firstName,
+				lastName: lastName,
+				selectedImage: selectedImage
+			)
 			router.navigateBack()
 		}
 	}
@@ -203,7 +204,11 @@ struct EditProfileScreen: View {
 // MARK: - Preview
 
 #Preview {
-	EditProfileScreen(viewModel: ProfileViewModel())
+	
+	@Previewable @Environment(ProfileViewModel.self) var viewModel
+
+	
+	EditProfileScreen()
 		.environment(Router())
 }
 

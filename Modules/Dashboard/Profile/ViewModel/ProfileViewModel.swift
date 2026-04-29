@@ -62,5 +62,22 @@ final class ProfileViewModel {
             )
         ]
     }
+	
+	
+	// MARK: - Update Profile Action
+	func updateProfile(
+		firstName: String,
+		lastName: String,
+		selectedImage: UIImage?
+	) {
+		self.firstName = firstName.trimmingCharacters(in: .whitespaces)
+		self.lastName = lastName.trimmingCharacters(in: .whitespaces)
+		
+		if let image = selectedImage,
+		   let data = image.jpegData(compressionQuality: 0.8) {
+			// In a real app: upload data to server, then update avatarURL
+			_ = data
+		}
+	}
 }
 

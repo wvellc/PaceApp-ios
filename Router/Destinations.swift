@@ -22,7 +22,7 @@ enum Destinations: Hashable, Codable {
 	case notifications
 	
     // MARK: - Profile
-    case editProfile
+	case editProfile(firstName: String?, lastName: String?, profile:String?)
 
     // MARK: - Settings
 	case settings

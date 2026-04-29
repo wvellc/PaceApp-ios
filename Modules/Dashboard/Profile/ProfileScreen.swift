@@ -51,6 +51,7 @@ struct ProfileScreen: View {
 		}
 		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 		.appBackground()
+		.environment(viewModel)
 	}
 	
 	// MARK: - Avatar Section
@@ -109,7 +110,14 @@ struct ProfileScreen: View {
 			// Edit Profile Button
 			Button(
 				action: {
-					router.navigate(to: .editProfile)
+					router
+						.navigate(
+							to: .editProfile(
+										firstName: viewModel.firstName,
+										lastName: viewModel.lastName,
+										profile: viewModel.avatarURL
+									)
+						)
 				},
 				label: {
 					Text("Edit Profile")
