@@ -25,31 +25,31 @@ struct EditProfileScreen: View {
 	// MARK: - Local edit state
 	@State private var firstName: String = ""
 	@State private var lastName: String = ""
-	@State private var selectedPhotoItem: PhotosPickerItem? = nil
 	@State private var selectedImage: UIImage? = nil
 	@State private var isPhotoPickerPresented: Bool = false
+	@State private var profileImageURL: URL?
 	
 	var body: some View {
 		VStack(spacing: 0) {
-			ScrollView(showsIndicators: false) {
-				VStack(spacing: 32) {
-					
-					// MARK: Avatar
-					avatarSection
-					
-					// MARK: Input Fields
-					inputSection
-					
-					Spacer(minLength: 20)
-				}
-				.padding(.horizontal, 20)
-				.padding(.top, 24)
+			VStack(spacing: 32) {
+				
+				// MARK: Avatar
+				avatarSection
+				
+				// MARK: Input Fields
+				inputSection
+				
+				Spacer(minLength: 20)
+				
+				// MARK: Update Profile Button
+				updateButton
+				
 			}
+			.padding(.horizontal, 20)
+			.padding(.top, 24)
+			.padding(.bottom, 36)
 			
-			// MARK: Update Profile Button
-			updateButton
-				.padding(.horizontal, 20)
-				.padding(.bottom, 36)
+			
 		}
 		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 		.appBackground()
@@ -59,16 +59,28 @@ struct EditProfileScreen: View {
 			firstName = viewModel.firstName ?? ""
 			lastName = viewModel.lastName ?? ""
 		}
-		.photosPicker(
-			isPresented: $isPhotoPickerPresented,
-			selection: $selectedPhotoItem,
-			matching: .images
-		)
-		.onChange(of: selectedPhotoItem) { _, newItem in
+		// Native, short, and clean implementation
+		.imagePickerManager(isPresented: $isPhotoPickerPresented, selectedFileURL: $profileImageURL)
+		.onChange(of: profileImageURL) { _, newValue in
 			Task {
-				if let data = try? await newItem?.loadTransferable(type: Data.self),
-				   let uiImage = UIImage(data: data) {
-					selectedImage = uiImage
+				// 1. Ensure the URL is not nil
+				guard let url = newValue else {
+					selectedImage = nil
+					return
+				}
+				
+				// 2. Load data from the local file path
+				// Use Task.detached for background disk reading
+				let image = await Task.detached(priority: .userInitiated) {
+					if let data = try? Data(contentsOf: url), let uiImage = UIImage(data: data) {
+						return uiImage
+					}
+					return await UIImage(resource: .icPerson)
+				}.value
+				
+				// 3. Update the UI state on the main thread
+				await MainActor.run {
+					self.selectedImage = image
 				}
 			}
 		}
@@ -81,68 +93,60 @@ struct EditProfileScreen: View {
 	private var avatarSection: some View {
 		let avatarShape = ProfilePhotoShape()
 		
-		VStack(spacing: 10) {
+		VStack(spacing: 16) {
 			ZStack(alignment: .bottomTrailing) {
 				// Avatar image
-				Group {
-					if let localImage = selectedImage {
-						Image(uiImage: localImage)
-							.resizable()
-							.scaledToFill()
-							.frame(width: 100, height: 108)
-							.clipShape(avatarShape)
-					} else {
-						AsyncImage(url: URL(string: viewModel.avatarURL)) { image in
-							image
-								.resizable()
-								.scaledToFill()
-								.frame(width: 100, height: 108)
-								.clipShape(avatarShape)
-						} placeholder: {
-							avatarShape
-								.fill(Color.white.opacity(0.1))
-								.frame(width: 100, height: 108)
+				
+				Color.whiteApp
+					.overlay {
+						ZStack {
+							if let localImage = selectedImage {
+								Image(uiImage: localImage)
+									.resizable()
+									.scaledToFill()
+									.frame(width: 100, height: 108)
+									.clipShape(avatarShape)
+							} else {
+								AsyncImage(url: URL(string: viewModel.avatarURL)) { image in
+									image
+										.resizable()
+										.scaledToFill()
+										.frame(width: 100, height: 108)
+										.clipShape(avatarShape)
+									
+								} placeholder: {
+									avatarShape
+										.fill(.whiteApp)
+										.frame(width: 100, height: 108)
+										.overlay {
+											Image(.icProfile)
+												.resizable()
+												.renderingMode(.template)
+												.foregroundStyle(.grayHint)
+												.scaledToFill()
+												.frame(width: 60, height: 60)
+										}
+								}
+							}
+							
+							Color.blackApp.opacity(0.7)
 								.overlay {
-									ProgressView().tint(.white)
+									Image(.icCamera)
 								}
 						}
+
 					}
-				}
-				.overlay {
-					// Dim overlay on avatar
-					avatarShape
-						.fill(Color.black.opacity(0.35))
-						.frame(width: 100, height: 108)
-				}
+					.frame(width: 100, height: 108)
+					.clipShape(avatarShape)
+
 				
-				// Camera badge
-				Button(action: {
-					isPhotoPickerPresented = true
-				}, label: {
-					Circle()
-						.fill(
-							LinearGradient(
-								colors: [Color(hex: "#4D9FFF"), Color(hex: "#1A6FE0")],
-								startPoint: .topLeading,
-								endPoint: .bottomTrailing
-							)
-						)
-						.frame(width: 32, height: 32)
-						.overlay {
-							Image(systemName: "camera.fill")
-								.font(.system(size: 14))
-								.foregroundStyle(.white)
-						}
-						.shadow(color: Color(hex: "#1A6FE0").opacity(0.5), radius: 6, x: 0, y: 3)
-				})
-				.offset(x: 4, y: 4)
 			}
 			.onTapGesture {
 				isPhotoPickerPresented = true
 			}
 			
 			Text("Update Photo")
-				.font(.medium14)
+				.font(.medium16)
 				.foregroundStyle(.whiteApp)
 		}
 	}
@@ -205,10 +209,8 @@ struct EditProfileScreen: View {
 
 #Preview {
 	
-	@Previewable @Environment(ProfileViewModel.self) var viewModel
-
-	
 	EditProfileScreen()
 		.environment(Router())
+		.environment(ProfileViewModel())
 }
 

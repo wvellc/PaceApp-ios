@@ -33,13 +33,13 @@ struct ProfileScreen: View {
 			
 			ScrollView(showsIndicators: false) {
 				VStack {
-					VSpace(height: 31)
+					VSpace(height: 28)
 					
 					// MARK: Avatar Section
 					avatarSection
 					
 					
-					VSpace(height: 16)
+					VSpace(height: 28)
 					
 					// MARK: Menu Items
 					menuSection
@@ -91,7 +91,7 @@ struct ProfileScreen: View {
 					}
 				}
 			
-			VSpace(height: 16)
+			VSpace(height: 18)
 			
 			// Name
 			Text(
@@ -105,7 +105,7 @@ struct ProfileScreen: View {
 				.font(.medium14)
 				.foregroundStyle(.white50)
 			
-			VSpace(height: 16)
+			VSpace(height: 12)
 			
 			// Edit Profile Button
 			Button(
