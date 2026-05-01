@@ -563,6 +563,8 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Please allow Bluetooth access so PaceApp can find and connect to your Garmin watch for real-time pace, heart rate, and workout tracking.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "PaceApp uses Bluetooth to discover and connect to your Garmin watch for real-time pace, heart rate, and workout tracking.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Allow access to the camera for capturing profile picture. Your captured picture will be transmitted to our server to enhance your experience.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Please allow access to the photo library to select a photo for the profile picture. The chosen image will transmitted to our server to personalize your profile.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -618,6 +620,8 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Please allow Bluetooth access so PaceApp can find and connect to your Garmin watch for real-time pace, heart rate, and workout tracking.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "PaceApp uses Bluetooth to discover and connect to your Garmin watch for real-time pace, heart rate, and workout tracking.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Allow access to the camera for capturing profile picture. Your captured picture will be transmitted to our server to enhance your experience.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Please allow access to the photo library to select a photo for the profile picture. The chosen image will transmitted to our server to personalize your profile.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;

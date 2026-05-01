@@ -10,48 +10,53 @@ import SwiftUI
 struct ProfileScreen: View {
 	
 	@Environment(Router.self) private var router
+	@State private var path = NavigationPath()
 	@State private var viewModel = ProfileViewModel()
 	
 	var body: some View {
-		VStack(spacing: 0) {
-			
-			// MARK: App Navigation Bar
-			AppNavigation(trailing: {
-				Button(action: {
-					router.navigate(to: .settings)
-				}, label: {
-					RoundedRectangle(cornerRadius: 100)
-						.foregroundStyle(.whiteApp)
-						.frame(width: 40, height: 40)
-						.overlay(content: {
-							Image(.icSettings)
-								.resizable()
-								.frame(width: 20, height: 20)
-						})
+		NavigationStack(path: $path) {
+			VStack(spacing: 0) {
+				
+				// MARK: App Navigation Bar
+				AppNavigation(trailing: {
+					Button(action: {
+						router.navigate(to: .settings)
+					}, label: {
+						RoundedRectangle(cornerRadius: 100)
+							.foregroundStyle(.whiteApp)
+							.frame(width: 40, height: 40)
+							.overlay(content: {
+								Image(.icSettings)
+									.resizable()
+									.frame(width: 20, height: 20)
+							})
+					})
 				})
-			})
-			
-			ScrollView(showsIndicators: false) {
-				VStack {
-					VSpace(height: 28)
-					
-					// MARK: Avatar Section
-					avatarSection
-					
-					
-					VSpace(height: 28)
-					
-					// MARK: Menu Items
-					menuSection
+				
+				ScrollView(showsIndicators: false) {
+					VStack {
+						VSpace(height: 28)
+						
+						// MARK: Avatar Section
+						avatarSection
+						
+						
+						VSpace(height: 28)
+						
+						// MARK: Menu Items
+						menuSection
+					}
+					.padding(.horizontal, 20)
+					.padding(.bottom, 32)
 				}
-				.padding(.horizontal, 20)
-				.padding(.bottom, 32)
+				.scrollBounceBehavior(.basedOnSize)
 			}
-			.scrollBounceBehavior(.basedOnSize)
+			.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+			.appBackground()
+			.environment(viewModel)
+
 		}
-		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-		.appBackground()
-		.environment(viewModel)
+
 	}
 	
 	// MARK: - Avatar Section
@@ -219,3 +224,4 @@ struct ProfileScreen: View {
 	ProfileScreen()
 		.environment(Router())
 }
+

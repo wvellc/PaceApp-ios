@@ -16,7 +16,8 @@ struct ProfileStepView: View {
 
     @Bindable var viewModel: CreateAccountViewModel
     @FocusState private var focusedField: Field?
-
+	@State private var isPhotoPickerPresented = false
+	
     private enum Field {
         case firstName
         case lastName
@@ -36,9 +37,7 @@ struct ProfileStepView: View {
 			VSpace(height: 32)
 			
             // Avatar picker
-			PhotosPicker(selection: $viewModel.selectedPhotoItem, matching: .images) {
-                avatarView
-            }
+		avatarView
             .onChange(of: viewModel.selectedPhotoItem) { _, _ in
                 Task { await viewModel.loadPhoto() }
             }
@@ -82,6 +81,14 @@ struct ProfileStepView: View {
         }
         .padding(.horizontal, 16)
         .padding(.top, 24)
+		.imagePickerManager(isPresented: $isPhotoPickerPresented, selectedImage: $viewModel.selectedPhotoItem)
+//		.onChange(of: viewModel.selectedPhotoItem) { oldValue, newValue in
+//			if newValue != nil {
+//				Task { await viewModel.loadPhoto() }
+//			} else {
+//				viewModel.profileImage = nil
+//			}
+//		}
 		.onAppear {
 			focusedField = .firstName
 		}
@@ -115,6 +122,10 @@ struct ProfileStepView: View {
 								.frame(width: 54, height: 54)
                         }
                     }
+					.onTapGesture {
+						isPhotoPickerPresented = true
+					}
+
             }
 
 			Text(.addPhoto)

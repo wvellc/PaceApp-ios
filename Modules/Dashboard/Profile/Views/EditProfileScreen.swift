@@ -27,8 +27,8 @@ struct EditProfileScreen: View {
 	@State private var lastName: String = ""
 	@State private var selectedImage: UIImage? = nil
 	@State private var isPhotoPickerPresented: Bool = false
-	@State private var profileImageURL: URL?
-	
+	@State private var profileImage: UIImage? = nil
+
 	var body: some View {
 		VStack(spacing: 0) {
 			VStack(spacing: 32) {
@@ -53,35 +53,21 @@ struct EditProfileScreen: View {
 		}
 		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 		.appBackground()
-		.navigationTitle("Edit Profile")
+		.navigationTitle(.editProfile)
 		.onAppear {
 			// Populate local state from viewModel
 			firstName = viewModel.firstName ?? ""
 			lastName = viewModel.lastName ?? ""
 		}
 		// Native, short, and clean implementation
-		.imagePickerManager(isPresented: $isPhotoPickerPresented, selectedFileURL: $profileImageURL)
-		.onChange(of: profileImageURL) { _, newValue in
-			Task {
-				// 1. Ensure the URL is not nil
-				guard let url = newValue else {
-					selectedImage = nil
-					return
-				}
-				
-				// 2. Load data from the local file path
-				// Use Task.detached for background disk reading
-				let image = await Task.detached(priority: .userInitiated) {
-					if let data = try? Data(contentsOf: url), let uiImage = UIImage(data: data) {
-						return uiImage
-					}
-					return await UIImage(resource: .icPerson)
-				}.value
-				
-				// 3. Update the UI state on the main thread
-				await MainActor.run {
-					self.selectedImage = image
-				}
+		.imagePickerManager(isPresented: $isPhotoPickerPresented, selectedImage: $profileImage)
+		.onChange(of: profileImage) { _, newValue in
+			// If a new image is picked, use it.
+			// If it's nil (Removed), fall back to the default resource.
+			if let image = newValue {
+				self.selectedImage = image
+			} else {
+				self.selectedImage = UIImage(resource: .icPerson)
 			}
 		}
 	}
@@ -138,6 +124,7 @@ struct EditProfileScreen: View {
 					}
 					.frame(width: 100, height: 108)
 					.clipShape(avatarShape)
+				
 
 				
 			}
@@ -145,7 +132,7 @@ struct EditProfileScreen: View {
 				isPhotoPickerPresented = true
 			}
 			
-			Text("Update Photo")
+			Text(.updatePhoto)
 				.font(.medium16)
 				.foregroundStyle(.whiteApp)
 		}
@@ -194,7 +181,7 @@ struct EditProfileScreen: View {
 	@ViewBuilder
 	private var updateButton: some View {
 		
-		AppButton("Update Profile") {
+		AppButton(.updateProfile) {
 			viewModel.updateProfile(
 				firstName: firstName,
 				lastName: lastName,

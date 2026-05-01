@@ -23,7 +23,7 @@ final class CreateAccountViewModel {
 	
 	var firstName: String = ""
 	var lastName: String = ""
-	var selectedPhotoItem: PhotosPickerItem? = nil
+	var selectedPhotoItem: UIImage? = nil
 	var profileImage: Image? = nil
 	
 	// MARK: - Step 2 / 3 / 4 — Watch pairing
@@ -100,9 +100,6 @@ final class CreateAccountViewModel {
 	@MainActor
 	func loadPhoto() async {
 		guard let item = selectedPhotoItem else { return }
-		guard let data = try? await item.loadTransferable(type: Data.self),
-			  let uiImage = UIImage(data: data)
-		else { return }
-		profileImage = Image(uiImage: uiImage)
+		profileImage = Image(uiImage: item)
 	}
 }

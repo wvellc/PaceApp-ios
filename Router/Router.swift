@@ -24,8 +24,8 @@ final class Router {
     var path = NavigationPath()
 
     /// The app's current root flow.
-	var root: RootFlow = .dashboard
-
+	var root: RootFlow = .auth
+	
     // MARK: Push / Pop
 
     /// Push a destination onto the stack.
@@ -74,3 +74,4 @@ final class Router {
 		path = NavigationPath()
     }
 }
+

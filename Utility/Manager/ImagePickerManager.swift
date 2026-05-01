@@ -6,17 +6,62 @@
 //
 
 import SwiftUI
-import UIKit
+import PhotosUI
 
-struct ImagePicker: UIViewControllerRepresentable {
-	var sourceType: UIImagePickerController.SourceType = .photoLibrary
-	@Binding var selectedFileURL: URL?
+// MARK: - Modern Gallery Picker (PHPicker)
+struct PhotoPicker: UIViewControllerRepresentable {
+	@Binding var selectedImage: UIImage?
+	@Environment(\.dismiss) private var dismiss
+	
+	func makeUIViewController(context: Context) -> PHPickerViewController {
+		var config = PHPickerConfiguration()
+		config.filter = .images
+		config.selectionLimit = 1
+		config.selection = .continuous
+		config.preferredAssetRepresentationMode = .automatic
+		
+		let picker = PHPickerViewController(configuration: config)
+		picker.delegate = context.coordinator
+		return picker
+	}
+	
+	func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
+	
+	func makeCoordinator() -> Coordinator {
+		Coordinator(self)
+	}
+	
+	class Coordinator: NSObject, PHPickerViewControllerDelegate { // Now in scope
+		let parent: PhotoPicker
+		init(_ parent: PhotoPicker) { self.parent = parent }
+		
+		func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+			// Dismiss immediately
+			picker.dismiss(animated: true)
+			
+			guard let provider = results.first?.itemProvider,
+					provider.canLoadObject(ofClass: UIImage.self) else { return }
+			
+			provider.loadObject(ofClass: UIImage.self) { image, _ in
+				DispatchQueue.main.async {
+					self.parent.selectedImage = image as? UIImage
+				}
+			}
+		}
+	}
+}
+
+// MARK: - Native Camera Picker
+struct CameraPicker: UIViewControllerRepresentable {
+	@Binding var selectedImage: UIImage?
 	@Environment(\.dismiss) private var dismiss
 	
 	func makeUIViewController(context: Context) -> UIImagePickerController {
 		let picker = UIImagePickerController()
+		picker.sourceType = .camera
 		picker.allowsEditing = true
-		picker.sourceType = sourceType
+		picker.cameraCaptureMode = .photo
+		picker.showsCameraControls = true
 		picker.delegate = context.coordinator
 		return picker
 	}
@@ -28,65 +73,56 @@ struct ImagePicker: UIViewControllerRepresentable {
 	}
 	
 	class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-		let parent: ImagePicker
-		
-		init(_ parent: ImagePicker) {
-			self.parent = parent
-		}
+		let parent: CameraPicker
+		init(_ parent: CameraPicker) { self.parent = parent }
 		
 		func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-			if let uiImage = info[.editedImage] as? UIImage ?? info[.originalImage] as? UIImage {
-				// Save to temporary directory to get a URL
-				if let data = uiImage.jpegData(compressionQuality: 0.8) {
-					let filename = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".jpg")
-					try? data.write(to: filename)
-					parent.selectedFileURL = filename
-				}
-			}
+			parent.selectedImage = info[.editedImage] as? UIImage ?? info[.originalImage] as? UIImage
 			parent.dismiss()
 		}
 		
-		func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-			parent.dismiss()
-		}
+		func imagePickerControllerDidCancel(_ picker: UIImagePickerController) { parent.dismiss() }
 	}
 }
 
+// MARK: - Image Picker Manager Modifier
 struct ImagePickerManager: ViewModifier {
-    @Binding var selectedFileURL: URL?
-    @Binding var isPresented: Bool
-    
-    @State private var showImagePicker = false
-    @State private var sourceType: UIImagePickerController.SourceType = .photoLibrary
-
-    func body(content: Content) -> some View {
-        content
-            .confirmationDialog("Select Option", isPresented: $isPresented, titleVisibility: .hidden) {
-                Button("CAMERA") {
-                    self.sourceType = .camera
-                    self.showImagePicker = true
-                }
-                Button("PHOTO GALLERY") {
-                    self.sourceType = .photoLibrary
-                    self.showImagePicker = true
-                }
-                if selectedFileURL != nil {
-                    Button("REMOVE PHOTO", role: .destructive) {
-                        selectedFileURL = nil
-                    }
-                }
-                Button("Cancel", role: .cancel) { }
-            }
-            .sheet(isPresented: $showImagePicker) {
-                // Ensure you have the ImagePicker struct from the previous response
-                ImagePicker(sourceType: sourceType, selectedFileURL: $selectedFileURL)
-            }
-    }
+	@Binding var selectedImage: UIImage?
+	@Binding var isPresented: Bool
+	
+	@State private var showCamera = false
+	@State private var showGallery = false
+	
+	func body(content: Content) -> some View {
+		content
+			.confirmationDialog("Select Option", isPresented: $isPresented, titleVisibility: .visible) {
+				
+				// Logic for image NOT selected
+				Button("CAMERA") { showCamera = true }
+				
+				Button("PHOTO GALLERY") { showGallery = true }
+				
+				if selectedImage != nil {
+					Button("REMOVE", role: .destructive) { selectedImage = nil }
+				}
+				
+				Button("Cancel", role: .cancel) { }
+				
+			}
+			.sheet(isPresented: $showCamera) {
+				CameraPicker(selectedImage: $selectedImage)
+					.ignoresSafeArea()
+			}
+			.sheet(isPresented: $showGallery) {
+				PhotoPicker(selectedImage: $selectedImage)
+					.ignoresSafeArea()
+			}
+	}
 }
 
-// Convenience extension
 extension View {
-    func imagePickerManager(isPresented: Binding<Bool>, selectedFileURL: Binding<URL?>) -> some View {
-        self.modifier(ImagePickerManager(selectedFileURL: selectedFileURL, isPresented: isPresented))
-    }
+	func imagePickerManager(isPresented: Binding<Bool>, selectedImage: Binding<UIImage?>) -> some View {
+		self.modifier(ImagePickerManager(selectedImage: selectedImage, isPresented: isPresented))
+	}
 }
+
