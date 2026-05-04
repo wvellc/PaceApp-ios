@@ -10,53 +10,47 @@ import SwiftUI
 struct ProfileScreen: View {
 	
 	@Environment(Router.self) private var router
-	@State private var path = NavigationPath()
 	@State private var viewModel = ProfileViewModel()
 	
 	var body: some View {
-		NavigationStack(path: $path) {
-			VStack(spacing: 0) {
-				
-				// MARK: App Navigation Bar
-				AppNavigation(trailing: {
-					Button(action: {
-						router.navigate(to: .settings)
-					}, label: {
-						RoundedRectangle(cornerRadius: 100)
-							.foregroundStyle(.whiteApp)
-							.frame(width: 40, height: 40)
-							.overlay(content: {
-								Image(.icSettings)
-									.resizable()
-									.frame(width: 20, height: 20)
-							})
-					})
+		VStack(spacing: 0) {
+			
+			// MARK: App Navigation Bar
+			AppNavigation(trailing: {
+				Button(action: {
+					router.navigate(to: .settings)
+				}, label: {
+					RoundedRectangle(cornerRadius: 100)
+						.foregroundStyle(.whiteApp)
+						.frame(width: 40, height: 40)
+						.overlay(content: {
+							Image(.icSettings)
+								.resizable()
+								.frame(width: 20, height: 20)
+						})
 				})
-				
-				ScrollView(showsIndicators: false) {
-					VStack {
-						VSpace(height: 28)
-						
-						// MARK: Avatar Section
-						avatarSection
-						
-						
-						VSpace(height: 28)
-						
-						// MARK: Menu Items
-						menuSection
-					}
-					.padding(.horizontal, 20)
-					.padding(.bottom, 32)
+			})
+			
+			ScrollView(showsIndicators: false) {
+				VStack {
+					VSpace(height: 28)
+					
+					// MARK: Avatar Section
+					avatarSection
+					
+					
+					VSpace(height: 28)
+					
+					// MARK: Menu Items
+					menuSection
 				}
-				.scrollBounceBehavior(.basedOnSize)
+				.padding(.horizontal, 20)
+				.padding(.bottom, 32)
 			}
-			.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-			.appBackground()
-			.environment(viewModel)
-
+			.scrollBounceBehavior(.basedOnSize)
 		}
-
+		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+		.appBackground()
 	}
 	
 	// MARK: - Avatar Section
@@ -113,38 +107,30 @@ struct ProfileScreen: View {
 			VSpace(height: 12)
 			
 			// Edit Profile Button
-			Button(
-				action: {
-					router
-						.navigate(
-							to: .editProfile(
-										firstName: viewModel.firstName,
-										lastName: viewModel.lastName,
-										profile: viewModel.avatarURL
-									)
-						)
-				},
-				label: {
-					Text("Edit Profile")
-						.font(.semiBold16)
-						.foregroundStyle(.fluorescentMint)
-						.padding(16)
-						.frame(width: 150, height: 42)
-						.background(.fluorescentMint.opacity(0.20))
-						.cornerRadius(8)
-						.overlay(
-							RoundedRectangle(cornerRadius: 8)
-								.inset(by: 0.50)
-								.strokeBorder(
-									LinearGradient(
-										colors: [.fluorescentMint.opacity(0.40), .clear],
-										startPoint: .bottom,
-										endPoint: .top
-									),
-									lineWidth: 1
-								)
-						)
-				})
+			NavigationLink {
+				EditProfileScreen(viewModel: viewModel)
+			} label: {
+				Text(.editProfile)
+					.font(.semiBold16)
+					.foregroundStyle(.fluorescentMint)
+					.padding(16)
+					.frame(width: 150, height: 42)
+					.background(.fluorescentMint.opacity(0.20))
+					.cornerRadius(8)
+					.overlay(
+						RoundedRectangle(cornerRadius: 8)
+							.inset(by: 0.50)
+							.strokeBorder(
+								LinearGradient(
+									colors: [.fluorescentMint.opacity(0.40), .clear],
+									startPoint: .bottom,
+									endPoint: .top
+								),
+								lineWidth: 1
+							)
+					)
+			}
+
 		}
 		.padding(.top, 8)
 	}
@@ -199,7 +185,7 @@ struct ProfileScreen: View {
 					
 			}
 		}
-		.padding(12)
+		.padding(Constant.UI.padding12)
 		.cardBackground()
 		.onTapGesture {
 			handleMenuTap(item: item)

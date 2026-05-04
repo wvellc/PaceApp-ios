@@ -28,5 +28,8 @@ struct NetworkConst {
 	struct WebUrl {
 		static let privacyPolicy    = "\(baseURL)/privacy-policy"
 		static let termsOfService   = "\(baseURL)/terms-of-service"
+		static let licences         = "\(baseURL)/licenses"
+		static let wvelabs     	    = "https://wvelabs.com"
+		
 	}
 }

@@ -48,13 +48,6 @@ extension Router {
 			case .notifications	: NotificationsScreen()
 				
 				// ----------------------------------------------------------------
-				// MARK: Profile
-				// ----------------------------------------------------------------
-				
-			case .editProfile	: EditProfileScreen()
-		
-				
-				// ----------------------------------------------------------------
 				// MARK: Settings
 				// ----------------------------------------------------------------
 				
@@ -67,6 +60,16 @@ extension Router {
 				AppWebViewScreen(
 					requestUrl: NetworkConst.WebUrl.privacyPolicy
 				)
+			case .licenses		:
+				AppWebViewScreen(
+					requestUrl: NetworkConst.WebUrl.licences
+				)
+				// ----------------------------------------------------------------
+				// MARK: N/A
+				// ----------------------------------------------------------------
+				
+				
+
 			
 		}
 	}

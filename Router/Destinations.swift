@@ -21,13 +21,10 @@ enum Destinations: Hashable, Codable {
 	case createRunEvent
 	case notifications
 	
-    // MARK: - Profile
-	case editProfile(firstName: String?, lastName: String?, profile:String?)
-
     // MARK: - Settings
 	case settings
 	case termsOfService
 	case privacyPolicy
-
+	case licenses
 
 }

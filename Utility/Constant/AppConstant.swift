@@ -41,6 +41,7 @@ struct Constant {
 		
 		//Padding
 		static let defaultPadding = CGFloat(16)
+		static let padding12 = CGFloat(12)
 
 	}
 }

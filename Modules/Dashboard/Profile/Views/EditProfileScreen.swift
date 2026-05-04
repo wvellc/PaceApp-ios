@@ -8,9 +8,9 @@
 import SwiftUI
 import PhotosUI
 
+/// Edito profile screen
 struct EditProfileScreen: View {
 	
-	@Environment(Router.self) private var router
 	@FocusState private var focusedField: Field?
 	
 	private enum Field {
@@ -18,10 +18,8 @@ struct EditProfileScreen: View {
 		case lastName
 	}
 
-	// Shared ProfileViewModel passed from ProfileScreen
-	@Environment(ProfileViewModel.self) var viewModel
-	
-	// or @EnvironmentObject var viewModel: ProfileViewModel
+	var viewModel: ProfileViewModel
+
 	// MARK: - Local edit state
 	@State private var firstName: String = ""
 	@State private var lastName: String = ""
@@ -59,11 +57,7 @@ struct EditProfileScreen: View {
 			firstName = viewModel.firstName ?? ""
 			lastName = viewModel.lastName ?? ""
 		}
-		// Native, short, and clean implementation
-		.imagePickerManager(isPresented: $isPhotoPickerPresented, selectedImage: $profileImage)
 		.onChange(of: profileImage) { _, newValue in
-			// If a new image is picked, use it.
-			// If it's nil (Removed), fall back to the default resource.
 			if let image = newValue {
 				self.selectedImage = image
 			} else {
@@ -124,7 +118,7 @@ struct EditProfileScreen: View {
 					}
 					.frame(width: 100, height: 108)
 					.clipShape(avatarShape)
-				
+					.imagePickerManager(isPresented: $isPhotoPickerPresented, selectedImage: $profileImage)
 
 				
 			}
@@ -187,7 +181,6 @@ struct EditProfileScreen: View {
 				lastName: lastName,
 				selectedImage: selectedImage
 			)
-			router.navigateBack()
 		}
 	}
 }
@@ -196,7 +189,9 @@ struct EditProfileScreen: View {
 
 #Preview {
 	
-	EditProfileScreen()
+	@Previewable @State var profileVM = ProfileViewModel()
+
+	EditProfileScreen(viewModel: profileVM)
 		.environment(Router())
 		.environment(ProfileViewModel())
 }
