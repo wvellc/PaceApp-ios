@@ -7,10 +7,13 @@
 
 import SwiftUI
 
+///Update gait units
 struct UpdateGaitScreen: View {
 	
+	//MARK: Environment
 	@Environment(\.dismiss) var dismiss
 	
+	//MARK: View Builder
     var body: some View {
 		VStack {
 			ScrollView(showsIndicators: false) {
