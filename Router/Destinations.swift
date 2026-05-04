@@ -27,4 +27,7 @@ enum Destinations: Hashable, Codable {
 	case privacyPolicy
 	case licenses
 
+	// MARK: - User settings
+	case updateGait
+	case manageWatch
 }

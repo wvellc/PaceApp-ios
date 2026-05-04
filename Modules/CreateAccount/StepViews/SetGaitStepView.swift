@@ -7,43 +7,10 @@
 
 import SwiftUI
 
-// MARK: - Gait Type Enum
-
-/// Represents the two supported gait modes: walking and running.
-enum GaitType: String, CaseIterable, Identifiable {
-	case walking = "Walking"
-	case running = "Running"
-	var id: String { rawValue }
-}
-
-// MARK: - Data Models
-
-/// Top-level container holding gait data for both walking and running.
-struct GaitUserData: Identifiable, Codable {
-	var id = UUID()
-	var walkingData: GaitData
-	var runningData: GaitData
-	
-	enum CodingKeys: String, CodingKey {
-		case id, walkingData, runningData
-	}
-}
-
-/// Stores the step length and unit for a single gait type.
-struct GaitData: Identifiable, Codable {
-	var id = UUID()
-	var stepLength: Double
-	var unit: String  // e.g. "Meters" or "Feet"
-	
-	enum CodingKeys: String, CodingKey {
-		case id, stepLength, unit
-	}
-}
 
 // MARK: - Parent View
 
 struct SetGaitStepView: View {
-	@Bindable var viewModel: CreateAccountViewModel
 	
 	var body: some View {
 		VStack(alignment: .leading, spacing: 24) {
@@ -67,13 +34,12 @@ struct SetGaitStepView: View {
 			
 			Spacer()
 		}
-		.padding(.horizontal, 16)
 		.padding(.top, 24)
 	}
 }
 
 #Preview {
-	SetGaitStepView(viewModel: CreateAccountViewModel())
+	SetGaitStepView()
 		.appBackground()
 }
 

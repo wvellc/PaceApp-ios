@@ -65,12 +65,14 @@ extension Router {
 					requestUrl: NetworkConst.WebUrl.licences
 				)
 				// ----------------------------------------------------------------
-				// MARK: N/A
+				// MARK: User settings
 				// ----------------------------------------------------------------
 				
 				
 
 			
+			case .updateGait	: UpdateGaitScreen()
+			case .manageWatch	: EmptyView()
 		}
 	}
 }

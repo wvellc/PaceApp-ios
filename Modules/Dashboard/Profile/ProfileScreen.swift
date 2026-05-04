@@ -195,14 +195,14 @@ struct ProfileScreen: View {
 	// MARK: - Actions
 	
 	private func handleMenuTap(item: ProfileMenuItem) {
-		//		switch item.id {
-		//			case .manageWatch:
-		//				router.navigate(to: .manageWatch)
-		//			case .setGait:
-		//				router.navigate(to: .setGait)
-		//			default:
-		//				break
-		//		}
+		switch item.id {
+			case .manageWatch:
+				router.navigate(to: .manageWatch)
+			case .setGait:
+				router.navigate(to: .updateGait)
+			default:
+				break
+		}
 	}
 }
 
