@@ -26,6 +26,10 @@
 		E6370ED22F83A70000007CDF /* AppLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6370ED12F83A70000007CDF /* AppLabel.swift */; };
 		E6370ED42F83AACF00007CDF /* AppCardBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6370ED32F83AACF00007CDF /* AppCardBackground.swift */; };
 		E64DD7C02F92193B001233EA /* ToolBar+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E64DD7BF2F92193B001233EA /* ToolBar+Ext.swift */; };
+		E659B8D42FA895A30012AC29 /* AppAlertModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E659B8D32FA895A30012AC29 /* AppAlertModel.swift */; };
+		E659B8D62FA895B10012AC29 /* AppAlertManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E659B8D52FA895B10012AC29 /* AppAlertManager.swift */; };
+		E659B8D82FA895BF0012AC29 /* AppAlertView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E659B8D72FA895BF0012AC29 /* AppAlertView.swift */; };
+		E659B8DA2FA895C70012AC29 /* InstallAppAlert.swift in Sources */ = {isa = PBXBuildFile; fileRef = E659B8D92FA895C70012AC29 /* InstallAppAlert.swift */; };
 		E684F1E72F769CDF0059C38F /* ProfilePhotoShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = E684F1E62F769CDF0059C38F /* ProfilePhotoShape.swift */; };
 		E6AE33272F7D4875009189CD /* AppNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6AE33262F7D4875009189CD /* AppNavigation.swift */; };
 		E6B649522F67FAAF00612A01 /* CountryPicker in Frameworks */ = {isa = PBXBuildFile; productRef = E6B649512F67FAAF00612A01 /* CountryPicker */; };
@@ -71,6 +75,10 @@
 		E6370ED12F83A70000007CDF /* AppLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLabel.swift; sourceTree = "<group>"; };
 		E6370ED32F83AACF00007CDF /* AppCardBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCardBackground.swift; sourceTree = "<group>"; };
 		E64DD7BF2F92193B001233EA /* ToolBar+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ToolBar+Ext.swift"; sourceTree = "<group>"; };
+		E659B8D32FA895A30012AC29 /* AppAlertModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAlertModel.swift; sourceTree = "<group>"; };
+		E659B8D52FA895B10012AC29 /* AppAlertManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAlertManager.swift; sourceTree = "<group>"; };
+		E659B8D72FA895BF0012AC29 /* AppAlertView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAlertView.swift; sourceTree = "<group>"; };
+		E659B8D92FA895C70012AC29 /* InstallAppAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstallAppAlert.swift; sourceTree = "<group>"; };
 		E684F1E62F769CDF0059C38F /* ProfilePhotoShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePhotoShape.swift; sourceTree = "<group>"; };
 		E6AE33262F7D4875009189CD /* AppNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNavigation.swift; sourceTree = "<group>"; };
 		E6B748E82F6A9D7C00202A2D /* OTPFieldView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPFieldView.swift; sourceTree = "<group>"; };
@@ -107,6 +115,11 @@
 		E61F83BC2F642F0900C215DF /* Manager */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Manager;
+			sourceTree = "<group>";
+		};
+		E659B8E12FA897FA0012AC29 /* Toasts */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Toasts;
 			sourceTree = "<group>";
 		};
 		E6C3329C2F62926900224AA5 /* Constant */ = {
@@ -152,6 +165,17 @@
 				E6370ED32F83AACF00007CDF /* AppCardBackground.swift */,
 			);
 			path = AppBackground;
+			sourceTree = "<group>";
+		};
+		E659B8D22FA895990012AC29 /* AppAlert */ = {
+			isa = PBXGroup;
+			children = (
+				E659B8D32FA895A30012AC29 /* AppAlertModel.swift */,
+				E659B8D52FA895B10012AC29 /* AppAlertManager.swift */,
+				E659B8D72FA895BF0012AC29 /* AppAlertView.swift */,
+				E659B8D92FA895C70012AC29 /* InstallAppAlert.swift */,
+			);
+			path = AppAlert;
 			sourceTree = "<group>";
 		};
 		E6C334282F62BA5F00224AA5 /* Modifier */ = {
@@ -204,6 +228,8 @@
 				E6C4BEF72F61849700C17C69 /* LogoWithText.swift */,
 				E6C4BEF92F618A2800C17C69 /* Spacing.swift */,
 				E6370ED12F83A70000007CDF /* AppLabel.swift */,
+				E659B8D22FA895990012AC29 /* AppAlert */,
+				E659B8E12FA897FA0012AC29 /* Toasts */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -305,6 +331,7 @@
 			fileSystemSynchronizedGroups = (
 				E61F83B52F64264C00C215DF /* Model */,
 				E61F83BC2F642F0900C215DF /* Manager */,
+				E659B8E12FA897FA0012AC29 /* Toasts */,
 				E6C3329C2F62926900224AA5 /* Constant */,
 				E6C3342E2F62BA7000224AA5 /* Animations */,
 				E6C335CC2F62D60500224AA5 /* Router */,
@@ -386,6 +413,8 @@
 				E6370ED22F83A70000007CDF /* AppLabel.swift in Sources */,
 				E684F1E72F769CDF0059C38F /* ProfilePhotoShape.swift in Sources */,
 				E61F83B82F64277400C215DF /* AppButton.swift in Sources */,
+				E659B8D82FA895BF0012AC29 /* AppAlertView.swift in Sources */,
+				E659B8D62FA895B10012AC29 /* AppAlertManager.swift in Sources */,
 				E61F82232F63E6CC00C215DF /* AppBackground.swift in Sources */,
 				E60361D62F90B32F0036538C /* DatePickerSheet.swift in Sources */,
 				E60361D22F90A9EF0036538C /* DualRangeSlider.swift in Sources */,
@@ -412,6 +441,8 @@
 				E6AE33272F7D4875009189CD /* AppNavigation.swift in Sources */,
 				E64DD7C02F92193B001233EA /* ToolBar+Ext.swift in Sources */,
 				E6C4BEDF2F613E1300C17C69 /* AppGradients.swift in Sources */,
+				E659B8DA2FA895C70012AC29 /* InstallAppAlert.swift in Sources */,
+				E659B8D42FA895A30012AC29 /* AppAlertModel.swift in Sources */,
 				E6C332862F62915700224AA5 /* PaceApp.swift in Sources */,
 				E61F83B12F641BB400C215DF /* UIWindow+Ext.swift in Sources */,
 			);

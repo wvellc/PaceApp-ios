@@ -53,6 +53,7 @@ struct SettingScreen: View {
 		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 		.appBackground()
 		.navigationTitle(.settings)
+		.navigationBarTitleDisplayMode(.inline)
 	}
 		
 	// MARK: - Standard Menu Row (reuses profileMenuRow pattern)
@@ -133,13 +134,16 @@ struct SettingScreen: View {
 	}
 	
 	private func handleLogout() {
-		//TODO: Clear session and navigate to auth root
-		AppSession.removeAllData()
-		router.setRoot(.auth)
+		viewModel.showLogoutAlert {
+			AppSession.removeAllData()
+			router.setRoot(.auth)
+		}
 	}
 	
 	private func handleDeleteAccount() {
-		//TODO: Show confirmation alert or navigate to delete flow
+		viewModel.showDeleteAccountAlert {
+			//TODO: Call delete account API then clear session
+		}
 	}
 }
 

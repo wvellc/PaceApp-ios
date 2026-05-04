@@ -38,11 +38,6 @@ struct DevelopedByView : View {
 			}
 			.padding(Constant.UI.padding12)
 			.contentShape(Rectangle())
-			.onTapGesture {
-				withAnimation(.easeInOut(duration: 0.1)) {
-					isDevelopedByExpanded.toggle()
-				}
-			}
 			
 			// MARK: Expanded content — WveLabs logo + Visit Website button
 			if isDevelopedByExpanded {
@@ -65,6 +60,8 @@ struct DevelopedByView : View {
 							value: isDevelopedByExpanded
 						)
 					
+					Spacer()
+					
 					// Visit Website button — ZoomIn with 200ms delay
 					AppButton(.visitWebsite) {
 						if let url = URL(string: NetworkConst.WebUrl.wvelabs) {
@@ -82,10 +79,15 @@ struct DevelopedByView : View {
 						value: isDevelopedByExpanded
 					)
 				}
-				.padding(.leading, 20)
+				.padding(.horizontal, 20)
 				.padding(.bottom, 26)
 				.padding(.top, 10)
 				.frame(maxWidth: .infinity, alignment: .leading)
+			}
+		}
+		.onTapGesture {
+			withAnimation(.easeInOut(duration: 0.1)) {
+				isDevelopedByExpanded.toggle()
 			}
 		}
 		.cardBackground()

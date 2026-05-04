@@ -47,7 +47,8 @@ struct PaceApp: App {
 			.environment(router)
 			.appBackground()
             .environment(ciqManager)
-			.installToast(position: .top)  
+			.installToast(position: .top)
+				.installAppAlert()
             .onOpenURL { url in
                 print("Received URL: \(url)")
                 ciqManager.handleOpenURL(url)
