@@ -5,14 +5,6 @@
 //  Created by FURKAN VIJAPURA on 5/4/26.
 //
 
-
-//
-//  SettingsViewModel.swift
-//  PaceApp
-//
-//  Created by FURKAN VIJAPURA on 4/24/26.
-//
-
 import SwiftUI
 import Observation
 
@@ -22,7 +14,12 @@ import Observation
 final class SettingsViewModel {
 
     // MARK: - Distance Unit
-    var selectedUnit: DistanceType = .miles
+    var selectedUnit: DistanceType = .miles {
+		didSet {
+			// This runs every time selectedUnit is changed
+			AppSession.userDistanceUnit = selectedUnit
+		}
+	}
 
     // MARK: - Developed By expansion
     var isDevelopedByExpanded: Bool = false
@@ -38,6 +35,12 @@ final class SettingsViewModel {
         ]
     }
 
+	//MARK: Initializer
+	init() {
+		// Pull the initial state from your static persistence layer
+		self.selectedUnit = AppSession.userDistanceUnit
+	}
+	
 	// MARK: - Alerts
 
 	/// Presents the logout confirmation alert.

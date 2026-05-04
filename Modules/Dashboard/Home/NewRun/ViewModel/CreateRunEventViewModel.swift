@@ -77,6 +77,8 @@ class CreateRunEventViewModel {
 			eventName = "Pace event"
 			location = "London"
 		#endif
+		
+		distanceType = AppSession.userDistanceUnit
 	}
 	
 	

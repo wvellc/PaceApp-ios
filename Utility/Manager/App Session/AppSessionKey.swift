@@ -16,4 +16,5 @@ enum AppSessionKey: String, CaseIterable {
     case configDetails
     case userId
 	case userGait
+	case distanceUnit
 }

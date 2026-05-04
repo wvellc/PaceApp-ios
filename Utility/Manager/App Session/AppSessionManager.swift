@@ -80,6 +80,16 @@ enum AppSession {
 		get { defaults.bool(forKey: AppSessionKey.isUserProfileCompleted.rawValue) }
 		set { defaults.set(newValue, forKey: AppSessionKey.isUserProfileCompleted.rawValue) }
 	}
+	
+	// USER DISTANCE TYPE
+	static var userDistanceUnit: DistanceType {
+		get {
+			DistanceType(
+				rawValue: defaults.string(forKey: AppSessionKey.distanceUnit.rawValue) ?? DistanceType.miles.rawValue
+			) ?? DistanceType.miles
+		}
+		set { defaults.set(newValue.rawValue, forKey: AppSessionKey.distanceUnit.rawValue) }
+	}
 		
 //	// USER DETAILS (Utilizing the Generic Object Handlers)
 //	static var userDetails: UserData? {

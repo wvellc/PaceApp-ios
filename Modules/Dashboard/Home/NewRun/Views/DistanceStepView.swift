@@ -27,7 +27,7 @@ struct DistanceStepView: View {
 				unselectedForeground: .darkCharcoal,
 				trackBackground: .grayHint
 			)
-			.onChange(of: viewModel.distanceType) { _, _ in
+			.onChange(of: viewModel.distanceType) { _, newState in
 				// Reset to a valid value in new range
 				viewModel.distance = viewModel.distanceRange.first ?? 1.0
 			}
