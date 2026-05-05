@@ -595,6 +595,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "PaceApp-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "PACE APP";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Please allow Bluetooth access so PaceApp can find and connect to your Garmin watch for real-time pace, heart rate, and workout tracking.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "PaceApp uses Bluetooth to discover and connect to your Garmin watch for real-time pace, heart rate, and workout tracking.";
@@ -652,6 +653,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "PaceApp-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "PACE APP";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Please allow Bluetooth access so PaceApp can find and connect to your Garmin watch for real-time pace, heart rate, and workout tracking.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "PaceApp uses Bluetooth to discover and connect to your Garmin watch for real-time pace, heart rate, and workout tracking.";
