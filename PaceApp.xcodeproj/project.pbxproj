@@ -30,6 +30,7 @@
 		E659B8D62FA895B10012AC29 /* AppAlertManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E659B8D52FA895B10012AC29 /* AppAlertManager.swift */; };
 		E659B8D82FA895BF0012AC29 /* AppAlertView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E659B8D72FA895BF0012AC29 /* AppAlertView.swift */; };
 		E659B8DA2FA895C70012AC29 /* InstallAppAlert.swift in Sources */ = {isa = PBXBuildFile; fileRef = E659B8D92FA895C70012AC29 /* InstallAppAlert.swift */; };
+		E662BE592FA9EA08004B812D /* Color+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E662BE582FA9EA08004B812D /* Color+Ext.swift */; };
 		E684F1E72F769CDF0059C38F /* ProfilePhotoShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = E684F1E62F769CDF0059C38F /* ProfilePhotoShape.swift */; };
 		E6AE33272F7D4875009189CD /* AppNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6AE33262F7D4875009189CD /* AppNavigation.swift */; };
 		E6B649522F67FAAF00612A01 /* CountryPicker in Frameworks */ = {isa = PBXBuildFile; productRef = E6B649512F67FAAF00612A01 /* CountryPicker */; };
@@ -79,6 +80,7 @@
 		E659B8D52FA895B10012AC29 /* AppAlertManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAlertManager.swift; sourceTree = "<group>"; };
 		E659B8D72FA895BF0012AC29 /* AppAlertView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAlertView.swift; sourceTree = "<group>"; };
 		E659B8D92FA895C70012AC29 /* InstallAppAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstallAppAlert.swift; sourceTree = "<group>"; };
+		E662BE582FA9EA08004B812D /* Color+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Ext.swift"; sourceTree = "<group>"; };
 		E684F1E62F769CDF0059C38F /* ProfilePhotoShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePhotoShape.swift; sourceTree = "<group>"; };
 		E6AE33262F7D4875009189CD /* AppNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNavigation.swift; sourceTree = "<group>"; };
 		E6B748E82F6A9D7C00202A2D /* OTPFieldView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPFieldView.swift; sourceTree = "<group>"; };
@@ -249,6 +251,7 @@
 		E6C4BEFC2F618C5200C17C69 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
+				E662BE582FA9EA08004B812D /* Color+Ext.swift */,
 				E64DD7BF2F92193B001233EA /* ToolBar+Ext.swift */,
 				E61FA42D2F67D252001DA088 /* String+Ext.swift */,
 				E61F83B02F641BB400C215DF /* UIWindow+Ext.swift */,
@@ -435,6 +438,7 @@
 				E6C4BEF82F61849700C17C69 /* LogoWithText.swift in Sources */,
 				E6C4BEFA2F618A2800C17C69 /* Spacing.swift in Sources */,
 				E61FA4262F67C706001DA088 /* WebView.swift in Sources */,
+				E662BE592FA9EA08004B812D /* Color+Ext.swift in Sources */,
 				E61FA4202F67BDFD001DA088 /* ValidationProvider.swift in Sources */,
 				E60361D42F90B3130036538C /* DatePickerField.swift in Sources */,
 				E61FA42E2F67D252001DA088 /* String+Ext.swift in Sources */,

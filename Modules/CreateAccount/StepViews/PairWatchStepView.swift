@@ -86,7 +86,7 @@ struct PairWatchStepView: View {
 			VSpace(height: 8)
 			
 			// Subtitle
-			Text("Connect your watch to this phone to sync runs,\npace goals.")
+			Text("Connect your watch to this phone to sync runs, pace goals.")
 				.font(.medium16)
 				.foregroundStyle(.grayHint)
 				.multilineTextAlignment(.center)

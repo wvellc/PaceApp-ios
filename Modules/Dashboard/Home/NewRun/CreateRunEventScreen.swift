@@ -30,32 +30,6 @@ struct CreateRunEventScreen: View {
 
             VStack(spacing: 0) {
 
-                // MARK: Navigation Bar
-                HStack {
-                    RunBackButton {
-                        if viewModel.currentStep == .eventDetails {
-                            dismiss()
-                        } else {
-                            viewModel.goBack()
-                        }
-                    }
-
-                    Spacer()
-
-					Text(.newRun)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.white)
-
-                    Spacer()
-
-                    // Balance back button
-                    Color.clear
-                        .frame(width: 38, height: 38)
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .padding(.bottom, 16)
-
                 // MARK: Content
                 ScrollView {
                     VStack(spacing: 32) {
@@ -63,6 +37,7 @@ struct CreateRunEventScreen: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 24)
+					.padding(.top, 8)
                 }
 				.scrollBounceBehavior(.basedOnSize)
 
@@ -92,7 +67,11 @@ struct CreateRunEventScreen: View {
 		.onAppear {
 			viewModel.router = self.router
 		}
-        .navigationBarHidden(true)
+		.navigationTitle(.newRun)
+		.navigationBarBackButtonHidden(true)
+		.navigationBarTitleDisplayMode(.inline)
+		.toolbar { topToolbar }
+		.toolbarBackground(.hidden, for: .navigationBar)
     }
 
     // MARK: - Step Content Router
@@ -150,6 +129,33 @@ struct CreateRunEventScreen: View {
                 ))
         }
     }
+	
+	// MARK: - Top Toolbar
+	
+	@ToolbarContentBuilder
+	private var topToolbar: some ToolbarContent {
+		ToolbarItem(placement: .topBarLeading) {
+			Button {
+				if viewModel.currentStep == .eventDetails {
+					dismiss()
+				} else {
+					viewModel.goBack()
+				}
+			} label: {
+				Image(systemName: "chevron.left")
+					.font(.system(size: 16, weight: .semibold))
+					.foregroundStyle(.whiteApp)
+					.padding(8)
+
+			}
+		}
+		
+		ToolbarItem(placement: .principal) {
+			Text(.newRun)
+				.font(.medium17)
+				.foregroundStyle(.whiteApp)
+		}
+	}
 }
 
 // MARK: - Preview

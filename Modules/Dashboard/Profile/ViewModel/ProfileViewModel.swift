@@ -35,13 +35,13 @@ final class ProfileViewModel {
             ProfileMenuItem(
                 id: .manageWatch,
                 icon: .icWatch,
-                title: "Manage your watch!",
+                title: "Manage your watch",
                 type: .navigation
             ),
             ProfileMenuItem(
                 id: .intvlVibrate,
                 icon: .icVibrate,
-                title: "Intvl Vibrate",
+                title: "Interval Vibrate",
                 type: .toggle(binding: { [weak self] val in
                     self?.isIntvlVibrateOn = val
                 }, value: isIntvlVibrateOn)
@@ -49,7 +49,7 @@ final class ProfileViewModel {
             ProfileMenuItem(
                 id: .intvlBeep,
                 icon: .icBeep,
-                title: "Intvl Beep",
+                title: "Interval Beep",
                 type: .toggle(binding: { [weak self] val in
                     self?.isIntvlBeepOn = val
                 }, value: isIntvlBeepOn)

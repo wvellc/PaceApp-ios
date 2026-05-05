@@ -72,7 +72,7 @@ extension Router {
 
 			
 			case .updateGait	: UpdateGaitScreen()
-			case .manageWatch	: EmptyView()
+			case .manageWatch	: ManageWatchScreen()
 		}
 	}
 }

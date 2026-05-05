@@ -87,8 +87,6 @@ struct ManageWatchScreen: View {
                 PairWatchStepView()
             case .chooseYourModel:
                 ManageChooseDevicesStepView(viewModel: viewModel)
-            case .showConnectedWatch:
-                ConnectWatchStepView(watch: viewModel.selectedWatch)
         }
     }
 
