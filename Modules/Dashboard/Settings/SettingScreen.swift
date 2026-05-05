@@ -143,6 +143,9 @@ struct SettingScreen: View {
 	private func handleDeleteAccount() {
 		viewModel.showDeleteAccountAlert {
 			//TODO: Call delete account API then clear session
+			AppSession.removeAllData()
+			router.setRoot(.auth)
+
 		}
 	}
 }
