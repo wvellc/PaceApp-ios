@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "icUnFavorite.svg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

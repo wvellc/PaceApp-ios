@@ -184,14 +184,3 @@ final class HistoryViewModel {
 		isFilterActive    = false
 	}
 }
-
-private extension HistoryViewModel {
-	static func makeDate(day: Int, month: Int, year: Int = 2026) -> Date {
-		let calendar = Calendar(identifier: .gregorian)
-		let components = DateComponents(year: year, month: month, day: day)
-		guard let date = calendar.date(from: components) else {
-			fatalError("Invalid HistoryViewModel activity date.")
-		}
-		return date
-	}
-}

@@ -25,5 +25,14 @@ extension Date: @retroactive RawRepresentable {
 		formatter.dateTimeStyle = .numeric
 		return formatter.localizedString(for: self, relativeTo: Date())
 	}
-
 }
+
+func makeDate(day: Int, month: Int, year: Int = 2026) -> Date {
+	let calendar = Calendar(identifier: .gregorian)
+	let components = DateComponents(year: year, month: month, day: day)
+	guard let date = calendar.date(from: components) else {
+		fatalError("Invalid HistoryViewModel activity date.")
+	}
+	return date
+}
+

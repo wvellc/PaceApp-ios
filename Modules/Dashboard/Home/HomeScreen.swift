@@ -120,7 +120,9 @@ struct HomeScreen: View {
 	        RunAction(title: .newRun, symbol: "icNewRun", action: {
 	            router.navigate(to: .createRunEvent)
 	        }),
-	        RunAction(title: .favoriteRun, symbol: "icFavoriteRun", action: {}),
+	        RunAction(title: .favoriteRun, symbol: "icFavoriteRun", action: {
+				router.navigate(to: .favoritesRun)
+			}),
 	    ]
 
 		return LazyVGrid(columns: columns, alignment: .center, spacing: spacing) {

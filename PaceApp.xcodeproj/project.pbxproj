@@ -283,9 +283,9 @@
 		E6C69B4E2F603C8D00ACED81 = {
 			isa = PBXGroup;
 			children = (
-				18E0166B2F925F7300A486AB /* PrivacyInfo.xcprivacy */,
-				18C565AA2F8CE23D007BD365 /* AppDelegate.swift */,
 				E6C332832F62915700224AA5 /* PaceApp.swift */,
+				18C565AA2F8CE23D007BD365 /* AppDelegate.swift */,
+				18E0166B2F925F7300A486AB /* PrivacyInfo.xcprivacy */,
 				E6C4BEE62F615C2A00C17C69 /* PaceApp-Info.plist */,
 				E6C4BEFB2F618BFB00C17C69 /* Utility */,
 				E6C4BEF42F616CB600C17C69 /* DesignSystem */,

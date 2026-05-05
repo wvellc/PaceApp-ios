@@ -66,9 +66,19 @@ struct PaceApp: App {
 		appearance.backgroundColor = .clear
 		appearance.shadowColor = .clear // Removes the bottom separator line
 		
-		// 2. Set Text Attributes ON the appearance object (Modern approach)
-		appearance.titleTextAttributes = [.foregroundColor: UIColor.whiteApp]
-		appearance.largeTitleTextAttributes = [.foregroundColor: UIColor.whiteApp]
+		// Configure custom fonts for navigation bar titles
+		let titleFont = UIFont.systemFont(ofSize: 16, weight: .medium)
+		let largeTitleFont = UIFont.systemFont(ofSize: 34, weight: .semibold)
+		
+		appearance.titleTextAttributes = [
+			.foregroundColor: UIColor.whiteApp,
+			.font: titleFont
+		]
+		
+		appearance.largeTitleTextAttributes = [
+			.foregroundColor: UIColor.whiteApp,
+			.font: largeTitleFont
+		]
 		
 		// 3. Apply the configured appearance globally
 		let navBarProxy = UINavigationBar.appearance()

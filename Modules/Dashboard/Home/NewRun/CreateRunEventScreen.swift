@@ -152,7 +152,7 @@ struct CreateRunEventScreen: View {
 		
 		ToolbarItem(placement: .principal) {
 			Text(.newRun)
-				.font(.medium17)
+				.font(.medium16)
 				.foregroundStyle(.whiteApp)
 		}
 	}

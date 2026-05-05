@@ -45,6 +45,7 @@ extension Router {
 				// ----------------------------------------------------------------
 				
 			case .createRunEvent: CreateRunEventScreen()
+			case .favoritesRun	: FavoritesRunScreen()
 			case .notifications	: NotificationsScreen()
 				
 				// ----------------------------------------------------------------
