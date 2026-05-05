@@ -12,6 +12,7 @@ import PhotosUI
 struct EditProfileScreen: View {
 	
 	@FocusState private var focusedField: Field?
+	@Environment(\.dismiss) var dismiss
 	
 	private enum Field {
 		case firstName
@@ -52,6 +53,7 @@ struct EditProfileScreen: View {
 		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 		.appBackground()
 		.navigationTitle(.editProfile)
+		.navigationBarTitleDisplayMode(.inline)
 		.onAppear {
 			// Populate local state from viewModel
 			firstName = viewModel.firstName ?? ""
@@ -181,6 +183,8 @@ struct EditProfileScreen: View {
 				lastName: lastName,
 				selectedImage: selectedImage
 			)
+			
+			dismiss()
 		}
 	}
 }

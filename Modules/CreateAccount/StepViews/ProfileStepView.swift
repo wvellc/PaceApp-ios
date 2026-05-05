@@ -38,6 +38,7 @@ struct ProfileStepView: View {
 			
             // Avatar picker
 		avatarView
+			.imagePickerManager(isPresented: $isPhotoPickerPresented, selectedImage: $viewModel.selectedPhotoItem)
             .onChange(of: viewModel.selectedPhotoItem) { _, _ in
                 Task { await viewModel.loadPhoto() }
             }
@@ -81,7 +82,6 @@ struct ProfileStepView: View {
         }
         .padding(.horizontal, 16)
         .padding(.top, 24)
-		.imagePickerManager(isPresented: $isPhotoPickerPresented, selectedImage: $viewModel.selectedPhotoItem)
 //		.onChange(of: viewModel.selectedPhotoItem) { oldValue, newValue in
 //			if newValue != nil {
 //				Task { await viewModel.loadPhoto() }
