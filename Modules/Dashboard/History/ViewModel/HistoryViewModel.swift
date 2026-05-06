@@ -37,8 +37,8 @@ final class HistoryViewModel {
 	
 	// MARK: - Activities Data
 	
-	final var activities: [RecentActivity] = [
-		RecentActivity(
+	final var activities: [ActivityData] = [
+		ActivityData(
 			title: "Thursday Run",
 			date: makeDate(day: 29, month: 1),
 			distance: "5.00 mi",
@@ -48,7 +48,7 @@ final class HistoryViewModel {
 			deltaColor: .redBoho,
 			location: "New York City"
 		),
-		RecentActivity(
+		ActivityData(
 			title: "Saturday Long Run",
 			date: makeDate(day: 31, month: 1),
 			distance: "12.00 mi",
@@ -58,7 +58,7 @@ final class HistoryViewModel {
 			deltaColor: .fluorescentMint,
 			location: "Central Park"
 		),
-		RecentActivity(
+		ActivityData(
 			title: "Monday Recovery",
 			date: makeDate(day: 2, month: 2),
 			distance: "3.50 mi",
@@ -68,7 +68,7 @@ final class HistoryViewModel {
 			deltaColor: .redBoho,
 			location: "Brooklyn"
 		),
-		RecentActivity(
+		ActivityData(
 			title: "Wednesday Tempo",
 			date: makeDate(day: 4, month: 2),
 			distance: "6.20 mi",
@@ -78,7 +78,7 @@ final class HistoryViewModel {
 			deltaColor: .fluorescentMint,
 			location: "Queens"
 		),
-		RecentActivity(
+		ActivityData(
 			title: "Friday Easy Run",
 			date: makeDate(day: 6, month: 2),
 			distance: "4.00 mi",
@@ -88,7 +88,7 @@ final class HistoryViewModel {
 			deltaColor: .fluorescentMint,
 			location: "Hoboken"
 		),
-		RecentActivity(
+		ActivityData(
 			title: "Sunday Long Run",
 			date: makeDate(day: 8, month: 2),
 			distance: "15.00 mi",
@@ -98,7 +98,7 @@ final class HistoryViewModel {
 			deltaColor: .fluorescentMint,
 			location: "Twin Falls"
 		),
-		RecentActivity(
+		ActivityData(
 			title: "Tuesday Intervals",
 			date: makeDate(day: 10, month: 2),
 			distance: "5.50 mi",
@@ -108,7 +108,7 @@ final class HistoryViewModel {
 			deltaColor: .fluorescentMint,
 			location: "Chicago"
 		),
-		RecentActivity(
+		ActivityData(
 			title: "Thursday Run",
 			date: makeDate(day: 12, month: 2),
 			distance: "8.00 mi",
@@ -122,7 +122,7 @@ final class HistoryViewModel {
 	
 	// MARK: - Computed: Filtered Activities
 	
-	var filteredActivities: [RecentActivity] {
+	var filteredActivities: [ActivityData] {
 		var result = activities
 		
 		// 1. Search text filter

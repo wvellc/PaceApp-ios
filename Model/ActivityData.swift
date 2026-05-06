@@ -8,7 +8,7 @@
 import SwiftUI
 
 // MARK: - Recent Activity Model
-struct RecentActivity: Identifiable {
+struct ActivityData: Identifiable {
     let id = UUID()
     let title: String
     let date: Date
@@ -18,6 +18,29 @@ struct RecentActivity: Identifiable {
     let delta: String
 	let deltaColor: Color
 	let location: String
+	let gaitType : GaitType?
+	
+	init(
+		title: String,
+		date: Date,
+		distance: String,
+		duration: String,
+		avgPace: String,
+		delta: String,
+		deltaColor: Color,
+		location: String,
+		gaitType: GaitType = .running
+	) {
+		self.title = title
+		self.date = date
+		self.distance = distance
+		self.duration = duration
+		self.avgPace = avgPace
+		self.delta = delta
+		self.deltaColor = deltaColor
+		self.location = location
+		self.gaitType = gaitType
+	}
 
 	var displayDate: String {
 		Self.displayDateFormatter.string(from: date)
@@ -25,8 +48,8 @@ struct RecentActivity: Identifiable {
 	
     // MARK: Sample Data
     // Sample content used by the dashboard preview state.
-    static let samples: [RecentActivity] = [
-        RecentActivity(
+    static let samples: [ActivityData] = [
+        ActivityData(
             title: "Thursday Run",
             date: Self.makeDate(day: 29, month: 1),
             distance: "5.00 mi",
@@ -34,9 +57,10 @@ struct RecentActivity: Identifiable {
             avgPace: "9:00 /mi",
             delta: "+01:10",
 			deltaColor: .redBoho,
-			location: "New York City"
+			location: "New York City",
+			gaitType: .walking
         ),
-        RecentActivity(
+        ActivityData(
             title: "Saturday Run",
             date: Self.makeDate(day: 31, month: 1),
             distance: "15.00 mi",
@@ -49,7 +73,7 @@ struct RecentActivity: Identifiable {
     ]
 }
 
-private extension RecentActivity {
+private extension ActivityData {
 	
 	static let displayDateFormatter: DateFormatter = {
 		let formatter = DateFormatter()

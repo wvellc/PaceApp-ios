@@ -9,7 +9,7 @@ import SwiftUI
 ///Upcoming activity cell
 struct UpcomingActivityView: View {
 	
-	let activity: RecentActivity
+	let activity: ActivityData
 	
 	var body: some View {
 		HStack(alignment: .top) {

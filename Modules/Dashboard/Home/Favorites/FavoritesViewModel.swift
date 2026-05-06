@@ -11,8 +11,8 @@ import Observation
 final class FavoritesViewModel {
 	
 	// MARK: - Activities Data
-	final var favRuns: [RecentActivity] = [
-		RecentActivity(
+	final var favRuns: [ActivityData] = [
+		ActivityData(
 			title: "Thursday Run",
 			date: makeDate(day: 29, month: 1),
 			distance: "5.00 mi",
@@ -22,7 +22,7 @@ final class FavoritesViewModel {
 			deltaColor: .redBoho,
 			location: "New York City"
 		),
-		RecentActivity(
+		ActivityData(
 			title: "Saturday Long Run",
 			date: makeDate(day: 31, month: 1),
 			distance: "12.00 mi",
@@ -32,7 +32,7 @@ final class FavoritesViewModel {
 			deltaColor: .fluorescentMint,
 			location: "Central Park"
 		),
-		RecentActivity(
+		ActivityData(
 			title: "Monday Recovery",
 			date: makeDate(day: 2, month: 2),
 			distance: "3.50 mi",
@@ -42,7 +42,7 @@ final class FavoritesViewModel {
 			deltaColor: .redBoho,
 			location: "Brooklyn"
 		),
-		RecentActivity(
+		ActivityData(
 			title: "Wednesday Tempo",
 			date: makeDate(day: 4, month: 2),
 			distance: "6.20 mi",
@@ -57,7 +57,7 @@ final class FavoritesViewModel {
 	
 	//MARK: Methods
 	// Handle the swipe-to-unfavorite action
-	func unFavorite(run: RecentActivity) {
+	func unFavorite(run: ActivityData) {
 		if let index = favRuns.firstIndex(where: { $0.id == run.id }) {
 			favRuns.remove(at: index)
 		}

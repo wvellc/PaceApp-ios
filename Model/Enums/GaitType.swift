@@ -13,5 +13,12 @@ enum GaitType: String, CaseIterable, Identifiable {
 	case walking = "Walking"
 	case running = "Running"
 	var id: String { rawValue }
+	
+	var label: String {
+		switch self {
+			case .walking:  "Walk"
+			case .running:  "Run"
+		}
+	}
 }
 

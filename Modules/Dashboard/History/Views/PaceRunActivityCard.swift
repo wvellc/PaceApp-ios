@@ -9,7 +9,7 @@ import SwiftUI
 
 // MARK: - Recent Activity Card
 struct PaceRunActivityCard: View {
-    let activity: RecentActivity
+    let activity: ActivityData
 
     // MARK: Body
     var body: some View {
