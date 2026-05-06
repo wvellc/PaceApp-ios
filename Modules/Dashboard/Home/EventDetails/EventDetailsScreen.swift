@@ -8,46 +8,86 @@
 import SwiftUI
 import MapKit
 
-///Event details screen
+// MARK: - EventDetailsScreen
+
+/// Event details screen
 struct EventDetailsScreen: View {
 	
-	//MARK: Variables
+	// MARK: Variables
 	let activityData: ActivityData?
-	@State private var route: MKRoute?
 	
-	//MARK: Environment
+	// MARK: ViewModel
+	@State private var viewModel: EventDetailsViewModel
+	
+	// MARK: Environment
 	@Environment(\.dismiss) private var dismiss
 	
-	//MARK: View Builder
+	// MARK: Init
+	init(activityData: ActivityData?) {
+		self.activityData = activityData
+		_viewModel = State(initialValue: EventDetailsViewModel(activityData: activityData))
+	}
+	
+	// MARK: View Builder
 	var body: some View {
-		VStack {
-			//MARK: Rout map
-			Map {
-				if let route {
-					MapPolyline(route)
-						.stroke(.blue, lineWidth: 5)
-				}
-			}
-//			.task {
-//				getDirections()
-//			}
-			
-			//MARK: Save & Favorites
-
-			VStack {
-				//MARK: Basic details
-				//MARK: Analisys
-				//MARK: Intervals
-				//MARK: Segments
-			}
-			
+		VStack(spacing: 0) {
+			scrollContent
 		}
 		.appBackground()
-		.navigationBarTitle("\(activityData?.gaitType?.label ?? "")\(activityData?.gaitType?.label != nil ? " " : "")Details")
-		.navigationBarTitleDisplayMode(.inline)
+		.navigationBarTitle(
+			"\(activityData?.gaitType?.label ?? "")\(activityData?.gaitType?.label != nil ? " " : "")Details",
+			displayMode: .inline
+		)
+		// Full-screen map
+		.fullScreenCover(isPresented: $viewModel.isShowingFullMap) {
+			FullScreenMapView(
+				coordinates: viewModel.routeCoordinates,
+				onClose: viewModel.closeFullMap, 
+			)
+		}
+	}
+	
+	// MARK: - Scroll Content
+	
+	private var scrollContent: some View {
+		ScrollView(.vertical, showsIndicators: false) {
+			VStack(spacing: 16) {
+				
+				// MARK: Route Map
+				RunDetailMapView(
+					coordinates: viewModel.routeCoordinates,
+				)
+				.onTap {
+					viewModel.openFullMap()
+				}
+				.frame(height: 220)
+								
+				// MARK: Detail Card (Basic details, Analysis, Intervals, Segments)
+				RunDetailCardView(viewModel: viewModel)
+				
+				// MARK: Bottom Actions
+				bottomActions
+				
+			}
+			.padding(.horizontal, 16)
+			.padding(.top, 12)
+		}
+	}
+	
+	// MARK: - Bottom Actions
+	
+	private var bottomActions: some View {
+		FooterActions(
+			onDelete: viewModel.deleteEvent,
+			onDublicate: viewModel.duplicateEvent
+		)
 	}
 }
 
+// MARK: - Preview
+
 #Preview {
-	EventDetailsScreen(activityData: ActivityData.samples.first)
+	NavigationStack {
+		EventDetailsScreen(activityData: ActivityData.samples.first)
+	}
 }

@@ -73,7 +73,7 @@ struct GaitSelectionView: View {
 		
 		// Fall back to sensible defaults if no saved data exists
 		_selectedUnit = State(initialValue: savedData?.unit ?? "Meters")
-		_selectedStepLength = State(initialValue: savedData?.stepLength ?? 2.0)
+		_selectedStepLength = State(initialValue: savedData?.stepLength ?? (type == .walking ? 2.5 : 4.0))
 	}
 	
 	// MARK: Helpers

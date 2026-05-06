@@ -75,7 +75,7 @@ struct GoalTimeStepView: View {
 				
                 Spacer()
 
-				Image(.icOverTime)
+				Image(.icOvertime)
                     .frame(width: 24, height: 24)
 				
 				Spacer()
