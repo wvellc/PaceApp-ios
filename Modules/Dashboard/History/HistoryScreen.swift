@@ -16,6 +16,8 @@ struct HistoryScreen: View {
 	@FocusState var focusedField: Bool?
 	@State private var isFilterSheetPresented = false
 	
+	//MARK: Environment
+	@Environment(Router.self) private var router
 	
 	// MARK: Body
 	var body: some View {
@@ -33,8 +35,14 @@ struct HistoryScreen: View {
 			Group {
 				if viewModel.filteredActivities.isEmpty {
 					Spacer(minLength: 25)
-					HistoryNoData()
-						.transition(.opacity)
+					NoDataView(
+						icon: .icEmptyHistory,	
+						title: .letsGetAfterItPrsAwait,
+						onIconTap: {
+							router.navigate(to: .createRunEvent)
+						}
+					)
+					.transition(.opacity)
 					Spacer(minLength: 25)
 					Spacer()
 				} else {

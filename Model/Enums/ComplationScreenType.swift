@@ -25,7 +25,7 @@ enum ComplationScreenType {
         case .otpVerified:
             return .youWillSoonBeDirectedToTheMainPage
         case .accountCreation:
-            return .yourSetupIsCompleteTimeToHitYourTargetPace
+			return .timeToAchieveNewPersonalRecords
         }
     }
 }

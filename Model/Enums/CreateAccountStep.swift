@@ -62,7 +62,7 @@ enum CreateAccountStep: Int, CaseIterable {
 	
 	var showsSkip: Bool {
 		switch self {
-			case .pairWatch, .chooseYourModel: return true
+			case .pairWatch, .chooseYourModel, .connectStrava: return true
 			default: return false
 		}
 	}

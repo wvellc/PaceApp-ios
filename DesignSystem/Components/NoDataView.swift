@@ -12,7 +12,22 @@ struct NoDataView : View {
 	//MARK: Variables
 	let icon: ImageResource?
 	let title: LocalizedStringResource
-	let description: LocalizedStringResource
+	let description: LocalizedStringResource?
+	let onIconTap: VoidCallback?
+	
+	init(
+		icon: ImageResource?,
+		title: LocalizedStringResource,
+		description: LocalizedStringResource? = nil,
+		animateContent: Bool = false,
+		onIconTap: VoidCallback? = nil
+	) {
+		self.icon = icon
+		self.title = title
+		self.description = description
+		self.animateContent = animateContent
+		self.onIconTap = onIconTap
+	}
 	
 	//MARK: States
 	@State private var animateContent = false
@@ -26,7 +41,10 @@ struct NoDataView : View {
 				Image(icon!)
 					.resizable()
 					.frame(width: 140, height: 140)
-					.padding(.bottom, 40)
+					.onTapGesture {
+						onIconTap?()
+					}
+					.padding(.bottom, 32)
 					.InteractiveSpringScaleIn(isAnimated: $animateContent, duration: 0.3)
 			}
 			
@@ -40,12 +58,14 @@ struct NoDataView : View {
 					.kerning(0.53624)
 					.fadeInUp(isAnimated: $animateContent, delay: 0.18, duration: 0.7, from: 30)
 				
-				Text(description)
-					.font(.medium16)
-					.foregroundStyle(.whiteApp.opacity(0.9))
-					.multilineTextAlignment(.center)
-					.lineSpacing(4)
-					.fadeInUp(isAnimated: $animateContent, delay: 0.28, duration: 0.7, from: 26)
+				if description != nil {
+					Text(description!)
+						.font(.medium16)
+						.foregroundStyle(.whiteApp.opacity(0.9))
+						.multilineTextAlignment(.center)
+						.lineSpacing(4)
+						.fadeInUp(isAnimated: $animateContent, delay: 0.28, duration: 0.7, from: 26)
+				}
 			}
 			.padding(.horizontal, 32)
 			

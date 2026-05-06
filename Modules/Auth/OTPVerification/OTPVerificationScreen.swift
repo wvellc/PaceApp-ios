@@ -76,7 +76,7 @@ struct OTPVerificationScreen: View {
 				isOTPFieldFocused = true
 			}
 			viewModel.onOTPVerified = { [weak router] in
-				router?.navigate(to: .OTPVerified, animation: .easeIn)
+				router?.setRoot(.accountCreation)
 			}
 			viewModel.onAppear()
 		}
