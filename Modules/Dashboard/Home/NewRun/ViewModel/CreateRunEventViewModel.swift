@@ -8,6 +8,7 @@
 import Foundation
 import Observation
 import Combine
+import SwiftData
 
 // MARK: - ViewModel
 
@@ -16,6 +17,7 @@ class CreateRunEventViewModel {
 	
 	//MARK: Router
 	var router: Router?
+	private var modelContext: ModelContext?
 	
 	// MARK: Step 1 – Event Details
 	var eventName: String = ""
@@ -32,8 +34,9 @@ class CreateRunEventViewModel {
 	
 	var distanceRange: [Float] {
 		switch distanceType {
-			case .km:    return Array(stride(from: 0.5, through: 200.0, by: 0.5))
+			case .kilometers, .kilometersLegacy: return Array(stride(from: 0.5, through: 200.0, by: 0.5))
 			case .miles: return Array(stride(from: 0.5, through: 150.0, by: 0.5))
+			case .feet, .meters: return Array(stride(from: 100.0, through: 5000.0, by: 100.0))
 		}
 	}
 	
@@ -79,6 +82,11 @@ class CreateRunEventViewModel {
 		#endif
 		
 		distanceType = AppSession.userDistanceUnit
+	}
+
+	func configure(modelContext: ModelContext) {
+		self.modelContext = modelContext
+		prefillFromDeviceSettings()
 	}
 	
 	
@@ -243,10 +251,7 @@ class CreateRunEventViewModel {
 	
 	/// Formats total seconds as HH:MM:SS
 	private func formatSeconds(_ totalSeconds: Int) -> String {
-		let h = totalSeconds / 3600
-		let m = (totalSeconds % 3600) / 60
-		let s = totalSeconds % 60
-		return String(format: "%02d:%02d:%02d", h, m, s)
+		TimeFormatter.toString(seconds: totalSeconds)
 	}
 	
 	// MARK: - Segment Building
@@ -332,8 +337,94 @@ class CreateRunEventViewModel {
 	// MARK: - Submit
 	
 	private func submitForm() {
-		// TODO: Pass to coordinator / API layer
-		print("Form submitted: \(eventName), \(location), \(eventDate)")
-		router?.navigateToRoot()
+		guard let modelContext else {
+			ToastManager.shared.present(.warning("Event storage is not ready. Please try again."))
+			return
+		}
+
+		let event = makeAppEvent()
+		event.syncStatus = SyncStatus.pending.rawValue
+		modelContext.insert(event)
+
+		do {
+			try modelContext.save()
+			ConnectIQManager.shared.sendMessage(makeWatchPayload())
+			ToastManager.shared.present(.success("Event saved and sent to watch."))
+			router?.navigateToRoot()
+		} catch {
+			ToastManager.shared.present(.error("Failed to save event: \(error.localizedDescription)"))
+		}
+	}
+
+	private func prefillFromDeviceSettings() {
+		guard let modelContext else { return }
+		let descriptor = FetchDescriptor<GarminDeviceSettings>()
+		guard let settings = try? modelContext.fetch(descriptor).first else { return }
+		distanceType = settings.runningGaitMeasure.isImperial ? .miles : .kilometers
+	}
+
+	private func makeAppEvent() -> AppEvent {
+		AppEvent(from: makeGarminEventDTO(), isActive: true)
+	}
+
+	private func makeGarminEventDTO() -> GarminEventDTO {
+		GarminEventDTO(
+			date: DateFormatter.garminDateString(from: eventDate),
+			name: eventName,
+			activity: eventType.rawValue,
+			distance: Double(distance),
+			measure: distanceType.garminRawValue,
+			goal: goalTimeFormatted,
+			intervals: lookBackIntervals,
+			segmentCount: wantsSegments ? segments.count : 0,
+			segments: wantsSegments ? segments.map {
+				GarminSegmentDTO(
+					eta: $0.formattedGoalTime,
+					distance: Double($0.distance)
+				)
+			} : [],
+			actualTime: nil,
+			actualDist: nil,
+			avgHeartRate: nil,
+			paces: nil,
+			location: location,
+			timeVar: nil,
+			startAt: eventDate.timeIntervalSince1970,
+			stopAt: nil,
+			completedSegments: nil
+		)
+	}
+
+	private func makeWatchPayload() -> [String: Any] {
+		[
+			"type": "createEvent",
+			"event": [
+				"date": DateFormatter.garminDateString(from: eventDate),
+				"name": eventName,
+				"activity": eventType.rawValue,
+				"distance": Double(distance),
+				"measure": distanceType.garminRawValue,
+				"goal": goalTimeFormatted,
+				"intervals": lookBackIntervals,
+				"segmentCount": wantsSegments ? segments.count : 0,
+				"segments": wantsSegments ? segments.map {
+					[
+						"eta": $0.formattedGoalTime,
+						"distance": Double($0.distance)
+					]
+				} : [],
+				"location": location,
+				"startAt": eventDate.timeIntervalSince1970
+			]
+		]
+	}
+}
+
+private extension DateFormatter {
+	static func garminDateString(from date: Date) -> String {
+		let formatter = DateFormatter()
+		formatter.dateFormat = "MMM/d/yyyy"
+		formatter.locale = Locale(identifier: "en_US_POSIX")
+		return formatter.string(from: date)
 	}
 }

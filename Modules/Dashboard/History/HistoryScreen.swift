@@ -7,6 +7,7 @@
 
 
 import SwiftUI
+import SwiftData
 
 // MARK: - History Screen
 struct HistoryScreen: View {
@@ -18,9 +19,11 @@ struct HistoryScreen: View {
 	
 	// This tracks which item is currently being navigated to
 	@State private var selectedActivity: ActivityData?
+	@Query(sort: \AppEvent.garminStartAt, order: .reverse) private var eventRecords: [AppEvent]
 	
 	//MARK: Environment
 	@Environment(Router.self) private var router
+	@Environment(\.modelContext) private var modelContext
 	
 	// MARK: Body
 	var body: some View {
@@ -77,6 +80,12 @@ struct HistoryScreen: View {
 			.navigationDestination(item: $selectedActivity) { activity in
 				EventDetailsScreen(activityData: activity)
 			}
+			.onAppear {
+				viewModel.updateActivities(from: eventRecords)
+			}
+			.onChange(of: eventRecords) { _, newValue in
+				viewModel.updateActivities(from: newValue)
+			}
 		
 	}
 }
@@ -118,7 +127,9 @@ private extension HistoryScreen {
 				.listRowSeparator(.hidden)
 				.swipeActions(edge: .trailing, allowsFullSwipe: true) {
 					Button(role: .destructive) {
-						withAnimation { viewModel.delete(event: activity) }
+						withAnimation {
+							delete(activity: activity)
+						}
 					} label: {
 						Image(systemName: "trash.fill")
 					}
@@ -136,10 +147,18 @@ private extension HistoryScreen {
 		.listStyle(.plain)
 		.padding(.top, Constant.UI.defaultPadding / 2)
 	}
+
+	func delete(activity: ActivityData) {
+		if let startAt = activity.garminStartAt,
+		   let event = eventRecords.first(where: { $0.garminStartAt == startAt }) {
+			modelContext.delete(event)
+			try? modelContext.save()
+		}
+		viewModel.delete(event: activity)
+	}
 }
 
 // MARK: - Preview
 #Preview {
 	HistoryScreen()
 }
-

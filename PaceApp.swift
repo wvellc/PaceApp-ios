@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct PaceApp: App {
@@ -53,6 +54,10 @@ struct PaceApp: App {
                 print("Received URL: \(url)")
                 ciqManager.handleOpenURL(url)
             }
+			.modelContainer(AppContainer.shared)
+			.onAppear {
+				ciqManager.configure(modelContext: ModelContext(AppContainer.shared))
+			}
         }
 	}
 	
@@ -103,4 +108,3 @@ struct PaceApp: App {
 	}
 
 }
-

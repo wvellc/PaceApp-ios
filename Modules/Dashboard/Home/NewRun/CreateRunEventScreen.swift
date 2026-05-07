@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 // MARK: - Main Screen
 
@@ -14,6 +15,7 @@ struct CreateRunEventScreen: View {
 	//MARK: Environment
 	@Environment(Router.self) private var router
     @Environment(\.dismiss) private var dismiss
+	@Environment(\.modelContext) private var modelContext
 
 	@State private var viewModel = CreateRunEventViewModel()
 
@@ -66,6 +68,7 @@ struct CreateRunEventScreen: View {
         }
 		.onAppear {
 			viewModel.router = self.router
+			viewModel.configure(modelContext: modelContext)
 		}
 		.navigationTitle(.newRun)
 		.navigationBarBackButtonHidden(true)

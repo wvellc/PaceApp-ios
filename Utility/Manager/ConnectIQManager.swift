@@ -8,6 +8,7 @@
 //Imports
 import Foundation
 import ConnectIQ
+import SwiftData
 
 //Garmin watch connect manager
 @Observable
@@ -25,12 +26,18 @@ class ConnectIQManager: NSObject {
     private let urlScheme = "connect"
     private let connectIQ = ConnectIQ.sharedInstance()
     private var targetApp: IQApp?
+    private var modelContext: ModelContext?
     
     // MARK: - Lifecycle of class
     private override init() {
         super.init()
         // 1. Initialize the SDK
         connectIQ?.initialize(withUrlScheme: urlScheme, uiOverrideDelegate: self)
+    }
+
+    @MainActor
+    func configure(modelContext: ModelContext) {
+        self.modelContext = modelContext
     }
     
     // MARK: - Device Management
@@ -126,12 +133,52 @@ extension ConnectIQManager: IQAppMessageDelegate {
     //Recive data from the watch
     func receivedMessage(_ message: Any!, from app: IQApp!) {
         print("Device received message \(message ?? "") from: \(app.device?.modelName ?? "unknown")")
-        DispatchQueue.main.async {
-            if let msgString = message as? String {
-                self.receivedMessages.append(msgString)
-            } else if let dict = message as? [String: Any] {
-                self.receivedMessages.append(dict.description)
+        Task { @MainActor in
+            do {
+                guard let data = try Self.jsonData(from: message) else {
+                    self.receivedMessages.append(String(describing: message ?? ""))
+                    return
+                }
+
+                guard let modelContext = self.modelContext else {
+                    self.receivedMessages.append("Received Garmin payload, but SwiftData is not configured.")
+                    return
+                }
+
+                let result = try await EventSyncService(modelContext: modelContext).processGarminPayload(data)
+                self.receivedMessages.append(
+                    "Synced Garmin payload: \(result.created) created, \(result.updated) updated, \(result.skipped) skipped"
+                )
+
+                if result.hasErrors {
+                    ToastManager.shared.present(.warning("Garmin sync completed with \(result.errors.count) issue(s)."))
+                } else {
+                    ToastManager.shared.present(.success("Garmin events synced."))
+                }
+            } catch {
+                self.receivedMessages.append("Garmin sync failed: \(error.localizedDescription)")
+                ToastManager.shared.present(.error("Garmin sync failed: \(error.localizedDescription)"))
             }
         }
+    }
+
+    private static func jsonData(from message: Any?) throws -> Data? {
+        if let data = message as? Data {
+            return data
+        }
+
+        if let string = message as? String {
+            return string.data(using: .utf8)
+        }
+
+        if let dictionary = message as? [String: Any] {
+            return try JSONSerialization.data(withJSONObject: dictionary)
+        }
+
+        if let array = message as? [[String: Any]] {
+            return try JSONSerialization.data(withJSONObject: array)
+        }
+
+        return nil
     }
 }

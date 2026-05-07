@@ -10,6 +10,7 @@ import SwiftUI
 // MARK: - Recent Activity Model
 struct ActivityData: Identifiable, Hashable {
     let id = UUID()
+	let garminStartAt: TimeInterval?
     var title: String
     let date: Date
     let distance: String
@@ -29,8 +30,10 @@ struct ActivityData: Identifiable, Hashable {
 		delta: String,
 		deltaColor: Color,
 		location: String,
-		gaitType: GaitType = .running
+		gaitType: GaitType = .running,
+		garminStartAt: TimeInterval? = nil
 	) {
+		self.garminStartAt = garminStartAt
 		self.title = title
 		self.date = date
 		self.distance = distance
@@ -40,6 +43,21 @@ struct ActivityData: Identifiable, Hashable {
 		self.deltaColor = deltaColor
 		self.location = location
 		self.gaitType = gaitType
+	}
+
+	init(event: AppEvent) {
+		self.init(
+			title: event.name,
+			date: event.startDate,
+			distance: event.formattedDistance,
+			duration: event.actualTimeString ?? event.formattedGoal,
+			avgPace: event.bestPace ?? "--",
+			delta: event.timeVarianceLabel,
+			deltaColor: (event.timeVarianceSeconds ?? 0) >= 0 ? .fluorescentMint : .redBoho,
+			location: event.location ?? "",
+			gaitType: event.activity == .walking ? .walking : .running,
+			garminStartAt: event.garminStartAt
+		)
 	}
 
 	var displayDate: String {
