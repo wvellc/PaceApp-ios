@@ -20,7 +20,7 @@ struct SettingScreen: View {
 					// MARK: Distance Unit Segmented Control
 					AppSegmentedControl(
 						selection: $viewModel.selectedUnit,
-						segments: DistanceType.allCases.map { (key: $0, title: $0.rawValue) },
+						segments: MeasureUnit.allCases.map { (key: $0, title: $0.rawValue) },
 						unselectedForeground: .darkCharcoal,
 						trackBackground: .grayHint
 					)

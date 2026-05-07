@@ -14,7 +14,7 @@ import Observation
 final class SettingsViewModel {
 
     // MARK: - Distance Unit
-    var selectedUnit: DistanceType = .miles {
+    var selectedUnit: MeasureUnit = .miles {
 		didSet {
 			// This runs every time selectedUnit is changed
 			AppSession.userDistanceUnit = selectedUnit

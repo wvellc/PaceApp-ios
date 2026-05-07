@@ -7,7 +7,7 @@
 
 
 // MARK: - Event Enums
-enum EventType: String, CaseIterable {
+enum ActivityType: String, CaseIterable {
     case run = "Run"
     case walking = "Walking"
     case cycling = "Cycling"

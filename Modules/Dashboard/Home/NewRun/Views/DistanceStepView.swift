@@ -23,7 +23,7 @@ struct DistanceStepView: View {
 //			.pickerStyle(.segmented)
 			AppSegmentedControl(
 				selection: $viewModel.distanceType,
-				segments: DistanceType.allCases.map { (key: $0, title: $0.rawValue) },
+				segments: MeasureUnit.allCases.map { (key: $0, title: $0.rawValue) },
 				unselectedForeground: .darkCharcoal,
 				trackBackground: .grayHint
 			)

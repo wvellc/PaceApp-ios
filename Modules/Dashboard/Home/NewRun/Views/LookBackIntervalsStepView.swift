@@ -66,7 +66,7 @@ struct LookBackIntervalsStepView: View {
 				.cardBackground()
 				.overlay(
 					Menu {
-						ForEach(EventType.allCases, id: \.self) { type in
+						ForEach(ActivityType.allCases, id: \.self) { type in
 							Button(type.rawValue) {
 								viewModel.eventType = type
 							}

@@ -27,7 +27,7 @@ class CreateRunEventViewModel {
 	var maxDate: Date { Calendar.current.date(byAdding: .year, value: 10, to: Date()) ?? Date() }
 	
 	// MARK: Step 2 – Distance
-	var distanceType: DistanceType = .miles
+	var distanceType: MeasureUnit = .miles
 	var distance: Float = 1.0
 	
 	var distanceRange: [Float] {
@@ -65,7 +65,7 @@ class CreateRunEventViewModel {
 	
 	// MARK: Step – Look-Back Intervals
 	var lookBackIntervals: Int = 13
-	var eventType: EventType = .run
+	var eventType: ActivityType = .run
 	
 	// MARK: Navigation
 	var currentStep: CreateRunStep = .eventDetails

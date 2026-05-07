@@ -82,11 +82,11 @@ enum AppSession {
 	}
 	
 	// USER DISTANCE TYPE
-	static var userDistanceUnit: DistanceType {
+	static var userDistanceUnit: MeasureUnit {
 		get {
-			DistanceType(
-				rawValue: defaults.string(forKey: AppSessionKey.distanceUnit.rawValue) ?? DistanceType.miles.rawValue
-			) ?? DistanceType.miles
+			MeasureUnit(
+				rawValue: defaults.string(forKey: AppSessionKey.distanceUnit.rawValue) ?? MeasureUnit.miles.rawValue
+			) ?? MeasureUnit.miles
 		}
 		set { defaults.set(newValue.rawValue, forKey: AppSessionKey.distanceUnit.rawValue) }
 	}
