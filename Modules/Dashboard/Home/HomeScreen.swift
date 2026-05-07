@@ -13,7 +13,7 @@ struct HomeScreen: View {
 	//MARK: Variables
 	@State private var viewModel = HomeViewModel()
 	@State private var showPairWatch = false
-	private let recentActivities = ActivityData.samples
+	@State private var recentActivities = ActivityData.samples
 	
 	@Environment(Router.self) private var router
 	

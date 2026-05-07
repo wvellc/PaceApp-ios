@@ -24,7 +24,8 @@ final class EventDetailsViewModel {
 	
 	// MARK: Toggle States
 	var isFavorite: Bool = false
-		
+	var showEditScreen: Bool?
+	
 	// MARK: Init
 	init(activityData: ActivityData? = nil) {
 		self.activityData = activityData
@@ -149,13 +150,9 @@ final class EventDetailsViewModel {
 			isSegmentsExpanded.toggle()
 		}
 	}
-	
-	//TODO: Delete event
-	func deleteEvent() {
-		print("Delete event tapped")
-	}
+
 	//TODO: Dublicate event
-	func duplicateEvent() {
-		print("Duplicate event tapped")
+	func editEvent() {
+		showEditScreen = !(showEditScreen ?? false)
 	}
 }

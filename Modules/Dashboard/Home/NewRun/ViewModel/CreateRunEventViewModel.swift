@@ -154,13 +154,12 @@ class CreateRunEventViewModel {
 	}
 	
 	// MARK: - Validation
-	
 	func validateEventDetails() -> Bool {
 		if eventName.trimmingCharacters(in: .whitespaces).isEmpty {
 			DispatchQueue.main.async {
 				self.focusedField = .eventName
 			}
-			ToastManager.shared.present(.warning("Event name is required."))
+			ToastManager.shared.present(.warning(String(localized: .eventNameIsRequired)))
 			return false
 		}
 		
@@ -168,7 +167,7 @@ class CreateRunEventViewModel {
 			DispatchQueue.main.async {
 				self.focusedField = .location
 			}
-			ToastManager.shared.present(.warning("Location is required."))
+			ToastManager.shared.present(.warning(String(localized: .locationIsRequired)))
 			return false
 		}
 		
@@ -178,7 +177,7 @@ class CreateRunEventViewModel {
 	
 	func validateGoalTime() -> Bool {
 		if totalGoalSeconds == 0 {
-			ToastManager.shared.present(.warning("Goal time is required."))
+			ToastManager.shared.present(.warning(String(localized: .goalTimeIsRequired)))
 			return false
 		}
 		return true

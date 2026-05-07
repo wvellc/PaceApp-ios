@@ -38,6 +38,9 @@ struct EventDetailsScreen: View {
 			"\(activityData?.gaitType?.label ?? "")\(activityData?.gaitType?.label != nil ? " " : "")Details",
 			displayMode: .inline
 		)
+		.navigationDestination(item: $viewModel.showEditScreen, destination: { activity in
+			EditEventScreen(eventData: $viewModel.activityData)
+		})
 	}
 	
 	// MARK: - Scroll Content
@@ -94,8 +97,10 @@ struct EventDetailsScreen: View {
 	
 	private var bottomActions: some View {
 		FooterActions(
-			onDelete: viewModel.deleteEvent,
-			onEdit: viewModel.duplicateEvent
+			onDelete: {
+				dismiss()
+			},
+			onEdit: viewModel.editEvent
 		)
 	}
 }

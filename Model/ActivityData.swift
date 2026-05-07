@@ -10,14 +10,14 @@ import SwiftUI
 // MARK: - Recent Activity Model
 struct ActivityData: Identifiable, Hashable {
     let id = UUID()
-    let title: String
+    var title: String
     let date: Date
     let distance: String
     let duration: String
     let avgPace: String
     let delta: String
 	let deltaColor: Color
-	let location: String
+	var location: String
 	let gaitType : GaitType?
 	
 	init(
