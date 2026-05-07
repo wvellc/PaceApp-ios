@@ -73,6 +73,21 @@ struct EventDetailsScreen: View {
 			.padding(.horizontal, 16)
 			.padding(.top, 12)
 		}
+		.toolbar {
+			//Favorite or UnFavorite action button
+			ToolbarItem(placement: .topBarTrailing) {
+				Button {
+					viewModel.toggleFavorite()
+				} label: {
+					Image(.icFavoriteRun)
+						.renderingMode(.template)
+						.resizable()
+						.frame(width: 24, height: 24)
+						.foregroundStyle(viewModel.isFavorite ? .fluorescentMint : .grayHint)
+
+				}
+			}
+		}
 	}
 	
 	// MARK: - Bottom Actions
