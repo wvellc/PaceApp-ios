@@ -16,74 +16,74 @@ struct HistoryScreen: View {
 	@FocusState var focusedField: Bool?
 	@State private var isFilterSheetPresented = false
 	
+	// This tracks which item is currently being navigated to
+	@State private var selectedActivity: ActivityData?
+	
 	//MARK: Environment
 	@Environment(Router.self) private var router
 	
 	// MARK: Body
 	var body: some View {
-		VStack(spacing: 0) {
-			// Navigation Bar
-			AppNavigation()
-			
-			// Search Bar
-			searchBar
-				.padding(.horizontal, 16)
-				.padding(.top, 16)
-				.padding(.bottom, 8)
-			
-			// Activity List
-			Group {
-				if viewModel.filteredActivities.isEmpty {
-					Spacer(minLength: 25)
-					NoDataView(
-						icon: .icEmptyHistory,	
-						title: .letsGetAfterItPrsAwait,
-						onIconTap: {
-							router.navigate(to: .createRunEvent)
-						}
-					)
-					.transition(.opacity)
-					Spacer(minLength: 25)
-					Spacer()
-				} else {
-					activityList
+			VStack(spacing: 0) {
+				// Navigation Bar
+				AppNavigation()
+				
+				// Search Bar
+				searchBar
+					.padding(.horizontal, 16)
+					.padding(.top, 16)
+					.padding(.bottom, 8)
+				
+				// Activity List
+				Group {
+					if viewModel.filteredActivities.isEmpty {
+						Spacer(minLength: 25)
+						NoDataView(
+							icon: .icEmptyHistory,
+							title: .letsGetAfterItPrsAwait,
+							onIconTap: {
+								router.navigate(to: .createRunEvent)
+							}
+						)
 						.transition(.opacity)
+						Spacer(minLength: 25)
+						Spacer()
+					} else {
+						// Pass nothing to List selection, handle it manually
+						activityList
+							.transition(.opacity)
+					}
 				}
+				.animation(.easeInOut(duration: 0.25), value: viewModel.filteredActivities.isEmpty)
 			}
-			.animation(.easeInOut(duration: 0.25), value: viewModel.filteredActivities.isEmpty)
-		}
-		.appBackground()
-		// ── Filter Bottom Sheet ────────────────────────────────────
-		.sheet(isPresented: $isFilterSheetPresented) {
-			FilterSheetView(
-				distanceMin:    $viewModel.filterDistanceMin,
-				distanceMax:    $viewModel.filterDistanceMax,
-				filterDate:     $viewModel.filterDate,
-				filterLocation: $viewModel.filterLocation,
-				onApply: {
-					viewModel.applyFilter()
-				},
-				onClear: {
-					viewModel.clearFilter()
-					isFilterSheetPresented = false
-				},
-				onDismiss: {
-					isFilterSheetPresented = false
-				}
-			)
-			.applySheetSizing(height: 580)
-			.presentationBackground(.whiteApp)
-			.scrollDismissesKeyboard(.immediately)
-
-			
-		}
+			.appBackground()
+			.sheet(isPresented: $isFilterSheetPresented) {
+				FilterSheetView(
+					distanceMin:    $viewModel.filterDistanceMin,
+					distanceMax:    $viewModel.filterDistanceMax,
+					filterDate:     $viewModel.filterDate,
+					filterLocation: $viewModel.filterLocation,
+					onApply: { viewModel.applyFilter() },
+					onClear: {
+						viewModel.clearFilter()
+						isFilterSheetPresented = false
+					},
+					onDismiss: { isFilterSheetPresented = false }
+				)
+				.applySheetSizing(height: 580)
+				.presentationBackground(.whiteApp)
+				.scrollDismissesKeyboard(.immediately)
+			}
+			.navigationDestination(item: $selectedActivity) { activity in
+				EventDetailsScreen(activityData: activity)
+			}
+		
 	}
 }
 
 // MARK: - Subviews
 private extension HistoryScreen {
 	
-	// MARK: Search Bar
 	var searchBar: some View {
 		AppTextField(
 			text: $viewModel.searchText,
@@ -99,29 +99,42 @@ private extension HistoryScreen {
 			submitLabel: .done
 		)
 		.focused($focusedField, equals: true)
-		.onSubmit {
-			focusedField = false
-		}
+		.onSubmit { focusedField = false }
 	}
 	
-	// MARK: Activity List
+	@ViewBuilder
 	var activityList: some View {
-		ScrollView(showsIndicators: false) {
-			LazyVStack(spacing: 16) {
-				ForEach(viewModel.filteredActivities) { activity in
-					
-					NavigationLink {
-						EventDetailsScreen(activityData: activity)
+		// We remove 'selection: $selectedActivity' from List because it causes gesture conflicts
+		List(selection: $selectedActivity) {
+			ForEach(viewModel.filteredActivities) { activity in
+				Button {
+					selectedActivity = activity
+				} label: {
+					PaceRunActivityCard(activity: activity)
+				}
+				.buttonStyle(.plain)
+				.listRowInsets(EdgeInsets(top: 8, leading: Constant.UI.defaultPadding, bottom: 8, trailing: Constant.UI.defaultPadding))
+				.listRowBackground(Color.clear)
+				.listRowSeparator(.hidden)
+				.swipeActions(edge: .trailing, allowsFullSwipe: true) {
+					Button(role: .destructive) {
+						withAnimation { viewModel.delete(event: activity) }
 					} label: {
-						PaceRunActivityCard(activity: activity)
+						Image(systemName: "trash.fill")
 					}
-
+					.tint(.redBoho)
+					
+					Button {
+						withAnimation { viewModel.dublicate(event: activity) }
+					} label: {
+						Image(systemName: "plus.square.fill.on.square.fill")
+					}
+					.tint(.neonAquaBlue)
 				}
 			}
-			.padding(.horizontal, 16)
-			.padding(.top, 16)
-			.padding(.bottom, 24)
 		}
+		.listStyle(.plain)
+		.padding(.top, Constant.UI.defaultPadding / 2)
 	}
 }
 

@@ -8,7 +8,7 @@
 import SwiftUI
 
 // MARK: - Recent Activity Model
-struct ActivityData: Identifiable {
+struct ActivityData: Identifiable, Hashable {
     let id = UUID()
     let title: String
     let date: Date

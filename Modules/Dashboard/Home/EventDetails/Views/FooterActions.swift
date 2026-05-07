@@ -11,7 +11,7 @@ import SwiftUI
 struct FooterActions: View {
 	
 	let onDelete: () -> Void
-	let onDublicate: () -> Void
+	let onEdit: () -> Void
 	
 	var body: some View {
 		if #available(iOS 26.0, *) {
@@ -34,10 +34,10 @@ struct FooterActions: View {
 			)
 			
 			DetailButton(
-				title: "Duplicate",
-				icon: "plus.square.fill.on.square.fill",
+				title: "Edit",
+				icon: "pencil.line",
 				color: .whiteApp ,
-				action: onDublicate
+				action: onEdit
 			)
 		}
 	}

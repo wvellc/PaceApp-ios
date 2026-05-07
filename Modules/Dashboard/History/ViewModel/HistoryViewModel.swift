@@ -168,6 +168,8 @@ final class HistoryViewModel {
 		return result
 	}
 	
+	
+	
 	// MARK: - Filter Actions
 	
 	/// Commits the current filter state and closes the sheet.
@@ -183,4 +185,18 @@ final class HistoryViewModel {
 		filterLocation    = ""
 		isFilterActive    = false
 	}
+	
+	
+	// Handle the swipe-to-delete action
+	func delete(event: ActivityData) {
+		if let index = activities.firstIndex(where: { $0.id == event.id }) {
+			activities.remove(at: index)
+		}
+	}
+	
+	// Handle the swipe-to-dublicate action
+	func dublicate(event: ActivityData) {
+		//TODO: Dublicate event & navigation
+	}
+
 }

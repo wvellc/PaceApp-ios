@@ -95,7 +95,7 @@ struct EventDetailsScreen: View {
 	private var bottomActions: some View {
 		FooterActions(
 			onDelete: viewModel.deleteEvent,
-			onDublicate: viewModel.duplicateEvent
+			onEdit: viewModel.duplicateEvent
 		)
 	}
 }
