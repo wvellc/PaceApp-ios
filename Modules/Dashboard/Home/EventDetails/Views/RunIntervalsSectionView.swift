@@ -19,14 +19,14 @@ struct RunIntervalsSectionView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-			Divider()
-				.padding(.bottom, 2)
+			detailsSeprator()
 
             RunDetailSectionHeader(title: "Intervals", isExpanded: isExpanded, onToggle: onToggle)
 
             if isExpanded {
-                Divider()
-				
+				detailsSeprator()
+					.padding(.vertical, 8)
+
                 LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(intervals) { interval in
                         VStack(alignment: .leading, spacing: 4) {

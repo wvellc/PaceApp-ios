@@ -20,14 +20,11 @@ final class EventDetailsViewModel {
 	// MARK: Section Expansion
 	var isAnalysisExpanded: Bool  = true
 	var isIntervalsExpanded: Bool = false
-	var isSegmentsExpanded: Bool  = true
+	var isSegmentsExpanded: Bool  = false
 	
 	// MARK: Toggle States
 	var isFavorite: Bool = false
-	
-	// MARK: Full-screen map
-	var isShowingFullMap: Bool = false
-	
+		
 	// MARK: Init
 	init(activityData: ActivityData? = nil) {
 		self.activityData = activityData
@@ -151,14 +148,6 @@ final class EventDetailsViewModel {
 		withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
 			isSegmentsExpanded.toggle()
 		}
-	}
-	
-	func openFullMap() {
-		isShowingFullMap = true
-	}
-	
-	func closeFullMap() {
-		isShowingFullMap = false
 	}
 	
 	//TODO: Delete event

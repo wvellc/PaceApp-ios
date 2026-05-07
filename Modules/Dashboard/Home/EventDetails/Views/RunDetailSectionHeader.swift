@@ -39,7 +39,8 @@ struct RunDetailSectionHeader: View {
 			.animation(.spring(response: 0.3, dampingFraction: 0.65), value: isExpanded)
 
         }
-		.padding(.vertical, 8)
+		.padding(.vertical, 10)
+		.padding(.top, 8)
 		.onTap {
 			onToggle()
 		}

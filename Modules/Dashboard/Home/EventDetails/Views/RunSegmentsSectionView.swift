@@ -17,14 +17,15 @@ struct RunSegmentsSectionView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-			Divider()
-				.padding(.bottom, 2)
+			detailsSeprator()
 
 			
             RunDetailSectionHeader(title: "Segments", isExpanded: isExpanded, onToggle: onToggle)
 
             if isExpanded {
-                Divider().padding(.top, 8)
+				detailsSeprator()
+						.padding(.top, 8)
+				
                 VStack(spacing: 10) {
                     ForEach(segments) { segment in
                         HStack {

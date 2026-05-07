@@ -38,13 +38,6 @@ struct EventDetailsScreen: View {
 			"\(activityData?.gaitType?.label ?? "")\(activityData?.gaitType?.label != nil ? " " : "")Details",
 			displayMode: .inline
 		)
-		// Full-screen map
-		.fullScreenCover(isPresented: $viewModel.isShowingFullMap) {
-			FullScreenMapView(
-				coordinates: viewModel.routeCoordinates,
-				onClose: viewModel.closeFullMap, 
-			)
-		}
 	}
 	
 	// MARK: - Scroll Content
@@ -54,11 +47,19 @@ struct EventDetailsScreen: View {
 			VStack(spacing: 16) {
 				
 				// MARK: Route Map
-				RunDetailMapView(
-					coordinates: viewModel.routeCoordinates,
-				)
-				.onTap {
-					viewModel.openFullMap()
+				NavigationLink {
+					MapViewFullScreen(
+						coordinates: viewModel.routeCoordinates,
+					)
+					.navigationBarTitle(
+						"\(activityData?.gaitType?.label ?? "")\(activityData?.gaitType?.label != nil ? " " : "")Details",
+						displayMode: .inline
+					)
+
+				} label: {
+					MapViewRunDetail(
+						coordinates: viewModel.routeCoordinates,
+					)
 				}
 				.frame(height: 220)
 								

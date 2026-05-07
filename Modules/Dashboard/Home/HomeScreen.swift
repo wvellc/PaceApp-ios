@@ -153,7 +153,13 @@ struct HomeScreen: View {
 			VStack(spacing: 16) {
 				//Activity list
 				ForEach(recentActivities) { activity in
-					UpcomingActivityView(activity: activity)
+					
+					NavigationLink {
+						EventDetailsScreen(activityData: activity)
+					} label: {
+						UpcomingActivityView(activity: activity)
+					}
+
 				}
 			}
 		}

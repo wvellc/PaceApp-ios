@@ -20,7 +20,7 @@ struct RunDetailCardView: View {
 				.font(.semiBold24)
                 .foregroundStyle(.darkCharcoal)
 
-			VSpace()
+			VSpace(height: 12)
 
             // Time delta badge
             TimeDeltaBadgeView(
@@ -30,7 +30,7 @@ struct RunDetailCardView: View {
             )
 
             // Date & Location
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
 				
 				//Date
 				if viewModel.activityData?.displayDate != nil {
@@ -41,9 +41,12 @@ struct RunDetailCardView: View {
 						Text(viewModel.activityData?.displayDate ?? "")
 							.font(.semiBold16)
 							.foregroundStyle(.darkCharcoal)
+							.lineLimit(1)
+
 					}
 				}
 				
+				//Location
 				if viewModel.activityData?.location != nil {
 					HStack(alignment: .center, spacing: 8) {
 						Image(.icLocationBlue)
@@ -52,6 +55,7 @@ struct RunDetailCardView: View {
 						Text(viewModel.activityData?.location ?? "")
 							.font(.semiBold16)
 							.foregroundStyle(.darkCharcoal)
+							.lineLimit(3)
 					}
 				}
             }
@@ -84,35 +88,9 @@ struct RunDetailCardView: View {
     }
 }
 
-// MARK: - TimeDeltaBadgeView
-
-private struct TimeDeltaBadgeView: View {
-
-    let timeDelta: String
-    let isNegative: Bool
-    let percent: String
-
-	private var color: Color { !isNegative ? .redBoho : .fluorescentMint }
-	private var textColor: Color { !isNegative ? .whiteApp : .darkCharcoal }
-
-    var body: some View {
-        HStack {
-			Image(.icOvertime)
-				.renderingMode(.template)
-				.frame(width: 24, height: 24)
-			
-            Text(timeDelta)
-				.font(.semiBold16)
-			
-            Spacer()
-			
-            Text(percent)
-                .font(.semiBold16)
-        }
-		.foregroundStyle(textColor)
-        .padding(.horizontal, 8)
-		.padding(.vertical, 4.5)
-        .background(color)
-		.clipShape(Capsule())
-    }
+func detailsSeprator() -> some View {
+	return Divider()
+		.foregroundStyle(.grayHint)
+		.background(.grayHint)
 }
+

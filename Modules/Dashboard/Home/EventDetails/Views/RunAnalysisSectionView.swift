@@ -15,17 +15,19 @@ struct RunAnalysisSectionView: View {
     let isExpanded: Bool
     let onToggle: () -> Void
 
-    var body: some View {
+	
+	var body: some View {
         VStack(spacing: 0) {
-			Divider()
-				.padding(.bottom, 2)
+			detailsSeprator()
 
 
             RunDetailSectionHeader(title: "Analysis", isExpanded: isExpanded, onToggle: onToggle)
 
             if isExpanded {
-                Divider()
 				
+				detailsSeprator()
+					.padding(.vertical, 8)
+
                 VStack(spacing: 12) {
                     statRow(
                         lLabel: "Event Distance",    lValue: viewModel.eventDistance,
@@ -73,3 +75,5 @@ struct RunAnalysisSectionView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
+
+

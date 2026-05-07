@@ -30,6 +30,7 @@
 		E659B8D62FA895B10012AC29 /* AppAlertManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E659B8D52FA895B10012AC29 /* AppAlertManager.swift */; };
 		E659B8D82FA895BF0012AC29 /* AppAlertView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E659B8D72FA895BF0012AC29 /* AppAlertView.swift */; };
 		E659B8DA2FA895C70012AC29 /* InstallAppAlert.swift in Sources */ = {isa = PBXBuildFile; fileRef = E659B8D92FA895C70012AC29 /* InstallAppAlert.swift */; };
+		E65D34072FAC5CC4001FB9F4 /* MKCoordinateRegion+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E65D34062FAC5CC4001FB9F4 /* MKCoordinateRegion+Ext.swift */; };
 		E662BE592FA9EA08004B812D /* Color+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E662BE582FA9EA08004B812D /* Color+Ext.swift */; };
 		E684F1E72F769CDF0059C38F /* ProfilePhotoShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = E684F1E62F769CDF0059C38F /* ProfilePhotoShape.swift */; };
 		E6AE33272F7D4875009189CD /* AppNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6AE33262F7D4875009189CD /* AppNavigation.swift */; };
@@ -80,6 +81,7 @@
 		E659B8D52FA895B10012AC29 /* AppAlertManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAlertManager.swift; sourceTree = "<group>"; };
 		E659B8D72FA895BF0012AC29 /* AppAlertView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAlertView.swift; sourceTree = "<group>"; };
 		E659B8D92FA895C70012AC29 /* InstallAppAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstallAppAlert.swift; sourceTree = "<group>"; };
+		E65D34062FAC5CC4001FB9F4 /* MKCoordinateRegion+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MKCoordinateRegion+Ext.swift"; sourceTree = "<group>"; };
 		E662BE582FA9EA08004B812D /* Color+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Ext.swift"; sourceTree = "<group>"; };
 		E684F1E62F769CDF0059C38F /* ProfilePhotoShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePhotoShape.swift; sourceTree = "<group>"; };
 		E6AE33262F7D4875009189CD /* AppNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNavigation.swift; sourceTree = "<group>"; };
@@ -251,6 +253,7 @@
 		E6C4BEFC2F618C5200C17C69 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
+				E65D34062FAC5CC4001FB9F4 /* MKCoordinateRegion+Ext.swift */,
 				E662BE582FA9EA08004B812D /* Color+Ext.swift */,
 				E64DD7BF2F92193B001233EA /* ToolBar+Ext.swift */,
 				E61FA42D2F67D252001DA088 /* String+Ext.swift */,
@@ -433,6 +436,7 @@
 				E6C3328E2F62920800224AA5 /* GlassButton.swift in Sources */,
 				E6C3328A2F6291C500224AA5 /* GilroyFontModifier.swift in Sources */,
 				18C565AB2F8CE23E007BD365 /* AppDelegate.swift in Sources */,
+				E65D34072FAC5CC4001FB9F4 /* MKCoordinateRegion+Ext.swift in Sources */,
 				E6C3328B2F6291C500224AA5 /* Gilroy+Font.swift in Sources */,
 				E6C3328C2F6291C500224AA5 /* AppFonts.swift in Sources */,
 				E6C4BEF82F61849700C17C69 /* LogoWithText.swift in Sources */,

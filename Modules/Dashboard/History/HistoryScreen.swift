@@ -109,7 +109,13 @@ private extension HistoryScreen {
 		ScrollView(showsIndicators: false) {
 			LazyVStack(spacing: 16) {
 				ForEach(viewModel.filteredActivities) { activity in
-					PaceRunActivityCard(activity: activity)
+					
+					NavigationLink {
+						EventDetailsScreen(activityData: activity)
+					} label: {
+						PaceRunActivityCard(activity: activity)
+					}
+
 				}
 			}
 			.padding(.horizontal, 16)
