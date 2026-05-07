@@ -10,70 +10,69 @@ import SwiftUI
 // MARK: - RunAnalysisSectionView
 
 struct RunAnalysisSectionView: View {
-
-    let viewModel: EventDetailsViewModel
-    let isExpanded: Bool
-    let onToggle: () -> Void
-
+	let viewModel: EventDetailsViewModel
+	let isExpanded: Bool
+	let onToggle: () -> Void
+	
+	// Define a 2-column grid layout
+	private let columns = [
+		GridItem(.flexible(), alignment: .center),
+		GridItem(.flexible(), alignment: .center)
+	]
+	
+	// Helper struct to manage the pairing
+	private struct StatItem: Identifiable {
+		let id = UUID()
+		let label: String
+		let value: String? // Optional to handle nil data
+	}
+	
+	private var stats: [StatItem] {
+		[
+			StatItem(label: "Event Distance",      value: viewModel.eventDistance),
+			StatItem(label: "Completed Distance",  value: viewModel.completedDistance),
+			StatItem(label: "Finish Time Goal",    value: viewModel.finishTimeGoal),
+			StatItem(label: "Total Time Taken",    value: viewModel.totalTimeTaken),
+			StatItem(label: "Time Variance",       value: viewModel.timeVariance),
+			StatItem(label: "Look-Back Intervals", value: viewModel.lookBackIntervals),
+			StatItem(label: "Segments",            value: viewModel.segmentsCount),
+			StatItem(label: "Average Heart Rate",  value: viewModel.averageHeartRate)
+		]
+	}
 	
 	var body: some View {
-        VStack(spacing: 0) {
+		VStack(spacing: 0) {
 			detailsSeprator()
-
-
-            RunDetailSectionHeader(title: "Analysis", isExpanded: isExpanded, onToggle: onToggle)
-
-            if isExpanded {
-				
+			
+			RunDetailSectionHeader(title: "Analysis", isExpanded: isExpanded, onToggle: onToggle)
+			
+			if isExpanded {
 				detailsSeprator()
 					.padding(.vertical, 8)
-
-                VStack(spacing: 12) {
-                    statRow(
-                        lLabel: "Event Distance",    lValue: viewModel.eventDistance,
-                        rLabel: "Completed Distance", rValue: viewModel.completedDistance
-                    )
-                    statRow(
-                        lLabel: "Finish Time Goal",  lValue: viewModel.finishTimeGoal,
-                        rLabel: "Total Time Taken",  rValue: viewModel.totalTimeTaken
-                    )
-                    statRow(
-                        lLabel: "Time Variance",     lValue: viewModel.timeVariance,
-                        rLabel: "Look-Back Intervals", rValue: viewModel.lookBackIntervals
-                    )
-                    statRow(
-                        lLabel: "Segments",          lValue: viewModel.segmentsCount,
-                        rLabel: "Average Heart Rate", rValue: viewModel.averageHeartRate
-                    )
-                }
-                .padding(.top, 12)
+				
+				// Use LazyVGrid for dynamic flow
+				LazyVGrid(columns: columns, spacing: 16) {
+					// .compactMap filters out any items where the value is nil
+					ForEach(stats.filter { $0.value != nil }) { stat in
+						statCell(label: stat.label, value: stat.value ?? "")
+					}
+				}
+				.padding(.top, 12)
 				.transition(.opacity.combined(with: .move(edge: .top).combined(with: .scale)))
-            }
-        }
-
-    }
-
-    @ViewBuilder
-    private func statRow(lLabel: String, lValue: String,
-                         rLabel: String, rValue: String) -> some View {
-        HStack(alignment: .top) {
-            statCell(label: lLabel, value: lValue)
-            statCell(label: rLabel, value: rValue)
-        }
-    }
-
-    @ViewBuilder
-    private func statCell(label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.regular13)
+			}
+		}
+	}
+	
+	@ViewBuilder
+	private func statCell(label: String, value: String) -> some View {
+		VStack(alignment: .leading, spacing: 2) {
+			Text(label)
+				.font(.regular13)
 				.foregroundStyle(.fashionGray)
-            Text(value)
+			Text(value)
 				.font(.semiBold17)
-                .foregroundStyle(.darkCharcoal)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
+				.foregroundStyle(.darkCharcoal)
+		}
+		.frame(maxWidth: .infinity, alignment: .leading)
+	}
 }
-
-
