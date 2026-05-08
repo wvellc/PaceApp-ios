@@ -19,51 +19,34 @@ struct CreateRunEventScreen: View {
 
 	//MARK: View Builder
     var body: some View {
-        ZStack {
-            // Deep blue background
-            LinearGradient(
-                colors: [Color(hex: "0C2D8C"), Color(hex: "091E5B")],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-
-            VStack(spacing: 0) {
-
-                // MARK: Content
-                ScrollView {
-                    VStack(spacing: 32) {
-                        stepContent
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 24)
-					.padding(.top, 8)
-                }
-				.scrollBounceBehavior(.basedOnSize)
-
-                Spacer(minLength: 0)
-
-                // MARK: Next Button
-                VStack(spacing: 0) {
-                    RunNextButton(
-                        title: viewModel.nextButtonTitle,
-                        isEnabled: viewModel.isNextEnabled
-                    ) {
-                        viewModel.goNext()
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
-                }
-                .background(
-                    LinearGradient(
-                        colors: [Color(hex: "0A1B6B").opacity(0), Color(hex: "0A1B6B")],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .ignoresSafeArea(edges: .bottom)
-                )
-            }
-        }
+		VStack(spacing: 0) {
+			
+			// MARK: Content
+			ScrollView {
+				VStack(spacing: 32) {
+					stepContent
+				}
+				.padding(.horizontal, 20)
+				.padding(.bottom, 24)
+				.padding(.top, 8)
+			}
+			.scrollBounceBehavior(.basedOnSize)
+			
+			Spacer(minLength: 0)
+			
+			// MARK: Next Button
+			VStack(spacing: 0) {
+				RunNextButton(
+					title: viewModel.nextButtonTitle,
+					isEnabled: viewModel.isNextEnabled
+				) {
+					viewModel.goNext()
+				}
+				.padding(.horizontal, 20)
+				.padding(.vertical, 16)
+			}
+		}
+		.appBackground()
 		.onAppear {
 			viewModel.router = self.router
 		}
