@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import PhotosUI
 
 /// Edito profile screen
 struct EditProfileScreen: View {
@@ -24,16 +23,10 @@ struct EditProfileScreen: View {
 	// MARK: - Local edit state
 	@State private var firstName: String = ""
 	@State private var lastName: String = ""
-	@State private var selectedImage: UIImage? = nil
-	@State private var isPhotoPickerPresented: Bool = false
-	@State private var profileImage: UIImage? = nil
 
 	var body: some View {
 		VStack(spacing: 0) {
 			VStack(spacing: 32) {
-				
-				// MARK: Avatar
-				avatarSection
 				
 				// MARK: Input Fields
 				inputSection
@@ -58,79 +51,6 @@ struct EditProfileScreen: View {
 			// Populate local state from viewModel
 			firstName = viewModel.firstName ?? ""
 			lastName = viewModel.lastName ?? ""
-		}
-		.onChange(of: profileImage) { _, newValue in
-			if let image = newValue {
-				self.selectedImage = image
-			} else {
-				self.selectedImage = UIImage(resource: .icPerson)
-			}
-		}
-	}
-	
-	
-	// MARK: - Avatar Section
-	
-	@ViewBuilder
-	private var avatarSection: some View {
-		let avatarShape = ProfilePhotoShape()
-		
-		VStack(spacing: 16) {
-			ZStack(alignment: .bottomTrailing) {
-				// Avatar image
-				
-				Color.whiteApp
-					.overlay {
-						ZStack {
-							if let localImage = selectedImage {
-								Image(uiImage: localImage)
-									.resizable()
-									.scaledToFill()
-									.frame(width: 100, height: 108)
-									.clipShape(avatarShape)
-							} else {
-								AsyncImage(url: URL(string: viewModel.avatarURL)) { image in
-									image
-										.resizable()
-										.scaledToFill()
-										.frame(width: 100, height: 108)
-										.clipShape(avatarShape)
-									
-								} placeholder: {
-									avatarShape
-										.fill(.whiteApp)
-										.frame(width: 100, height: 108)
-										.overlay {
-											Image(.icProfile)
-												.resizable()
-												.renderingMode(.template)
-												.foregroundStyle(.grayHint)
-												.scaledToFill()
-												.frame(width: 60, height: 60)
-										}
-								}
-							}
-							
-							Color.blackApp.opacity(0.7)
-								.overlay {
-									Image(.icCamera)
-								}
-						}
-
-					}
-					.frame(width: 100, height: 108)
-					.clipShape(avatarShape)
-					.imagePickerManager(isPresented: $isPhotoPickerPresented, selectedImage: $profileImage)
-
-				
-			}
-			.onTapGesture {
-				isPhotoPickerPresented = true
-			}
-			
-			Text(.updatePhoto)
-				.font(.medium16)
-				.foregroundStyle(.whiteApp)
 		}
 	}
 	
@@ -180,8 +100,7 @@ struct EditProfileScreen: View {
 		AppButton(.updateProfile) {
 			viewModel.updateProfile(
 				firstName: firstName,
-				lastName: lastName,
-				selectedImage: selectedImage
+				lastName: lastName
 			)
 			
 			dismiss()
@@ -199,4 +118,3 @@ struct EditProfileScreen: View {
 		.environment(Router())
 		.environment(ProfileViewModel())
 }
-
