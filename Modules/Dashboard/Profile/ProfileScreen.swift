@@ -65,28 +65,15 @@ struct ProfileScreen: View {
 				.fill(.whiteApp)
 				.frame(width: 100, height: 108)
 				.overlay {
-					AsyncImage(url: URL(string: viewModel.avatarURL)) { phase in
-						
-						if let image = phase.image {
-							image
-								.resizable()
-								.scaledToFill()
-								.clipShape(avatarShape)
-							
-						} else if phase.error != nil {
-							Image(.icProfile)
-								.resizable()
-								.renderingMode(.template)
-								.foregroundStyle(.grayHint)
-								.scaledToFill()
-								.frame(width: 60, height: 60)
-							
-						} else {
-							ProgressView()
-								.tint(.grayHint) // Acts as a placeholder.
-						}
-						
-						
+					VStack(alignment: .center) {
+						Text(avatarInitials)
+							.font(Gilroy.bold.size(54))
+							.foregroundStyle(.radiantBlue)
+							.lineLimit(1)
+							.minimumScaleFactor(0.6)
+							.frame(maxWidth: .infinity, maxHeight: .infinity)
+							.padding(.horizontal, 8)
+							.padding(.top, 30)
 					}
 				}
 			
@@ -204,10 +191,56 @@ struct ProfileScreen: View {
 				break
 		}
 	}
+	
+	// MARK: - Helpers
+	
+	private var avatarInitials: String {
+		let firstInitial = initial(from: viewModel.firstName)
+		let lastInitial = initial(from: viewModel.lastName)
+		let nameInitials = firstInitial + lastInitial
+		
+		if nameInitials.count == 2 {
+			return nameInitials
+		}
+		
+		let fullName = [viewModel.firstName, viewModel.lastName]
+			.compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+			.joined(separator: " ")
+		
+		if let fallback = firstCharacters(from: fullName, limit: 2) {
+			return fallback
+		}
+		
+		let emailName = viewModel.userEmail
+			.split(separator: "@")
+			.first
+			.map(String.init)
+		
+		return firstCharacters(from: emailName, limit: 2) ?? "PA"
+	}
+	
+	private func initial(from value: String?) -> String {
+		guard let character = value?
+			.trimmingCharacters(in: .whitespacesAndNewlines)
+			.first
+		else {
+			return ""
+		}
+		
+		return String(character).uppercased()
+	}
+	
+	private func firstCharacters(from value: String?, limit: Int) -> String? {
+		let trimmed = value?
+			.trimmingCharacters(in: .whitespacesAndNewlines)
+			.replacingOccurrences(of: " ", with: "") ?? ""
+		
+		guard trimmed.isEmpty == false else { return nil }
+		return String(trimmed.prefix(limit)).uppercased()
+	}
 }
 
 #Preview {
 	ProfileScreen()
 		.environment(Router())
 }
-
