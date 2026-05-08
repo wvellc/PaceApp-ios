@@ -1,3 +1,4 @@
+
 //
 //  DashboardView.swift
 //  PaceApp
@@ -58,8 +59,8 @@ struct TabBarScreen: View {
                 }
                 .tag(PaceTab.history)
 
-            // Stats tab
-            PlaceholderTabView(icon: PaceTab.stats.systemIcon, title: PaceTab.stats.title)
+            // Analytics tab
+            AnalyticsScreen()
                 .tabItem {
                     Image(PaceTab.stats.assetImage(selected: selectedTab == .stats))
                     Text(PaceTab.stats.title)

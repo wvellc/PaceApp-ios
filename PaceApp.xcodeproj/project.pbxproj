@@ -25,6 +25,7 @@
 		E61FA42E2F67D252001DA088 /* String+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61FA42D2F67D252001DA088 /* String+Ext.swift */; };
 		E6370ED22F83A70000007CDF /* AppLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6370ED12F83A70000007CDF /* AppLabel.swift */; };
 		E6370ED42F83AACF00007CDF /* AppCardBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6370ED32F83AACF00007CDF /* AppCardBackground.swift */; };
+		E638E08B2FAE24F6009D62CC /* PlainSelectedStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = E638E08A2FAE24F6009D62CC /* PlainSelectedStyle.swift */; };
 		E64DD7C02F92193B001233EA /* ToolBar+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E64DD7BF2F92193B001233EA /* ToolBar+Ext.swift */; };
 		E659B8D42FA895A30012AC29 /* AppAlertModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E659B8D32FA895A30012AC29 /* AppAlertModel.swift */; };
 		E659B8D62FA895B10012AC29 /* AppAlertManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E659B8D52FA895B10012AC29 /* AppAlertManager.swift */; };
@@ -76,6 +77,7 @@
 		E61FA42D2F67D252001DA088 /* String+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Ext.swift"; sourceTree = "<group>"; };
 		E6370ED12F83A70000007CDF /* AppLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLabel.swift; sourceTree = "<group>"; };
 		E6370ED32F83AACF00007CDF /* AppCardBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCardBackground.swift; sourceTree = "<group>"; };
+		E638E08A2FAE24F6009D62CC /* PlainSelectedStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainSelectedStyle.swift; sourceTree = "<group>"; };
 		E64DD7BF2F92193B001233EA /* ToolBar+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ToolBar+Ext.swift"; sourceTree = "<group>"; };
 		E659B8D32FA895A30012AC29 /* AppAlertModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAlertModel.swift; sourceTree = "<group>"; };
 		E659B8D52FA895B10012AC29 /* AppAlertManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAlertManager.swift; sourceTree = "<group>"; };
@@ -171,6 +173,14 @@
 			path = AppBackground;
 			sourceTree = "<group>";
 		};
+		E638E0892FAE24EF009D62CC /* Styles */ = {
+			isa = PBXGroup;
+			children = (
+				E638E08A2FAE24F6009D62CC /* PlainSelectedStyle.swift */,
+			);
+			path = Styles;
+			sourceTree = "<group>";
+		};
 		E659B8D22FA895990012AC29 /* AppAlert */ = {
 			isa = PBXGroup;
 			children = (
@@ -206,6 +216,7 @@
 		E6C4BEF42F616CB600C17C69 /* DesignSystem */ = {
 			isa = PBXGroup;
 			children = (
+				E638E0892FAE24EF009D62CC /* Styles */,
 				E6C4BF002F618D3600C17C69 /* Font */,
 				E6C4BEF62F61846D00C17C69 /* Components */,
 				E6C4BEDE2F613E1300C17C69 /* AppGradients.swift */,
@@ -416,6 +427,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E638E08B2FAE24F6009D62CC /* PlainSelectedStyle.swift in Sources */,
 				E6370ED22F83A70000007CDF /* AppLabel.swift in Sources */,
 				E684F1E72F769CDF0059C38F /* ProfilePhotoShape.swift in Sources */,
 				E61F83B82F64277400C215DF /* AppButton.swift in Sources */,
