@@ -124,8 +124,8 @@ private extension HistoryScreen {
 					}
 					.tint(.redBoho)
 					
-					Button {
-						withAnimation { viewModel.dublicate(event: activity) }
+					NavigationLink {
+						withAnimation { CreateRunEventScreen(type: .duplicate, intialData: activity) }
 					} label: {
 						Image(systemName: "plus.square.fill.on.square.fill")
 					}

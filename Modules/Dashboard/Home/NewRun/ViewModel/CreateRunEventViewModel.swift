@@ -14,6 +14,10 @@ import Combine
 @Observable
 class CreateRunEventViewModel {
 	
+	//MARK: Required properties
+	let type: CreateEventType
+
+	
 	//MARK: Router
 	var router: Router?
 	
@@ -72,13 +76,15 @@ class CreateRunEventViewModel {
 	
 	
 	//MARK: Initializer
-	init() {
+	init(type:CreateEventType = .new) {
 		#if DEBUG
 			eventName = "Pace event"
-			location = "London"
+			location = "NY City"
 		#endif
 		
 		distanceType = AppSession.userDistanceUnit
+		
+		self.type = type
 	}
 	
 	
@@ -326,7 +332,13 @@ class CreateRunEventViewModel {
 	}
 	
 	var nextButtonTitle: LocalizedStringResource {
-		currentStep == .lookBackIntervals ? LocalizedStringResource.submit : LocalizedStringResource.next
+		//Duplicate event
+		if type == .duplicate {
+			return .save
+		}
+		
+		//New event
+		return currentStep == .lookBackIntervals ? LocalizedStringResource.submit : LocalizedStringResource.next
 	}
 	
 	// MARK: - Submit

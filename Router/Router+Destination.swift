@@ -35,17 +35,17 @@ extension Router {
 				// MARK: Auth
 				// ----------------------------------------------------------------
 				
-			case .login			: LoginScreen()
-			case .verifyOTP		: OTPVerificationScreen()
-			case .accountCreated: ComplationScreen(screenType: .accountCreation)
+			case .login				: LoginScreen()
+			case .verifyOTP			: OTPVerificationScreen()
+			case .accountCreated	: ComplationScreen(screenType: .accountCreation)
 
 				// ----------------------------------------------------------------
 				// MARK: Dashbaord
 				// ----------------------------------------------------------------
 				
-			case .createRunEvent: CreateRunEventScreen()
-			case .favoritesRun	: FavoritesRunScreen()
-			case .notifications	: NotificationsScreen()
+			case .createRunEvent	: CreateRunEventScreen()
+			case .favoritesRun		: FavoritesRunScreen()
+			case .notifications		: NotificationsScreen()
 				
 				// ----------------------------------------------------------------
 				// MARK: Settings

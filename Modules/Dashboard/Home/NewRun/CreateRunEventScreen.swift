@@ -7,15 +7,25 @@
 
 import SwiftUI
 
-// MARK: - Main Screen
-
 struct CreateRunEventScreen: View {
+	
+	let type: CreateEventType
+	let intialData: ActivityData?
 	
 	//MARK: Environment
 	@Environment(Router.self) private var router
     @Environment(\.dismiss) private var dismiss
 
-	@State private var viewModel = CreateRunEventViewModel()
+	// MARK: ViewModel
+	@State private var viewModel: CreateRunEventViewModel
+	
+	// MARK: Init
+	init(type:CreateEventType = .new, intialData: ActivityData? = nil) {
+		self.type = type
+		self.intialData = intialData
+		_viewModel = State(initialValue: CreateRunEventViewModel(type: type))
+	}
+
 
 	//MARK: View Builder
     var body: some View {
@@ -40,6 +50,16 @@ struct CreateRunEventScreen: View {
 					title: viewModel.nextButtonTitle,
 					isEnabled: viewModel.isNextEnabled
 				) {
+					
+					//For duplicate event
+					if type == .duplicate && viewModel.validateEventDetails() {
+						dismiss()
+						
+						ToastManager.shared.present(.success("Successfully created."))
+						return
+					}
+					
+					//For new event flow
 					viewModel.goNext()
 				}
 				.padding(.horizontal, 20)
@@ -49,6 +69,11 @@ struct CreateRunEventScreen: View {
 		.appBackground()
 		.onAppear {
 			viewModel.router = self.router
+			
+			//FIXME: Remove after FB integration
+			viewModel.eventName = intialData?.title ?? ""
+			viewModel.location = intialData?.location ?? ""
+			viewModel.eventDate = intialData?.date ?? Date()
 		}
 		.navigationTitle(.newRun)
 		.navigationBarBackButtonHidden(true)

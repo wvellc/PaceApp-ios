@@ -193,10 +193,5 @@ final class HistoryViewModel {
 			activities.remove(at: index)
 		}
 	}
-	
-	// Handle the swipe-to-dublicate action
-	func dublicate(event: ActivityData) {
-		//TODO: Dublicate event & navigation
-	}
 
 }
