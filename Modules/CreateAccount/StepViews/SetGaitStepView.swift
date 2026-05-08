@@ -12,6 +12,12 @@ import SwiftUI
 
 struct SetGaitStepView: View {
 	
+	let gender: Gender
+	
+	init(gender: Gender = .male) {
+		self.gender = gender
+	}
+	
 	var body: some View {
 		VStack(alignment: .leading, spacing: 24) {
 			Text(.setYourWalkingStyleToMatchYourPaceAndMood)
@@ -22,12 +28,12 @@ struct SetGaitStepView: View {
 			
 			VStack(spacing: 24) {
 				// Running gait selector — saves to AppSession on change
-				GaitSelectionView(type: .running) { data in
+				GaitSelectionView(type: .running, gender: gender) { data in
 					AppSession.userGaitData?.runningData = data
 				}
 				
 				// Walking gait selector — saves to AppSession on change
-				GaitSelectionView(type: .walking) { data in
+				GaitSelectionView(type: .walking, gender: gender) { data in
 					AppSession.userGaitData?.walkingData = data
 				}
 			}
@@ -51,6 +57,7 @@ struct SetGaitStepView: View {
 struct GaitSelectionView: View {
 	
 	let type: GaitType
+	let gender: Gender
 	let onChange: (GaitData) -> Void
 	
 	@State private var selectedUnit: String
@@ -62,8 +69,9 @@ struct GaitSelectionView: View {
 	
 	// MARK: Init
 	
-	init(type: GaitType, onChange: @escaping (GaitData) -> Void) {
+	init(type: GaitType, gender: Gender = .male, onChange: @escaping (GaitData) -> Void) {
 		self.type = type
+		self.gender = gender
 		self.onChange = onChange
 		
 		// Pull previously saved data for this gait type from AppSession
@@ -71,9 +79,9 @@ struct GaitSelectionView: View {
 		? AppSession.userGaitData?.runningData
 		: AppSession.userGaitData?.walkingData
 		
-		// Fall back to sensible defaults if no saved data exists
-		_selectedUnit = State(initialValue: savedData?.unit ?? "Meters")
-		_selectedStepLength = State(initialValue: savedData?.stepLength ?? (type == .walking ? 2.5 : 4.0))
+		// Fall back to gender defaults in feet if no saved data exists.
+		_selectedUnit = State(initialValue: savedData?.unit ?? "Feet")
+		_selectedStepLength = State(initialValue: savedData?.stepLength ?? gender.defaultStepLength(for: type))
 	}
 	
 	// MARK: Helpers

@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import PhotosUI
 
 // MARK: - CreateAccountViewModel
 
@@ -23,8 +22,11 @@ final class CreateAccountViewModel {
 	
 	var firstName: String = ""
 	var lastName: String = ""
-	var selectedPhotoItem: UIImage? = nil
-	var profileImage: Image? = nil
+	var selectedGender: Gender = .male {
+		didSet {
+			applyDefaultGaitLengths(for: selectedGender)
+		}
+	}
 	
 	// MARK: - Step 2 / 3 / 4 — Watch pairing
 	/// Mock discovered devices — replace with real BLE scan results.
@@ -57,6 +59,12 @@ final class CreateAccountViewModel {
 	
 	enum SlideDirection {
 		case forward, backward
+	}
+	
+	// MARK: - Init
+	
+	init() {
+		applyDefaultGaitLengths(for: selectedGender)
 	}
 	
 	// MARK: - Actions
@@ -95,11 +103,9 @@ final class CreateAccountViewModel {
 		}
 	}
 	
-	// MARK: - Photo loading
+	// MARK: - Gait defaults
 	
-	@MainActor
-	func loadPhoto() async {
-		guard let item = selectedPhotoItem else { return }
-		profileImage = Image(uiImage: item)
+	private func applyDefaultGaitLengths(for gender: Gender) {
+		AppSession.userGaitData = gender.defaultGaitData
 	}
 }

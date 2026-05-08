@@ -6,44 +6,36 @@
 //
 
 import SwiftUI
-import PhotosUI
 
 
 // MARK: - ProfileStepView
 
-/// Step 1 — photo upload + first / last name entry.
+/// Step 1 — first / last name + gender selection.
 struct ProfileStepView: View {
 
+	//MARK: States
     @Bindable var viewModel: CreateAccountViewModel
     @FocusState private var focusedField: Field?
-	@State private var isPhotoPickerPresented = false
 	
+	//MARK: Field enum
     private enum Field {
         case firstName
         case lastName
     }
 
+	//MARK: View Builder
     var body: some View {
         VStack {
 
-            // Subtitle
-            Text("Set up your account to track your pace, performance, and progress in real time.")
-				.font(.medium20)
-                .foregroundStyle(.whiteApp)
-				.lineSpacing(10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-		
-			VSpace(height: 32)
+			VSpace(height: 60)
 			
-            // Avatar picker
-		avatarView
-			.imagePickerManager(isPresented: $isPhotoPickerPresented, selectedImage: $viewModel.selectedPhotoItem)
-            .onChange(of: viewModel.selectedPhotoItem) { _, _ in
-                Task { await viewModel.loadPhoto() }
-            }
-            
-			VSpace(height: 42)
+			Image("logo")
+				.resizable()
+				.scaledToFit()
+				.frame(width: 135.55, height: 90.59)
+				.shadow(color: Color.black.opacity(0.2), radius: 12, x: 0, y: 8)
+		
+			VSpace(height: 60)
 
             // Name fields
             VStack(spacing: 16) {
@@ -70,25 +62,22 @@ struct ProfileStepView: View {
                     ),
                     textContentType: .familyName,
                     autocapitalization: .words,
-						submitLabel: .done
+					submitLabel: .done
                 )
                 .focused($focusedField, equals: .lastName)
-                .onSubmit {
+				.onSubmit {
                     focusedField = nil
                 }
+				
+				
+				
+				genderSelectionView
+					.padding(.top, 8)
             }
 
             Spacer()
         }
-        .padding(.horizontal, 16)
         .padding(.top, 24)
-//		.onChange(of: viewModel.selectedPhotoItem) { oldValue, newValue in
-//			if newValue != nil {
-//				Task { await viewModel.loadPhoto() }
-//			} else {
-//				viewModel.profileImage = nil
-//			}
-//		}
 		.onAppear {
 			focusedField = .firstName
 		}
@@ -98,41 +87,23 @@ struct ProfileStepView: View {
 
     }
 
-    // MARK: - Avatar well
-
-    @ViewBuilder
-    private var avatarView: some View {
-        let avatarShape = ProfilePhotoShape()
-
-        VStack(spacing: 16) {
-            ZStack {
-
-                avatarShape
-					.fill(.whiteApp)
-                    .frame(width: 100, height: 108)
-                    .overlay {
-                        if let image = viewModel.profileImage {
-                            image
-                                .resizable()
-                                .scaledToFill()
-								.frame(width: 100, height: 108)
-                                .clipShape(avatarShape)
-                        } else {
-							Image(.icCamera)
-								.frame(width: 54, height: 54)
-                        }
-                    }
-					.onTapGesture {
-						isPhotoPickerPresented = true
-					}
-
-            }
-
-			Text(.addPhoto)
-                .font(.medium16)
+	// MARK: - Gender selection
+	
+	private var genderSelectionView: some View {
+		VStack(alignment: .leading, spacing: 12) {
+			Text(.gender)
+				.font(.semiBold16)
 				.foregroundStyle(.whiteApp)
-        }
-    }
+			
+			AppSegmentedControl(
+				selection: $viewModel.selectedGender,
+				segments: Gender.allCases.map {
+					(key: $0, title: $0.rawValue)
+				}
+			)
+		}
+		.padding(.top, 8)
+	}
 }
 
 #Preview {
