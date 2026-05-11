@@ -52,8 +52,7 @@ struct SettingScreen: View {
 		}
 		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 		.appBackground()
-		.navigationTitle(.settings)
-		.navigationBarTitleDisplayMode(.inline)
+		.navigationAppTitle(title: .settings) 
 	}
 		
 	// MARK: - Standard Menu Row (reuses profileMenuRow pattern)

@@ -89,6 +89,21 @@ struct AppBackButtonStyle: ViewModifier {
 	}
 }
 
+// MARK: - AppBackButtonStyle (View modifier – hides system bar & injects toolbar)
+
+struct AppNavigationTitle: ViewModifier {
+	let title: LocalizedStringResource
+	
+	func body(content: Content) -> some View {
+		content
+			.navigationBarTitleDisplayMode(.inline)
+			.toolbar {
+				AppTitleToolbarContent(title: title)
+			}
+	}
+}
+
+
 // MARK: - AppBackButtonToolbarContent (ToolbarContentBuilder compatible)
 
 /// Drop this directly inside a `@ToolbarContentBuilder` block when the screen
@@ -107,6 +122,24 @@ struct AppBackButtonToolbarContent: ToolbarContent {
 	}
 }
 
+// MARK: - AppTitleToolbarContent (ToolbarContentBuilder compatible)
+
+/// Drop this directly inside a `@ToolbarContentBuilder` block when the screen
+/// already owns its own `.toolbar { }` modifier and you need the back button
+/// alongside other `ToolbarItem`s.
+struct AppTitleToolbarContent: ToolbarContent {
+	let title: LocalizedStringResource
+	
+	var body: some ToolbarContent {
+		ToolbarItem(placement: .principal) {
+			Text(title)
+				.font(.medium16)
+				.foregroundStyle(.whiteApp)
+		}
+	}
+}
+
+
 // MARK: - View extension (attaches full modifier — back button + hidden system bar)
 
 extension View {
@@ -114,6 +147,10 @@ extension View {
 	/// navigation bar. Use on screens that do **not** have their own toolbar block.
 	func globalBackButton(onTap: @escaping VoidCallback) -> some View {
 		modifier(AppBackButtonStyle(onTap: onTap))
+	}
+	
+	func navigationAppTitle(title:LocalizedStringResource) -> some View {
+		modifier(AppNavigationTitle(title: title))
 	}
 }
 // MARK: - ToolbarContentBuilder extension

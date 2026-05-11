@@ -35,7 +35,7 @@ struct AppWebViewScreen: View {
             WebView(url: URL(string: requestUrl)!, errorMessage: $errorMessage)
                 .edgesIgnoringSafeArea(.all)
         }
-        .navigationTitle((title ?? "").uppercased())
+		.navigationAppTitle(title: .init(stringLiteral: (title ?? "").uppercased()))
     }
 }
 

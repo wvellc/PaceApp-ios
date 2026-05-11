@@ -38,31 +38,27 @@ struct AnalyticsDetailScreen: View {
     // MARK: - Body
 
     var body: some View {
-        ZStack {
-            AppBackground()
-
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 16) {
-
-                    // Period Selector
-                    AppSegmentedControl(
-                        selection: $selectedPeriod,
-                        segments: AnalyticsPeriod.allCases.map { (key: $0, title: $0.rawValue) }
-                    )
-                    .padding(.top, 4)
-
-                    // Summary Chart Cards
-                    ForEach(summaryCards) { card in
-                        summaryCardView(card)
-                    }
-
-                    Spacer(minLength: 32)
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 16)
-            }
-        }
-        .navigationTitle(metricType.detailTitle)
+		ScrollView(showsIndicators: false) {
+			VStack(spacing: 16) {
+				
+				// Period Selector
+				AppSegmentedControl(
+					selection: $selectedPeriod,
+					segments: AnalyticsPeriod.allCases.map { (key: $0, title: $0.rawValue) }
+				)
+				.padding(.top, 4)
+				
+				// Summary Chart Cards
+				ForEach(summaryCards) { card in
+					summaryCardView(card)
+				}
+				
+				Spacer(minLength: 32)
+			}
+			.padding(.horizontal, 16)
+			.padding(.bottom, 16)
+		}
+		.appBackground()
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbarColorScheme(.dark, for: .navigationBar)
@@ -70,6 +66,12 @@ struct AnalyticsDetailScreen: View {
             AppBackButtonToolbarContent {
                 dismiss()
             }
+			
+			ToolbarItem(placement: .principal) {
+				Text(metricType.detailTitle)
+					.font(.medium16)
+					.foregroundStyle(.whiteApp)
+			}
         }
     }
 

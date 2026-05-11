@@ -57,8 +57,6 @@ struct NotificationsScreen: View {
 					}
 			}
 		}
-		//Custom Navigation Bar Buttons
-		.navigationTitle(.notifications)
 		.navigationBarTitleDisplayMode(.inline)
 		.toolbarBackground(.hidden, for: .navigationBar)
 		.toolbarBackground(.clear, for: .navigationBar)
@@ -66,10 +64,9 @@ struct NotificationsScreen: View {
 			ToolbarItem(placement: .principal) {
 				Text(.notifications)
 					.font(.medium16)
-					.lineSpacing(24)
-					.foregroundColor(.whiteApp)
+					.foregroundStyle(.whiteApp)
 			}
-			
+
 			if !viewModel.notifications.isEmpty {
 				ToolbarItem(placement: .topBarTrailing) {
 					Button(action: { viewModel.clearAllNotification() }) {

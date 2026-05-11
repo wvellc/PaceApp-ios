@@ -75,7 +75,6 @@ struct CreateRunEventScreen: View {
 			viewModel.location = intialData?.location ?? ""
 			viewModel.eventDate = intialData?.date ?? Date()
 		}
-		.navigationTitle(.newRun)
 		.navigationBarBackButtonHidden(true)
 		.navigationBarTitleDisplayMode(.inline)
 		.toolbar { topToolbar }

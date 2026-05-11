@@ -42,8 +42,7 @@ struct FavoritesRunScreen: View {
 			}
 		}
 		.animation(.easeInOut(duration: 0.25), value: viewModel.favRuns.isEmpty)
-		.navigationTitle("Favorites")
-		.navigationBarTitleDisplayMode(.inline)
+		.navigationAppTitle(title: .favorites)
 		.appBackground()
 		.navigationDestination(item: $selectedActivity) { activity in
 			EventDetailsScreen(activityData: activity)

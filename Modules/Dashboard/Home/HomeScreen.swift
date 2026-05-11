@@ -77,7 +77,7 @@ struct HomeScreen: View {
 			}
 			.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 			.appBackground()
-			.navigationTitle(.home)
+			.navigationAppTitle(title: .home)
 			
 			if viewModel.showMetricPopup {
 				MetricsPopupView(

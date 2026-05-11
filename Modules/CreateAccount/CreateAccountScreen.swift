@@ -42,7 +42,6 @@ struct CreateAccountScreen: View {
 				}
 			}
 		}
-		.navigationTitle(viewModel.currentStep.title)
 		.navigationBarBackButtonHidden(true)
 		.navigationBarTitleDisplayMode(.inline)
 		.toolbar { topToolbar }
@@ -64,7 +63,7 @@ struct CreateAccountScreen: View {
 		
 		ToolbarItem(placement: .principal) {
 			Text(viewModel.currentStep.title)
-				.font(.medium17)
+				.font(.medium16)
 				.foregroundStyle(.whiteApp)
 		}
 		

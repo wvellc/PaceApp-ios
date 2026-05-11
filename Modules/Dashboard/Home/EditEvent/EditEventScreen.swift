@@ -71,7 +71,7 @@ struct EditEventScreen: View {
 		.padding(Constant.UI.defaultPadding)
 		.appBackground()
 		.navigationBarTitleDisplayMode(.inline)
-		.navigationTitle("Edit \(eventData?.gaitType?.label ?? "")")
+		.navigationAppTitle(title: "Edit \(eventData?.gaitType?.label ?? "")")
 		.onChange(of: focusedField) { oldField, newField in
 			focusedField = newField
 		}

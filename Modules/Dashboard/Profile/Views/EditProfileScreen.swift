@@ -45,7 +45,7 @@ struct EditProfileScreen: View {
 		}
 		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 		.appBackground()
-		.navigationTitle(.editProfile)
+		.navigationAppTitle(title: .editProfile)
 		.navigationBarTitleDisplayMode(.inline)
 		.onAppear {
 			// Populate local state from viewModel
