@@ -17,6 +17,11 @@ struct HomeScreen: View {
 	
 	@Environment(Router.self) private var router
 	
+	let runActions: [RunAction] = [
+		RunAction(title: .newRun, symbol: "icNewRun",rout: .createEvent),
+		RunAction(title: .favoriteRun, symbol: "icFavoriteRun", rout: .favorites),
+	]
+
 	
 	//MARK: View Builder
 	var body: some View {
@@ -88,6 +93,14 @@ struct HomeScreen: View {
 				.zIndex(20)
 			}
 		}
+		.navigationDestination(for: HomeCardViewType.self) { route in
+			switch route {
+				case .createEvent:
+					CreateRunEventScreen()
+				case .favorites:
+					FavoritesRunScreen()
+			}
+		}
 	}
 	
 	//MARK: Metric Row
@@ -114,32 +127,24 @@ struct HomeScreen: View {
 	
 	//MARK: Run Action Grid
 	private var runActionGrid: some View {
-	    // Two flexible columns with consistent spacing
-	    let spacing: CGFloat = 16
-	    let columns = Array(repeating: GridItem(.flexible(), spacing: spacing), count: 2)
-	    let runActions: [RunAction] = [
-	        RunAction(title: .newRun, symbol: "icNewRun", action: {
-	            router.navigate(to: .createRunEvent)
-	        }),
-	        RunAction(title: .favoriteRun, symbol: "icFavoriteRun", action: {
-				router.navigate(to: .favoritesRun)
-			}),
-	    ]
-
+		// Two flexible columns with consistent spacing
+		let spacing: CGFloat = 16
+		let columns = Array(repeating: GridItem(.flexible(), spacing: spacing), count: 2)
+		
 		return LazyVGrid(columns: columns, alignment: .center, spacing: spacing) {
-	        ForEach(runActions) { action in
-	            GeometryReader { geo in
-	                let side = geo.size.width
-					
-	                RunActionCard(action: action)
-	                    .frame(width: side, height: side)
-	            }
-				.aspectRatio(1, contentMode: .fit)
-
-	        }
-	    }
+			ForEach(runActions) { action in
+				NavigationLink(value: action.rout, label: {
+					GeometryReader { geo in
+						let side = geo.size.width
+						RunActionCard(action: action)
+							.frame(width: side, height: side)
+					}
+					.aspectRatio(1, contentMode: .fit)
+				})
+			}
+		}
 		.fixedSize(horizontal: false, vertical: true)
-
+		
 	}
 	
 	// MARK: Upcoming Activity
@@ -169,7 +174,9 @@ struct HomeScreen: View {
 
 
 #Preview {
-	HomeScreen()
-		.environment(Router())
+	NavigationStack {
+		HomeScreen()
+			.environment(Router())
+	}
 }
 

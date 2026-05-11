@@ -45,8 +45,8 @@ struct RunActionCard: View {
 				try? await Task.sleep(for: .milliseconds(80))
 				isUserTapped = false
 				
-				try? await Task.sleep(for: .milliseconds(100))
-				action.action()
+//				try? await Task.sleep(for: .milliseconds(100))
+//				action.action()
 			}
 		}
     }
@@ -56,5 +56,11 @@ struct RunAction: Identifiable {
 	let id = UUID()
 	let title: LocalizedStringResource
 	let symbol: String
-	let action: () -> Void
+	let rout: HomeCardViewType
+}
+
+
+
+enum HomeCardViewType: Hashable {
+	case createEvent, favorites
 }
