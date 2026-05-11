@@ -175,7 +175,7 @@ enum AnalyticsDummyData {
                     title: "Total Distance Covered",
                     value: "102",
                     unit: "mi.",
-                    accentColor: AnalyticsMetricType.pace.accentColor,
+                    accentColor: AnalyticsMetricType.elevation.accentColor,
                     dataPoints: dataPoints(for: period, metricType: .pace)
                 )
             ]
@@ -192,7 +192,7 @@ enum AnalyticsDummyData {
                     title: "Best Pace",
                     value: "6:12",
                     unit: "min/mi",
-                    accentColor: Color(red: 1.0, green: 0.82, blue: 0.2),
+                    accentColor: AnalyticsMetricType.pace.accentColor,
                     dataPoints: dataPoints(for: period, metricType: .pace)
                 )
             ]
@@ -209,7 +209,7 @@ enum AnalyticsDummyData {
                     title: "Max Heart Rate",
                     value: "178",
                     unit: "bpm",
-                    accentColor: Color(red: 1.0, green: 0.55, blue: 0.2),
+                    accentColor: AnalyticsMetricType.heartRate.accentColor,
                     dataPoints: dataPoints(for: period, metricType: .heartRate)
                 )
             ]
@@ -226,7 +226,7 @@ enum AnalyticsDummyData {
                     title: "Peak Effort",
                     value: "92",
                     unit: "%",
-                    accentColor: Color(red: 0.9, green: 0.7, blue: 0.3),
+                    accentColor: AnalyticsMetricType.percentage.accentColor,
                     dataPoints: dataPoints(for: period, metricType: .percentage)
                 )
             ]

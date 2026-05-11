@@ -80,9 +80,11 @@ struct PaceAreaChart: View {
 								.foregroundStyle(.blackApp)
 								.padding(.horizontal, 8)
 								.padding(.vertical, 4)
-								.background(RoundedRectangle(cornerRadius: 4)
-								.fill(.whiteApp)
-								.shadow(radius: 0.5))
+								.background(
+									RoundedRectangle(cornerRadius: 4)
+										.fill(.whiteApp)
+										.shadow(radius: 0.5)
+								)
 						}
 					
 					// Optional: Point indicator on the line
@@ -99,6 +101,9 @@ struct PaceAreaChart: View {
 		.chartXScale(domain: 0...(dataPoints.count - 1))
 		.chartYScale(domain: 0...maxValue)
 		.chartXSelection(value: $selectedIndex) // Tracks the drag/tap index
+		.onChange(of: selectedIndex, {
+			HapticManager.shared.medium()
+		})
 
         .chartXAxis {
             if showAxes {

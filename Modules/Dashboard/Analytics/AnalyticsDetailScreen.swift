@@ -38,26 +38,23 @@ struct AnalyticsDetailScreen: View {
     // MARK: - Body
 
     var body: some View {
-		ScrollView(showsIndicators: false) {
-			VStack(spacing: 16) {
-				
-				// Period Selector
-				AppSegmentedControl(
-					selection: $selectedPeriod,
-					segments: AnalyticsPeriod.allCases.map { (key: $0, title: $0.rawValue) }
-				)
-				.padding(.top, 4)
-				
-				// Summary Chart Cards
+		VStack {
+			
+			// Period Selector
+			AppSegmentedControl(
+				selection: $selectedPeriod,
+				segments: AnalyticsPeriod.allCases.map { (key: $0, title: $0.rawValue) }
+			)
+			.padding(.vertical, Constant.UI.defaultPadding / 2)
+			
+			// Summary Chart Cards
+			ScrollView(showsIndicators: false) {
 				ForEach(summaryCards) { card in
 					summaryCardView(card)
 				}
-				
-				Spacer(minLength: 32)
 			}
-			.padding(.horizontal, 16)
-			.padding(.bottom, 16)
 		}
+		.padding(.horizontal ,Constant.UI.defaultPadding)
 		.appBackground()
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
@@ -79,13 +76,13 @@ struct AnalyticsDetailScreen: View {
 
     @ViewBuilder
     private func summaryCardView(_ card: AnalyticsSummaryCard) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Constant.UI.defaultPadding) {
 
             // Value Header
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text(card.value)
-                        .font(.extraBold34)
+						.font(.bold28)
                         .foregroundStyle(card.accentColor)
 
                     Text(card.unit)
@@ -94,29 +91,23 @@ struct AnalyticsDetailScreen: View {
                 }
 
                 Text(card.title)
-                    .font(.medium16)
-                    .foregroundStyle(Color.white.opacity(0.7))
+					.font(.semiBold16)
+					.foregroundStyle(.darkCharcoal)
             }
 
             // Full-height chart with axes
             PaceAreaChart(
                 dataPoints: card.dataPoints,
                 accentColor: card.accentColor,
-                gradientColors: [
-                    card.accentColor.opacity(0.55),
-                    card.accentColor.opacity(0.04)
-                ],
+				gradientColors: metricType.gradientColors,
                 showAxes: true,
-                height: 180
+                height: 172
             )
         }
-        .padding(16)
-        .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 20))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
-        )
-        .animation(.easeInOut(duration: 0.3), value: selectedPeriod)
+		.padding(.horizontal, Constant.UI.defaultPadding)
+		.padding(.vertical, Constant.UI.defaultPadding )
+		.cardBackground()
+		.padding(.bottom, Constant.UI.defaultPadding)
     }
 }
 
