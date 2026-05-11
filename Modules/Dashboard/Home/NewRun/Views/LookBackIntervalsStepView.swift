@@ -10,22 +10,8 @@ struct LookBackIntervalsStepView: View {
 			RunEventHeaderCard()
 
             // Look-Back Intervals
-            VStack(alignment: .leading, spacing: 0) {
-                HStack {
-					AppLabel(title: .lookBackIntervals, font: .semiBold20)
-
-                    Spacer()
-
-					// Green dot indicator
-//					Button {
-//						//TODO: Show toast message
-//					} label: {
-//						Image("icInfo")
-//							.frame(width: 24, height: 24)
-//							.padding(11)
-//					}
-
-                }
+            VStack(alignment: .leading, spacing: 8) {
+				AppLabel(title: .lookBackIntervals, font: .semiBold20)
 
 				HStack(alignment: .center) {
                     Picker("Intervals", selection: $viewModel.lookBackIntervals) {

@@ -218,7 +218,15 @@
       "extractionState" : "manual"
     },
     "Favorite Run" : {
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Favorites"
+          }
+        }
+      }
     },
     "Favorites" : {
       "comment" : "The title of the screen where the user can view their favorite runs.",
@@ -364,7 +372,15 @@
 
     },
     "New Run" : {
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Event"
+          }
+        }
+      }
     },
     "New Start" : {
 
