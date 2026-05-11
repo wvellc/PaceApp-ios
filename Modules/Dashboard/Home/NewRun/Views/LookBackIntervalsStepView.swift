@@ -17,13 +17,13 @@ struct LookBackIntervalsStepView: View {
                     Spacer()
 
 					// Green dot indicator
-					Button {
-						//TODO: Show toast message
-					} label: {
-						Image("icInfo")
-							.frame(width: 24, height: 24)
-							.padding(11)
-					}
+//					Button {
+//						//TODO: Show toast message
+//					} label: {
+//						Image("icInfo")
+//							.frame(width: 24, height: 24)
+//							.padding(11)
+//					}
 
                 }
 

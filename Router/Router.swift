@@ -24,7 +24,7 @@ final class Router {
 	var path = NavigationPath()
 	
 	/// The app's current root flow.
-	var root: RootFlow = .dashboard
+	var root: RootFlow = .welcome
 	
 	/// Debounce flag — blocks duplicate calls within the 500 ms window.
 	/// `@ObservationIgnored` keeps this out of SwiftUI's observation graph
