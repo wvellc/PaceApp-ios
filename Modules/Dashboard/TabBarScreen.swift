@@ -20,7 +20,7 @@ struct TabBarScreen: View {
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = UIColor.clear
-        appearance.backgroundEffect = .init(style: .systemMaterialLight)
+		appearance.backgroundEffect = .init(style: .dark)
 
         let selected = UIColor(Color.neonAquaBlue)
         let normal   = UIColor(Color.neonAquaBlue).withAlphaComponent(0.4)
@@ -78,25 +78,6 @@ struct TabBarScreen: View {
     }
 
 } // End of DashboardView
-
-
-struct PlaceholderTabView: View {
-    let icon: String
-    let title: LocalizedStringResource
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.system(size: 52, weight: .ultraLight))
-                .foregroundStyle(.white.opacity(0.28))
-            Text(title)
-                .font(.system(size: 22, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.40))
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .appBackground()
-    }
-}
 
 #Preview("Pace App") {
     TabBarScreen()

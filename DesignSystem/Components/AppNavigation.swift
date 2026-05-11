@@ -57,36 +57,72 @@ struct AppNavigation<Leading: View, Trailing: View>: View {
 	}
 }
 
+// MARK: - Shared Back Button Label
+
+/// Reusable back-button label: white circle with a blue chevron.
+/// Use this inside any `ToolbarItem` label closure.
+struct AppBackButtonLabel: View {
+	var body: some View {
+		Image(systemName: "chevron.left")
+			.font(.system(size: 16, weight: .semibold))
+			.foregroundStyle(.whiteApp)
+			.padding(8)
+	}
+}
+
+// MARK: - AppBackButtonStyle (View modifier – hides system bar & injects toolbar)
+
 struct AppBackButtonStyle: ViewModifier {
-	let onTap: VoidOptionalCallback
+	let onTap: VoidCallback
 	
 	func body(content: Content) -> some View {
 		content
-			.navigationBarBackButtonHidden(true) // Hide system button
+			.navigationBarBackButtonHidden(true)
 			.toolbar {
 				ToolbarItem(placement: .topBarLeading) {
-					Button {
-						onTap()
-					} label: {
-						Image(systemName: "chevron.left")
-							.font(.system(size: 16, weight: .semibold))
-							.foregroundStyle(.radiantBlue)
-							.frame(width: 22, height: 22)
-							.padding( 8)
-							.background(.whiteApp) // Custom background
-							.frame(width: 32, height: 32)
-							.cornerRadius(100) // 3. Custom corner radius
+					Button(action: onTap) {
+						AppBackButtonLabel()
 					}
-					
 				}
-				.hideGlassBackgroundIfAvailable()
+//				.hideGlassBackgroundIfAvailable()
 			}
 	}
 }
 
-// Extension for easy global use
+// MARK: - AppBackButtonToolbarContent (ToolbarContentBuilder compatible)
+
+/// Drop this directly inside a `@ToolbarContentBuilder` block when the screen
+/// already owns its own `.toolbar { }` modifier and you need the back button
+/// alongside other `ToolbarItem`s.
+struct AppBackButtonToolbarContent: ToolbarContent {
+	let onTap: VoidCallback
+
+	var body: some ToolbarContent {
+		ToolbarItem(placement: .topBarLeading) {
+			Button(action: onTap) {
+				AppBackButtonLabel()
+			}
+		}
+//		.hideGlassBackgroundIfAvailable()
+	}
+}
+
+// MARK: - View extension (attaches full modifier — back button + hidden system bar)
+
 extension View {
-	func globalBackButton(onTap:@escaping VoidOptionalCallback) -> some View {
+	/// Hides the system back button and injects the styled back button into the
+	/// navigation bar. Use on screens that do **not** have their own toolbar block.
+	func globalBackButton(onTap: @escaping VoidCallback) -> some View {
 		modifier(AppBackButtonStyle(onTap: onTap))
 	}
 }
+// MARK: - ToolbarContentBuilder extension
+
+extension ToolbarContent {
+	/// Returns the styled back-button `ToolbarItem`.
+	/// Call this inside a `@ToolbarContentBuilder` block, e.g.:
+	/// ```
+	/// AppBackButtonToolbarContent { dismiss() }
+	/// ```
+}
+

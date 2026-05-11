@@ -139,25 +139,17 @@ struct CreateRunEventScreen: View {
     }
 	
 	// MARK: - Top Toolbar
-	
+
 	@ToolbarContentBuilder
 	private var topToolbar: some ToolbarContent {
-		ToolbarItem(placement: .topBarLeading) {
-			Button {
-				if viewModel.currentStep == .eventDetails {
-					dismiss()
-				} else {
-					viewModel.goBack()
-				}
-			} label: {
-				Image(systemName: "chevron.left")
-					.font(.system(size: 16, weight: .semibold))
-					.foregroundStyle(.whiteApp)
-					.padding(8)
-
+		AppBackButtonToolbarContent {
+			if viewModel.currentStep == .eventDetails {
+				dismiss()
+			} else {
+				viewModel.goBack()
 			}
 		}
-		
+
 		ToolbarItem(placement: .principal) {
 			Text(.newRun)
 				.font(.medium16)

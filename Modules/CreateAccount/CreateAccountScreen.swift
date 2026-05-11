@@ -59,14 +59,7 @@ struct CreateAccountScreen: View {
 	@ToolbarContentBuilder
 	private var topToolbar: some ToolbarContent {
 		if viewModel.currentStep.showsBack {
-			ToolbarItem(placement: .topBarLeading) {
-				Button(action: viewModel.onBack) {
-					Image(systemName: "chevron.left")
-						.font(.system(size: 16, weight: .semibold))
-						.foregroundStyle(.whiteApp)
-						.padding(8)
-				}
-			}
+			AppBackButtonToolbarContent(onTap: viewModel.onBack)
 		}
 		
 		ToolbarItem(placement: .principal) {
@@ -81,7 +74,6 @@ struct CreateAccountScreen: View {
 					Text(.skip)
 						.font(.medium17)
 						.foregroundStyle(.grayHint)
-//						.padding(8)
 				}
 			}
 			

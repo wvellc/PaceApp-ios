@@ -40,6 +40,7 @@ struct FavoritesRunScreen: View {
 		}
 		.animation(.easeInOut(duration: 0.25), value: viewModel.favRuns.isEmpty)
 		.navigationTitle("Favorites")
+		.navigationBarTitleDisplayMode(.inline)
 		.appBackground()
 		
 	}
