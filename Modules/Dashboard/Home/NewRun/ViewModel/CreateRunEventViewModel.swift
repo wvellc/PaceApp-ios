@@ -346,6 +346,8 @@ class CreateRunEventViewModel {
 	private func submitForm() {
 		// TODO: Pass to coordinator / API layer
 		print("Form submitted: \(eventName), \(location), \(eventDate)")
+		
+		ToastManager.shared.present(.success("\(eventType.rawValue) event created"))
 		router?.navigateToRoot()
 	}
 }
