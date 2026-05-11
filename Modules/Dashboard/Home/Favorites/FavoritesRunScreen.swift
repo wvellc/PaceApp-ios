@@ -13,6 +13,9 @@ struct FavoritesRunScreen: View {
 	// MARK: Properties
 	@State private var viewModel = FavoritesViewModel()
 	
+	// This tracks which item is currently being navigated to
+	@State private var selectedActivity: ActivityData?
+	
 	var body: some View {
 		// Activity List
 		VStack(alignment: .center) {
@@ -42,6 +45,10 @@ struct FavoritesRunScreen: View {
 		.navigationTitle("Favorites")
 		.navigationBarTitleDisplayMode(.inline)
 		.appBackground()
+		.navigationDestination(item: $selectedActivity) { activity in
+			EventDetailsScreen(activityData: activity)
+		}
+		
 		
 	}
 	
@@ -50,31 +57,37 @@ struct FavoritesRunScreen: View {
 	@ViewBuilder
 	var activityList: some View {
 		List {
-			ForEach(viewModel.favRuns) { run in
-				PaceRunActivityCard(activity: run)
+			ForEach(viewModel.favRuns) { activity in
+				Button {
+					selectedActivity = activity
+				} label: {
+					PaceRunActivityCard(activity: activity)
+				}
+				.buttonStyle(.plain)
+				
 				// Remove default list padding and backgrounds to make it look like a floating card
-					.listRowInsets(EdgeInsets(top: 8,
-											  leading: Constant.UI.defaultPadding,
-											  bottom: 8,
-											  trailing: Constant.UI.defaultPadding)
-					)
-					.listRowBackground(Color.clear)
-					.listRowSeparator(.hidden)
+				.listRowInsets(EdgeInsets(top: 8,
+										  leading: Constant.UI.defaultPadding,
+										  bottom: 8,
+										  trailing: Constant.UI.defaultPadding)
+				)
+				.listRowBackground(Color.clear)
+				.listRowSeparator(.hidden)
 				
 				
 				//Swipe to Delete (Matches the second image)
-					.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-						Button(role: .destructive) {
-							withAnimation {
-								viewModel.unFavorite(run: run)
-							}
-						} label: {
-							Image(.icUnFavorite)
-								.renderingMode(.template)
-								.foregroundStyle(.whiteApp)
+				.swipeActions(edge: .trailing, allowsFullSwipe: true) {
+					Button(role: .destructive) {
+						withAnimation {
+							viewModel.unFavorite(run: activity)
 						}
-						.tint(.redBoho)
+					} label: {
+						Image(.icUnFavorite)
+							.renderingMode(.template)
+							.foregroundStyle(.whiteApp)
 					}
+					.tint(.redBoho)
+				}
 			}
 		}
 		.listStyle(.plain)

@@ -33,11 +33,12 @@ struct EventDetailsScreen: View {
 		VStack(spacing: 0) {
 			scrollContent
 		}
+		.padding(.top, 6)
 		.appBackground()
-		.navigationBarTitle(
-			"\(activityData?.gaitType?.label ?? "")\(activityData?.gaitType?.label != nil ? " " : "")Details",
-			displayMode: .inline
-		)
+//		.navigationBarTitle(
+//			"\(activityData?.gaitType?.label ?? "")\(activityData?.gaitType?.label != nil ? " " : "")Details",
+//			displayMode: .inline
+//		)
 		.navigationDestination(item: $viewModel.showEditScreen, destination: { activity in
 			EditEventScreen(eventData: $viewModel.activityData)
 		})
@@ -73,7 +74,7 @@ struct EventDetailsScreen: View {
 				bottomActions
 				
 			}
-			.padding(.horizontal, 16)
+			.padding(.horizontal, Constant.UI.defaultPadding)
 			.padding(.top, 12)
 		}
 		.toolbar {
@@ -89,6 +90,12 @@ struct EventDetailsScreen: View {
 						.foregroundStyle(viewModel.isFavorite ? .fluorescentMint : .grayHint)
 
 				}
+			}
+			
+			ToolbarItem(placement: .principal) {
+				Text("\(activityData?.gaitType?.label ?? "")\(activityData?.gaitType?.label != nil ? " " : "")Details")
+					.font(.medium16)
+					.foregroundStyle(.whiteApp)
 			}
 		}
 	}
