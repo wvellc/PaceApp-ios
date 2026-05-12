@@ -109,6 +109,7 @@ public extension View {
 	}
 	
 	/// A convenience modifier to trigger a haptic on tap for simple cases.
+	/// Uses Button internally to prevent duplicate fires on rapid taps.
 	func onTapHaptic(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .light,
 					 intensity: CGFloat? = nil,
 					 perform action: @escaping () -> Void) -> some View {
@@ -121,14 +122,19 @@ private struct HapticTapModifier: ViewModifier {
 	let style: UIImpactFeedbackGenerator.FeedbackStyle
 	let intensity: CGFloat?
 	let action: () -> Void
-	
+
 	func body(content: Content) -> some View {
-		content.onTapGesture {
+		// Button gives native debounce — prevents duplicate action fires on rapid taps.
+		// .plain style keeps the visual appearance identical to the unwrapped content.
+		Button {
 			Task { @MainActor in
 				haptics.impact(style: style, intensity: intensity)
 				action()
 			}
+		} label: {
+			content
 		}
+		.buttonStyle(.plain)
 	}
 }
 

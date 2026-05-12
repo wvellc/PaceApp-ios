@@ -37,15 +37,19 @@ struct NoDataView : View {
 		//No Data
 		VStack {
 			//Image or icon
-			if icon != nil {
-				Image(icon!)
-					.resizable()
-					.frame(width: 140, height: 140)
-					.onTapGesture {
-						onIconTap?()
+			if let icon {
+				// Button gives native debounce — prevents duplicate action fires on rapid taps.
+				// Only rendered when a tap callback is actually provided.
+				if let onIconTap {
+					Button {
+						onIconTap()
+					} label: {
+						iconImage
 					}
-					.padding(.bottom, 32)
-					.InteractiveSpringScaleIn(isAnimated: $animateContent, duration: 0.3)
+					.buttonStyle(.plain)
+				} else {
+					iconImage
+				}
 			}
 			
 			//Details
@@ -58,8 +62,8 @@ struct NoDataView : View {
 					.kerning(0.53624)
 					.fadeInUp(isAnimated: $animateContent, delay: 0.18, duration: 0.7, from: 30)
 				
-				if description != nil {
-					Text(description!)
+				if let description {
+					Text(description)
 						.font(.medium16)
 						.foregroundStyle(.whiteApp.opacity(0.9))
 						.multilineTextAlignment(.center)
@@ -74,6 +78,16 @@ struct NoDataView : View {
 			animateContent = true
 		}
 	}
+
+	// MARK: - Icon image (shared between tappable and static variants)
+
+	private var iconImage: some View {
+		Image(icon!)
+			.resizable()
+			.frame(width: 140, height: 140)
+			.padding(.bottom, 32)
+			.InteractiveSpringScaleIn(isAnimated: $animateContent, duration: 0.3)
+	}
 	
 }
 
@@ -82,7 +96,7 @@ struct NoDataView : View {
 	NoDataView(
 		icon: .icEmptyNotification,
 		title: "No Notifications Yet",
-		description: "You don’t have any notifications right now."
+		description: "You don't have any notifications right now."
 	)
 	.appBackground()
 }
