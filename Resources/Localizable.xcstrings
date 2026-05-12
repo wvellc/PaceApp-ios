@@ -573,6 +573,9 @@
     "Start Fresh?" : {
 
     },
+    "Start Pairing Process" : {
+      "extractionState" : "manual"
+    },
     "Stay With Me" : {
 
     },

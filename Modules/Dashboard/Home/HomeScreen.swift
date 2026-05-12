@@ -12,15 +12,16 @@ struct HomeScreen: View {
 	
 	//MARK: Variables
 	@State private var viewModel = HomeViewModel()
-	@State private var showPairWatch = false
 	@State private var recentActivities = ActivityData.samples
-	
-	@Environment(Router.self) private var router
-	
+
 	let runActions: [RunAction] = [
 		RunAction(title: .newRun, symbol: "icNewRun", rout: .createRunEvent),
 		RunAction(title: .favoriteRun, symbol: "icFavoriteRun", rout: .favoritesRun),
 	]
+	
+	// MARK: - Environment
+	@Environment(Router.self) private var router
+	@Environment(ConnectIQManager.self) private var ciqManager
 
 	
 	//MARK: View Builder
@@ -57,9 +58,9 @@ struct HomeScreen: View {
 						}
 						
 						// MARK: Home data & Pair watch view
-						if showPairWatch {
+						if !ciqManager.isWatchPreviouslyPaired {
 							PairWatchView {
-								showPairWatch = true
+								router.navigate(to: .manageWatch)
 							}
 						} else {
 							VStack(alignment: .leading, spacing: 16) {

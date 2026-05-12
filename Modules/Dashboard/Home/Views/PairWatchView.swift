@@ -50,7 +50,7 @@ struct PairWatchView: View {
 			
 			VSpace(height: 70)
 			
-			AppButton(.getStarted, font: .medium20, verticalPadding: 20) {          
+			AppButton(.startPairingProcess, font: .medium20, verticalPadding: 20) {
                 onGetStarted()
 			}
 			.fadeInUp(isAnimated: $animateContent, delay: 0.42, duration: 0.8, from: 32)

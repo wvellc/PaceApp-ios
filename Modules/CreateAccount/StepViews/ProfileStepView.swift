@@ -16,6 +16,7 @@ struct ProfileStepView: View {
 	//MARK: States
     @Bindable var viewModel: CreateAccountViewModel
     @FocusState private var focusedField: Field?
+    @State private var isKeyboardVisible: Bool = false
 	
 	//MARK: Field enum
     private enum Field {
@@ -29,11 +30,17 @@ struct ProfileStepView: View {
 
 			VSpace(height: 60)
 			
-			Image("logo")
-				.resizable()
-				.scaledToFit()
-				.frame(width: 135.55, height: 90.59)
-				.shadow(color: Color.black.opacity(0.2), radius: 12, x: 0, y: 8)
+            Group {
+                Image("logo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 135.55, height: 90.59)
+                    .shadow(color: Color.black.opacity(0.2), radius: 12, x: 0, y: 8)
+                    .opacity(isKeyboardVisible ? 0 : 1)
+                    .scaleEffect(isKeyboardVisible ? 0.95 : 1)
+            }
+            .animation(.easeInOut(duration: 0.25), value: isKeyboardVisible)
+			.safeAreaPadding()
 		
 			VSpace(height: 60)
 
@@ -79,11 +86,24 @@ struct ProfileStepView: View {
         }
         .padding(.top, 24)
 		.onAppear {
-			focusedField = .firstName
-		}
+            focusedField = .firstName
+            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { _ in
+				isKeyboardVisible = true
+            }
+            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
+				isKeyboardVisible = false
+            }
+        }
 		.onDisappear {
-			focusedField = nil
-		}
+            focusedField = nil
+			NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
+            NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
+        }
+        .onChange(of: focusedField) { _, newValue in
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isKeyboardVisible = newValue != nil
+            }
+        }
 
     }
 
