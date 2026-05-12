@@ -338,7 +338,7 @@ class CreateRunEventViewModel {
 		}
 		
 		//New event
-		return currentStep == .lookBackIntervals ? LocalizedStringResource.submit : LocalizedStringResource.next
+		return currentStep == .lookBackIntervals ? LocalizedStringResource.create : LocalizedStringResource.next
 	}
 	
 	// MARK: - Submit

@@ -14,7 +14,7 @@ import Foundation
  
  // Reading data
  if AppSession.isUserAuthenticated {
-	print("Welcome back, \(AppSession.userId ?? "Unknown")!")
+ print("Welcome back, \(AppSession.userId ?? "Unknown")!")
  }
  
  // Clearing data on logout
@@ -26,12 +26,12 @@ import Foundation
  @AppStorage(AppSessionKey.isUserAuthenticated.rawValue) var isUserAuthenticated = false
  
  var body: some View {
-	 if isUserAuthenticated {
-		DashboardView()
-	 } else {
-		LoginView()
-	 }
-	}
+ if isUserAuthenticated {
+ DashboardView()
+ } else {
+ LoginView()
+ }
+ }
  }
  */
 
@@ -63,7 +63,8 @@ enum AppSession {
 	}
 	
 	// MARK: - Session Operations (Using Clean Computed Properties)
-	// USER AUTHENTICATION (Note: Converted String? to Bool for standard iOS practice, but you can change back to String? if needed)
+	
+	// USER AUTHENTICATION
 	static var isUserAuthenticated: Bool {
 		get { defaults.bool(forKey: AppSessionKey.isUserAuthenticated.rawValue) }
 		set { defaults.set(newValue, forKey: AppSessionKey.isUserAuthenticated.rawValue) }
@@ -90,24 +91,32 @@ enum AppSession {
 		}
 		set { defaults.set(newValue.rawValue, forKey: AppSessionKey.distanceUnit.rawValue) }
 	}
-		
-//	// USER DETAILS (Utilizing the Generic Object Handlers)
-//	static var userDetails: UserData? {
-//		get { readObject(forKey: .userDetails, as: UserData.self) }
-//		set { saveObject(newValue, forKey: .userDetails) }
-//	}
-//	
-//	// CONFIG DETAILS
-//	static var configDetails: ConfigModel? {
-//		get { readObject(forKey: .configDetails, as: ConfigModel.self) }
-//		set { saveObject(newValue, forKey: .configDetails) }
-//	}
-	
 	
 	// USER GAIT DATA (Utilizing the Generic Object Handlers)
 	static var userGaitData: GaitUserData? {
 		get { readObject(forKey: .userGait, as: GaitUserData.self) }
 		set { saveObject(newValue, forKey: .userGait) }
+	}
+	
+	// MARK: - Watch Persistence
+	
+	// PAIRED WATCH UUID
+	// Quick sentinel: non-nil means the user has paired at least once.
+	static var pairedWatchUUID: String? {
+		get { defaults.string(forKey: AppSessionKey.pairedWatchUUID.rawValue) }
+		set { defaults.set(newValue, forKey: AppSessionKey.pairedWatchUUID.rawValue) }
+	}
+	
+	// PAIRED DEVICES (full identity snapshot: UUID + modelName + friendlyName)
+	//
+	// The ConnectIQ SDK only produces IQDevice objects from the GCM URL callback.
+	// We persist a lightweight PersistedDevice snapshot here so that on cold launch
+	// ConnectIQManager.restoreSessionIfNeeded() can reconstruct IQDevice instances
+	// and call register(forDeviceEvents:) — the SDK immediately fires
+	// deviceStatusChanged with the real live connection status, no GCM needed.
+	static var pairedDevices: [PersistedDevice] {
+		get { readObject(forKey: .pairedDevices, as: [PersistedDevice].self) ?? [] }
+		set { saveObject(newValue, forKey: .pairedDevices) }
 	}
 	
 	// MARK: - Management Methods

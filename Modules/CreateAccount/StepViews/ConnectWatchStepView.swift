@@ -6,13 +6,14 @@
 //
 
 import SwiftUI
+import ConnectIQ
 
 // MARK: - ConnectWatchStepView
 
 /// Step 2 — animated watch pairing illustration.
 struct ConnectWatchStepView: View {
 
-    let watch: WatchDevice?
+    let watch: IQDevice?
 
     private let pulseDuration: TimeInterval = 2.6
 	private let pulseOffsets: [TimeInterval] = [0.0, 0.8, 1.6, 2.4]
@@ -38,8 +39,8 @@ struct ConnectWatchStepView: View {
             VSpace(height: 32)
 
             // Watch model name
-			if watch?.model != nil {
-				Text(watch!.model)
+			if watch?.modelName != nil {
+				Text(watch!.modelName)
 					.font(.semiBold20)
 					.foregroundStyle(.whiteApp)
 			}
@@ -77,7 +78,7 @@ struct ConnectWatchStepView: View {
 }
 
 #Preview {
-	ConnectWatchStepView(watch: WatchDevice(model: "Forerunner 245", nickname: "Jack's Watch"))
+	ConnectWatchStepView(watch:.init())
 		.appBackground()
 }
 

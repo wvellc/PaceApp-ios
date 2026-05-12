@@ -13,21 +13,13 @@
 //
 
 import SwiftUI
+import ConnectIQ
 
 // MARK: - PairWatchStepView
 
 /// Step 2 — Entry point for watch pairing.
 /// Shows a watch icon with a sync badge and prompts the user to start pairing.
 struct PairWatchStepView: View {
-	
-    //@Environment(ConnectIQManager.self) private var ciqManager
-     //Monkey C app UUID
-     //    let myAppUUID = "7243fd4e-7a56-485b-8a27-7eb3e43638fc"
-     //                ciqManager.findDevices()
-     //
-     //                if let device = ciqManager.devices.first {
-     //                    ciqManager.connectToApp(uuidString: myAppUUID, device: device)
-     //                }
     
 	// MARK: - Animation State
 	
