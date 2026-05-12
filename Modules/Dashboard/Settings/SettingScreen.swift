@@ -59,31 +59,33 @@ struct SettingScreen: View {
 	
 	@ViewBuilder
 	private func settingsMenuRow(item: SettingsMenuItem) -> some View {
-		HStack(spacing: 16) {
-			// Icon Circle
-			Circle()
-				.fill(.neonAquaBlue)
-				.frame(width: 42, height: 42)
-				.overlay {
-					Image(item.icon)
-						.resizable()
-						.renderingMode(.template)
-						.foregroundStyle(.whiteApp)
-						.frame(width: 32, height: 32)
-					
-				}
-			
-			// Title
-			Text(item.title)
-				.font(.semiBold16)
-				.foregroundStyle(.darkCharcoal)
-				.frame(maxWidth: .infinity, alignment: .leading)
-		}
-		.padding(10)
-		.cardBackground()
-		.onTapGesture {
+		Button(action: {
 			handleMenuTap(item: item)
-		}
+		}, label: {
+			HStack(spacing: 16) {
+				// Icon Circle
+				Circle()
+					.fill(.neonAquaBlue)
+					.frame(width: 42, height: 42)
+					.overlay {
+						Image(item.icon)
+							.resizable()
+							.renderingMode(.template)
+							.foregroundStyle(.whiteApp)
+							.frame(width: 32, height: 32)
+						
+					}
+				
+				// Title
+				Text(item.title)
+					.font(.semiBold16)
+					.foregroundStyle(.darkCharcoal)
+					.frame(maxWidth: .infinity, alignment: .leading)
+			}
+			.padding(10)
+			.cardBackground()
+		})
+		.buttonStyle(.plainSelected())
 	}
 	
 	

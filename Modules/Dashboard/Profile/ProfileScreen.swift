@@ -29,6 +29,8 @@ struct ProfileScreen: View {
 								.frame(width: 20, height: 20)
 						})
 				})
+				.buttonStyle(.plainSelected(active: .clear, pressed: .radiantBlue))
+
 			})
 			
 			ScrollView(showsIndicators: false) {
@@ -137,6 +139,26 @@ struct ProfileScreen: View {
 	
 	@ViewBuilder
 	private func profileMenuRow(item: ProfileMenuItem) -> some View {
+		let rowContent = profileMenuRowContent(item: item)
+
+		switch item.type {
+		case .navigation:
+			// Button gives native tap debounce — prevents double-push on fast taps
+			Button {
+				handleMenuTap(item: item)
+			} label: {
+				rowContent
+			}
+			.buttonStyle(.plainSelected(active: .clear, pressed: .radiantBlue))
+
+		case .toggle:
+			// Plain container — the Toggle inside handles its own interaction
+			rowContent
+		}
+	}
+
+	@ViewBuilder
+	private func profileMenuRowContent(item: ProfileMenuItem) -> some View {
 		HStack(spacing: 16) {
 			// Icon Circle
 			Circle()
@@ -148,7 +170,7 @@ struct ProfileScreen: View {
 						.renderingMode(.template)
 						.foregroundStyle(.whiteApp)
 						.frame(width: 32, height: 32)
-					
+				
 				}
 			
 			// Title
@@ -157,7 +179,7 @@ struct ProfileScreen: View {
 				.foregroundStyle(.darkCharcoal)
 				.frame(maxWidth: .infinity, alignment: .leading)
 			
-			// Trailing: Toggle or nothing
+			// Trailing: Toggle or chevron
 			switch item.type {
 				case .navigation:
 					EmptyView()
@@ -174,9 +196,6 @@ struct ProfileScreen: View {
 		}
 		.padding(Constant.UI.padding12)
 		.cardBackground()
-		.onTapGesture {
-			handleMenuTap(item: item)
-		}
 	}
 	
 	// MARK: - Actions

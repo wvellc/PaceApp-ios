@@ -37,18 +37,6 @@ struct RunActionCard: View {
 		}
         .scaleEffect(isUserTapped ? 0.92 : 1)
         .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isUserTapped)
-		.onTapGesture {
-			// Provide a quick press animation and trigger action after a slight delay
-			isUserTapped = true
-			
-			Task {
-				try? await Task.sleep(for: .milliseconds(80))
-				isUserTapped = false
-				
-//				try? await Task.sleep(for: .milliseconds(100))
-//				action.action()
-			}
-		}
     }
 }
 
@@ -56,11 +44,5 @@ struct RunAction: Identifiable {
 	let id = UUID()
 	let title: LocalizedStringResource
 	let symbol: String
-	let rout: HomeCardViewType
-}
-
-
-
-enum HomeCardViewType: Hashable {
-	case createEvent, favorites
+	let rout: Destinations
 }

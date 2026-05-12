@@ -18,8 +18,8 @@ struct HomeScreen: View {
 	@Environment(Router.self) private var router
 	
 	let runActions: [RunAction] = [
-		RunAction(title: .newRun, symbol: "icNewRun",rout: .createEvent),
-		RunAction(title: .favoriteRun, symbol: "icFavoriteRun", rout: .favorites),
+		RunAction(title: .newRun, symbol: "icNewRun", rout: .createRunEvent),
+		RunAction(title: .favoriteRun, symbol: "icFavoriteRun", rout: .favoritesRun),
 	]
 
 	
@@ -93,14 +93,6 @@ struct HomeScreen: View {
 				.zIndex(20)
 			}
 		}
-		.navigationDestination(for: HomeCardViewType.self) { route in
-			switch route {
-				case .createEvent:
-					CreateRunEventScreen()
-				case .favorites:
-					FavoritesRunScreen()
-			}
-		}
 	}
 	
 	//MARK: Metric Row
@@ -133,18 +125,20 @@ struct HomeScreen: View {
 		
 		return LazyVGrid(columns: columns, alignment: .center, spacing: spacing) {
 			ForEach(runActions) { action in
-				NavigationLink(value: action.rout, label: {
+				Button {
+					router.navigate(to: action.rout)
+				} label: {
 					GeometryReader { geo in
 						let side = geo.size.width
 						RunActionCard(action: action)
 							.frame(width: side, height: side)
 					}
 					.aspectRatio(1, contentMode: .fit)
-				})
+				}
+				.buttonStyle(.plain)
 			}
 		}
 		.fixedSize(horizontal: false, vertical: true)
-		
 	}
 	
 	// MARK: Upcoming Activity

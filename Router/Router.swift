@@ -1,6 +1,7 @@
 //
 //  Router.swift
-//  pace
+//  PaceApp
+//
 //  Created by FURKAN VIJAPURA on 3/12/26.
 
 import SwiftUI
@@ -24,20 +25,36 @@ final class Router {
 
     /// The app's current root flow.
 	var root: RootFlow = .dashboard
-	
+
+    // MARK: Private
+
+    /// Prevents duplicate pushes from rapid / double taps.
+	@ObservationIgnored
+    private var isNavigating = false
+
     // MARK: Push / Pop
 
     /// Push a destination onto the stack.
-    /// - Parameters:
-    ///   - destination: The screen to navigate to.
-    ///   - fadeIn: If `true`, uses a fade animation instead of the default iOS slide. Default is `false`.
+    /// Duplicate calls within the same run-loop tick are silently dropped,
+    /// so rapid double-taps can never push the same screen twice.
 	func navigate(to destination: Destinations, animation: Animation? = nil) {
-		if animation != nil {
+        guard !isNavigating else { return }
+        isNavigating = true
+
+        if let animation {
             withAnimation(animation) {
                 path.append(destination)
             }
         } else {
             path.append(destination)
+        }
+
+        // Re-arm after the transition animation completes (~0.4 s is safe for
+        // the default iOS push; use a short delay so back-to-back *different*
+        // destinations still work when intentional).
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(400))
+            isNavigating = false
         }
     }
 
@@ -71,6 +88,6 @@ final class Router {
     func setRoot(_ newRoot: RootFlow) {
 		root = newRoot
 		path = NavigationPath()
+        isNavigating = false
     }
 }
-

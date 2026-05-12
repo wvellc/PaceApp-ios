@@ -23,7 +23,7 @@ struct PlainSelectedStyle: ButtonStyle {
 
 // Helper for cleaner syntax
 extension ButtonStyle where Self == PlainSelectedStyle {
-	static func plainSelected(active: Color, pressed: Color) -> PlainSelectedStyle {
+	static func plainSelected(active: Color = .clear, pressed: Color = .radiantBlue) -> PlainSelectedStyle {
 		PlainSelectedStyle(activeColor: active, pressedColor: pressed)
 	}
 }
