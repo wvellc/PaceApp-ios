@@ -30,6 +30,11 @@ struct PaceApp: App {
     // MARK: - Scene
 
     /// Root scene containing a NavigationStack driven by the shared router.
+    ///
+    /// Root transitions (setRoot) are animated via a CATransition applied
+    /// directly on the window layer inside Router.setRoot(_:forward:), so no
+    /// SwiftUI .transition / .id modifiers are needed here — keeping the
+    /// NavigationStack clean and preventing the multi-screen bleed-through bug.
     var body: some Scene {
         WindowGroup {
             NavigationStack(path: $router.path) {

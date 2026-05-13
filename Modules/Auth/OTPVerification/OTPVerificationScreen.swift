@@ -71,16 +71,32 @@ struct OTPVerificationScreen: View {
 		.safeAreaPadding(Constant.UI.defaultPadding)
 		.appBackground()
 		.onAppear {
-			// defer focus slightly
-			DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+			Task { @MainActor in
+				try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
 				isOTPFieldFocused = true
 			}
+			
 			viewModel.onOTPVerified = { [weak router] in
-				router?.setRoot(.accountCreation)
+				// 1. Create a transaction
+				var transaction = Transaction()
+				
+				// 2. Attach the completion handler
+				// This block executes on the Main Thread automatically
+				transaction.addAnimationCompletion {
+					router?.setRoot(.accountCreation)
+				}
+				
+				// 3. Execute the state change within that transaction
+				withTransaction(transaction) {
+					isOTPFieldFocused = false
+				}
 			}
+			
 			viewModel.onAppear()
 		}
 		.onDisappear {
+			isOTPFieldFocused = false
+			
 			viewModel.onDisappear()
 		}
 	}

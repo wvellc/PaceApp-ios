@@ -6,6 +6,7 @@
 
 import SwiftUI
 import Observation
+import UIKit
 
 // MARK: - Router
 
@@ -24,7 +25,7 @@ final class Router {
     var path = NavigationPath()
 
     /// The app's current root flow.
-	var root: RootFlow = .accountCreation
+    var root: RootFlow = .welcome
 
     // MARK: Private
 
@@ -83,11 +84,38 @@ final class Router {
 
     // MARK: Root switching
 
-    /// Replace the current root flow (auth → dashboard, etc.)
-    /// and clear the navigation stack in one atomic update.
-    func setRoot(_ newRoot: RootFlow) {
-		root = newRoot
-		path = NavigationPath()
+    /// Replace the current root flow (auth → dashboard, etc.) and clear the
+    /// navigation stack in one atomic update.
+    ///
+    /// A native CATransition is applied to the key window layer **before**
+    /// the SwiftUI state mutation so the new root slides in from the trailing
+    /// edge (right → left), exactly like a UINavigationController push.
+    ///
+    /// - Parameters:
+    ///   - newRoot: The destination root flow.
+    ///   - forward: When `true` (default) the new root slides in from the
+    ///              **trailing** edge (right → left push feel).
+    ///              Pass `false` for a leading-edge (left → right pop feel).
+    func setRoot(_ newRoot: RootFlow, forward: Bool = true) {
+        // 1. Attach a CATransition to the key window BEFORE mutating state.
+        //    UIKit renders a snapshot of the current content, then slides the
+        //    new SwiftUI tree in — fully clipped, no bleed-through.
+        if let windowScene = UIApplication.shared.connectedScenes
+            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
+           let window = windowScene.windows.first(where: \.isKeyWindow) {
+
+            let transition = CATransition()
+            transition.duration = 0.35
+            transition.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            transition.type = .push
+            transition.subtype = forward ? .fromRight : .fromLeft
+            window.layer.add(transition, forKey: kCATransition)
+        }
+
+        // 2. Mutate state — SwiftUI re-renders the new root and UIKit's
+        //    transition animation carries it in smoothly.
+        root = newRoot
+        path = NavigationPath()
         isNavigating = false
     }
 }

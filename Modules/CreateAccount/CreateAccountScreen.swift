@@ -41,6 +41,8 @@ struct CreateAccountScreen: View {
                         .padding(.horizontal, 16)
                         .padding(.bottom, geo.safeAreaInsets.bottom + 32)
                 }
+				.ignoresSafeArea(.keyboard, edges: .bottom)
+
             }
         }
         .navigationBarBackButtonHidden(true)
@@ -53,8 +55,6 @@ struct CreateAccountScreen: View {
             viewModel.navigationEvent = nil
         }
         .onAppear {
-            // Inject AFTER viewModel exists — this is where the old Combine
-            // subscription was wired at init() time when ciqManager was nil.
             viewModel.configure(ciqManager: ciqManager)
         }
     }
