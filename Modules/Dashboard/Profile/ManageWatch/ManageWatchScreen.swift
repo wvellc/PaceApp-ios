@@ -14,7 +14,7 @@ struct ManageWatchScreen: View {
 	
 	// MARK: - Environment
 	
-	@Environment(Router.self) private var router
+	@Environment(Router.self)           private var router
 	@Environment(ConnectIQManager.self) private var ciqManager
 	
 	// MARK: - State
@@ -33,9 +33,6 @@ struct ManageWatchScreen: View {
 						.transition(slideTransition)
 						.id(viewModel.currentStep)
 					
-					// Uses viewModel.footerButtonTitle (dynamic) instead of the
-					// static ManageWatchStep.footerButtonTitle so "Connect Device"
-					// vs "Disconnect Device" reflects whether a watch is paired.
 					footerButton
 						.padding(.horizontal, 16)
 						.padding(.bottom, geo.safeAreaInsets.bottom + 32)
@@ -51,25 +48,16 @@ struct ManageWatchScreen: View {
 			handleNavigation(event)
 			viewModel.navigationEvent = nil
 		}
-		// ── Live status sync ─────────────────────────────────────────────
-		// deviceStatus changes whenever the SDK fires deviceStatusChanged(_:status:).
-		// We mirror that into connectedWatch so the "Manage your watch" step
-		// shows the real-time connection state (connected / not connected).
-		.onChange(of: ciqManager.deviceStatus) { _, _ in
-			viewModel.syncFromManager()
-		}
-		// connectedDevice is a computed property on ConnectIQManager derived from
-		// deviceStatus, but observing it separately catches any edge-case where
-		// the computed result changes without deviceStatus itself being reassigned.
+		// connectedDevice is now a stored @Observable var — this onChange fires
+		// reliably whenever deviceStatusChanged() updates it (live BT change or
+		// cold-launch restore).  Syncing here keeps connectedWatch in the VM
+		// always reflecting ground truth from the manager.
 		.onChange(of: ciqManager.connectedDevice?.uuid) { _, _ in
 			viewModel.syncFromManager()
 		}
-		// ── Device list sync ─────────────────────────────────────────────
-		// When Garmin Connect deep-link returns new devices, refresh selectedWatch.
+		// When GCM returns a new device list, refresh selectedWatch.
 		.onChange(of: ciqManager.devices.count) { _, _ in
 			viewModel.syncSelectedWatch()
-			// Also re-evaluate connectedWatch in case a newly added device is
-			// already in .connected status.
 			viewModel.syncFromManager()
 		}
 		.onAppear {
@@ -84,7 +72,6 @@ struct ManageWatchScreen: View {
 		if viewModel.currentStep.showsBack {
 			AppBackButtonToolbarContent(onTap: viewModel.onBack)
 		}
-		
 		ToolbarItem(placement: .principal) {
 			Text(viewModel.currentStep.title)
 				.font(.medium16)
@@ -109,8 +96,6 @@ struct ManageWatchScreen: View {
 	// MARK: - Footer Button
 	
 	private var footerButton: some View {
-		// viewModel.footerButtonTitle is a computed var that returns
-		// "Connect Device" or "Disconnect Device" based on connectedWatch.
 		AppButton(LocalizedStringResource(stringLiteral: viewModel.footerButtonTitle)) {
 			viewModel.onFooterTapped()
 		}
@@ -119,28 +104,22 @@ struct ManageWatchScreen: View {
 	// MARK: - Slide Transition
 	
 	private var slideTransition: AnyTransition {
-		let insertion: AnyTransition = viewModel.slideDirection == .forward
-		? .move(edge: .trailing) : .move(edge: .leading)
-		let removal: AnyTransition = viewModel.slideDirection == .forward
-		? .move(edge: .leading)  : .move(edge: .trailing)
-		return .asymmetric(insertion: insertion, removal: removal)
+		let insert: AnyTransition = viewModel.slideDirection == .forward ? .move(edge: .trailing) : .move(edge: .leading)
+		let remove: AnyTransition = viewModel.slideDirection == .forward ? .move(edge: .leading)  : .move(edge: .trailing)
+		return .asymmetric(insertion: insert, removal: remove)
 	}
 	
 	// MARK: - Navigation Handler
 	
 	private func handleNavigation(_ event: ManageWatchViewModel.NavigationEvent) {
 		switch event {
-			case .dismiss:
-				router.navigateBack()
+			case .dismiss: router.navigateBack()
 		}
 	}
 }
 
 // MARK: - ManageChooseDevicesStepView
 
-/// Device-picker step bound to ManageWatchViewModel.
-/// Reads ciqManager.devices via the ViewModel so @Observable re-renders the
-/// list whenever Garmin Connect's deep-link callback populates devices.
 private struct ManageChooseDevicesStepView: View {
 	
 	@Bindable var viewModel: ManageWatchViewModel
@@ -148,7 +127,6 @@ private struct ManageChooseDevicesStepView: View {
 	var body: some View {
 		VStack(spacing: 0) {
 			VSpace(height: 24)
-			
 			VStack(spacing: 16) {
 				let devices = viewModel.ciqManager?.devices ?? []
 				ForEach(devices, id: \.uuid) { device in
@@ -160,13 +138,10 @@ private struct ManageChooseDevicesStepView: View {
 					}
 				}
 			}
-			
 			Spacer()
 		}
 		.clipped()
-		.onAppear {
-			viewModel.syncSelectedWatch()
-		}
+		.onAppear { viewModel.syncSelectedWatch() }
 		.onChange(of: viewModel.ciqManager?.devices.count ?? 0) { _, _ in
 			viewModel.syncSelectedWatch()
 		}
@@ -176,8 +151,6 @@ private struct ManageChooseDevicesStepView: View {
 // MARK: - Preview
 
 #Preview {
-	NavigationStack {
-		ManageWatchScreen()
-	}
-	.environment(Router())
+	NavigationStack { ManageWatchScreen() }
+		.environment(Router())
 }

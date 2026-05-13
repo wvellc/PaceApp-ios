@@ -42,7 +42,7 @@ enum AppSession {
 	private static let defaults = UserDefaults.standard
 	
 	// Ignore keys while clearing session
-	private static let ignoreKeyList: [AppSessionKey] = [.configDetails]
+	private static let ignoreKeyList: [AppSessionKey] = [.isUserCanViewMetricsPopUp]
 	
 	// MARK: - Generic Storage Add-ons
 	// These generic helpers eliminate repetitive JSON encoding/decoding boilerplate
@@ -82,6 +82,15 @@ enum AppSession {
 		set { defaults.set(newValue, forKey: AppSessionKey.isUserProfileCompleted.rawValue) }
 	}
 	
+	// USER CAN SHOW METRICS POPUP
+	static var canShowMetricsOnboarding: Bool {
+		get {
+			defaults.object(forKey: AppSessionKey.isUserCanViewMetricsPopUp.rawValue) as? Bool ?? true
+		}
+		set {
+			defaults.set(newValue, forKey: AppSessionKey.isUserCanViewMetricsPopUp.rawValue)
+		}
+	}
 	// USER DISTANCE TYPE
 	static var userDistanceUnit: MeasureUnit {
 		get {
@@ -108,12 +117,6 @@ enum AppSession {
 	}
 	
 	// PAIRED DEVICES (full identity snapshot: UUID + modelName + friendlyName)
-	//
-	// The ConnectIQ SDK only produces IQDevice objects from the GCM URL callback.
-	// We persist a lightweight PersistedDevice snapshot here so that on cold launch
-	// ConnectIQManager.restoreSessionIfNeeded() can reconstruct IQDevice instances
-	// and call register(forDeviceEvents:) — the SDK immediately fires
-	// deviceStatusChanged with the real live connection status, no GCM needed.
 	static var pairedDevices: [PersistedDevice] {
 		get { readObject(forKey: .pairedDevices, as: [PersistedDevice].self) ?? [] }
 		set { saveObject(newValue, forKey: .pairedDevices) }

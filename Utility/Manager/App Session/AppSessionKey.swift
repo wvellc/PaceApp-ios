@@ -12,7 +12,7 @@ enum AppSessionKey: String, CaseIterable {
     case isUserAuthenticated
     case isUserProfileCompleted
     case userDetails
-    case configDetails
+    case isUserCanViewMetricsPopUp
     case userId
     case userGait
     case distanceUnit

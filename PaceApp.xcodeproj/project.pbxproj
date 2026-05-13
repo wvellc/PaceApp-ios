@@ -23,6 +23,7 @@
 		E61FA4222F67BE3C001DA088 /* AppTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61FA4212F67BE3C001DA088 /* AppTextField.swift */; };
 		E61FA4262F67C706001DA088 /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61FA4252F67C706001DA088 /* WebView.swift */; };
 		E61FA42E2F67D252001DA088 /* String+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61FA42D2F67D252001DA088 /* String+Ext.swift */; };
+		E629AD772FB44F1E00ABF3CD /* Task+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E629AD762FB44F1600ABF3CD /* Task+Ext.swift */; };
 		E6370ED22F83A70000007CDF /* AppLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6370ED12F83A70000007CDF /* AppLabel.swift */; };
 		E6370ED42F83AACF00007CDF /* AppCardBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6370ED32F83AACF00007CDF /* AppCardBackground.swift */; };
 		E638E08B2FAE24F6009D62CC /* PlainSelectedStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = E638E08A2FAE24F6009D62CC /* PlainSelectedStyle.swift */; };
@@ -75,6 +76,7 @@
 		E61FA4212F67BE3C001DA088 /* AppTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTextField.swift; sourceTree = "<group>"; };
 		E61FA4252F67C706001DA088 /* WebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebView.swift; sourceTree = "<group>"; };
 		E61FA42D2F67D252001DA088 /* String+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Ext.swift"; sourceTree = "<group>"; };
+		E629AD762FB44F1600ABF3CD /* Task+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Task+Ext.swift"; sourceTree = "<group>"; };
 		E6370ED12F83A70000007CDF /* AppLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLabel.swift; sourceTree = "<group>"; };
 		E6370ED32F83AACF00007CDF /* AppCardBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCardBackground.swift; sourceTree = "<group>"; };
 		E638E08A2FAE24F6009D62CC /* PlainSelectedStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainSelectedStyle.swift; sourceTree = "<group>"; };
@@ -264,6 +266,7 @@
 		E6C4BEFC2F618C5200C17C69 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
+				E629AD762FB44F1600ABF3CD /* Task+Ext.swift */,
 				E65D34062FAC5CC4001FB9F4 /* MKCoordinateRegion+Ext.swift */,
 				E662BE582FA9EA08004B812D /* Color+Ext.swift */,
 				E64DD7BF2F92193B001233EA /* ToolBar+Ext.swift */,
@@ -447,6 +450,7 @@
 				E6370ED42F83AACF00007CDF /* AppCardBackground.swift in Sources */,
 				E6C3328E2F62920800224AA5 /* GlassButton.swift in Sources */,
 				E6C3328A2F6291C500224AA5 /* GilroyFontModifier.swift in Sources */,
+				E629AD772FB44F1E00ABF3CD /* Task+Ext.swift in Sources */,
 				18C565AB2F8CE23E007BD365 /* AppDelegate.swift in Sources */,
 				E65D34072FAC5CC4001FB9F4 /* MKCoordinateRegion+Ext.swift in Sources */,
 				E6C3328B2F6291C500224AA5 /* Gilroy+Font.swift in Sources */,

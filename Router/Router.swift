@@ -25,7 +25,7 @@ final class Router {
     var path = NavigationPath()
 
     /// The app's current root flow.
-    var root: RootFlow = .welcome
+	var root: RootFlow = .dashboard
 
     // MARK: Private
 

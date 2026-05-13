@@ -27,35 +27,18 @@ extension IQDeviceStatus: @retroactive CustomStringConvertible {
 
 /// Singleton that owns all Garmin ConnectIQ SDK interactions.
 ///
-/// ### Cold-launch reconnect — how it actually works
+/// ### Why `connectedDevice` is a stored var (not computed)
+/// @Observable only tracks stored property accesses. A computed var derived from
+/// `deviceStatus` would not wake up views because SwiftUI never saw `deviceStatus`
+/// read inside their body — it only saw `connectedDevice`. Making it a stored var
+/// that is explicitly written in `deviceStatusChanged` gives every reading view
+/// a direct dependency it can wake up on.
 ///
-/// The ConnectIQ SDK only creates `IQDevice` objects during the Garmin Connect
-/// URL round-trip (`parseDeviceSelectionResponse(from:)`).  After a cold launch
-/// those objects are gone.  The approach here is:
-///
-/// 1. **Persist** — every time `handleOpenURL` populates the device list we
-///    snapshot each device's (UUID, modelName, friendlyName) into
-///    `AppSession.pairedDevices` via `PersistedDevice`.
-///
-/// 2. **Restore** — `restoreSessionIfNeeded()` (called from `PaceApp` via `.task`)
-///    reads `AppSession.pairedDevices`, reconstructs lightweight `IQDevice` objects
-///    using `IQDevice(uuid:friendlyName:modelName:)`, and calls
-///    `register(forDeviceEvents:delegate:)` for each one.
-///
-/// 3. **Status fires** — the SDK fires `deviceStatusChanged(_:status:)` almost
-///    immediately for every re-registered device, populating `deviceStatus` and
-///    therefore `connectedDevice` — **no Garmin Connect re-launch required**.
-///
-/// 4. **BT state restoration** — the `stateRestorationIdentifier` passed to
-///    `initialize` hooks into `CBCentralManagerOptionRestoreIdentifierKey`, so iOS
-///    can relaunch the app silently when a BT event occurs while suspended.
-///
-/// ### Checking connection status
-/// ```swift
-/// ciqManager.isWatchPreviouslyPaired          // ever paired? (cold launch gate)
-/// ciqManager.connectedDevice != nil           // live .connected device right now
-/// ciqManager.deviceStatus[device.uuid]        // raw status for any device
-/// ```
+/// ### Why `getDeviceStatus` is polled after `register(forDeviceEvents:)`
+/// `deviceStatusChanged` only fires when the status *changes*. If the watch is
+/// already connected when we register (first pairing or cold-launch restore) the
+/// delegate never fires. We call `getDeviceStatus(_:)` immediately after registering
+/// to read the current status and seed `connectedDevice` without waiting for a change.
 @Observable
 class ConnectIQManager: NSObject {
 	
@@ -63,48 +46,50 @@ class ConnectIQManager: NSObject {
 	
 	static let shared = ConnectIQManager()
 	
-	// MARK: - Public state  (@Observable auto-publishes changes)
+	// MARK: - ConnectIQ App UUID
+	// This is the UUID of the PaceApp .iq widget installed on the Garmin watch.
+	// It is NOT the device hardware UUID — those are different things.
+	private let watchAppUUID = "7243fd4e-7a56-485b-8a27-7eb3e43638fc"
+	private let watchStoreUUID = "7243fd4e-7a56-485b-8a27-7eb3e43638fc"
 	
-	/// All devices returned by the most recent GCM selection callback,
-	/// OR reconstructed from persistence on cold launch.
+	// MARK: - Public stored state
+	
+	/// All devices from the most recent GCM callback or restored from persistence.
 	var devices: [IQDevice] = []
 	
-	/// Live connection-status for every registered device, keyed by device UUID.
+	/// Live status map keyed by device UUID. Updated by `deviceStatusChanged`
+	/// and by the synchronous `getDeviceStatus` poll in `registerAndPollStatus`.
 	var deviceStatus: [UUID: IQDeviceStatus] = [:]
 	
-	/// The first device currently in `.connected` status, or `nil`.
-	/// Computed from `deviceStatus` so it updates automatically whenever
-	/// the SDK fires `deviceStatusChanged`.
-	var connectedDevice: IQDevice? {
-		devices.first { deviceStatus[$0.uuid] == .connected }
-	}
+	/// The currently connected Garmin watch, or `nil`.
+	///
+	/// STORED VAR — not computed — so @Observable wakes up every view that
+	/// reads it (e.g. HomeScreen's `if ciqManager.connectedDevice == nil`).
+	/// Written in `registerAndPollStatus` (immediate seed) and in
+	/// `deviceStatusChanged` (live updates thereafter).
+	var connectedDevice: IQDevice? = nil
 	
-	/// `true` when `AppSession.pairedDevices` has at least one entry.
-	/// Use this on cold launch to decide whether to show the watch-required
-	/// UI or proceed normally.
+	/// `true` when `AppSession.pairedDevices` is non-empty.
 	var isWatchPreviouslyPaired: Bool {
 		!AppSession.pairedDevices.isEmpty
 	}
 	
-	/// Messages received from the watch app, newest last.
+	/// Messages received from the watch app.
 	var receivedMessages: [String] = []
 	
-	/// `true` while the "install Garmin Connect" UI is visible.
+	/// `true` while the Garmin Connect install prompt is visible.
 	var showInstallGarminConnect: Bool = false
 	
 	// MARK: - Private
 	
-	private let urlScheme   = "connect"
-	private let connectIQ   = ConnectIQ.sharedInstance()
+	private let urlScheme = "connect"
+	private let connectIQ = ConnectIQ.sharedInstance()
 	private var targetApp: IQApp?
 	
 	// MARK: - Lifecycle
 	
 	private override init() {
 		super.init()
-		// Pass stateRestorationIdentifier so the SDK registers with
-		// CBCentralManagerOptionRestoreIdentifierKey.  iOS can then relaunch
-		// the app in the background when a BT event occurs while suspended.
 		connectIQ?.initialize(
 			withUrlScheme: urlScheme,
 			uiOverrideDelegate: self,
@@ -112,90 +97,108 @@ class ConnectIQManager: NSObject {
 		)
 	}
 	
+	// MARK: - Core: register + immediate status poll
+	
+	/// Registers a device for events and IMMEDIATELY reads its current status
+	/// via `getDeviceStatus(_:)`.
+	///
+	/// This solves the core problem: `deviceStatusChanged` only fires when status
+	/// *changes* — if the watch is already connected when we register (first pairing,
+	/// cold launch with watch in range), the delegate is silent and `connectedDevice`
+	/// would never be set. The synchronous poll fills that gap.
+	private func registerAndPollStatus(for device: IQDevice) {
+		// 1. Register — enables the live delegate going forward
+		connectIQ?.register(forDeviceEvents: device, delegate: self)
+		
+		// 2. Immediately read current status (synchronous SDK call)
+		guard let uuid = device.uuid else { return }
+		let currentStatus = connectIQ?.getDeviceStatus(device) ?? .invalidDevice
+		
+		print("[CIQ] polled \(device.modelName ?? uuid.uuidString): \(currentStatus)")
+		
+		// 3. Seed deviceStatus and connectedDevice right now, on the main thread
+		DispatchQueue.main.async {
+			self.deviceStatus[uuid] = currentStatus
+			
+			if !self.devices.contains(where: { $0.uuid == uuid }) {
+				self.devices.append(device)
+			}
+			
+			self.rederiveConnectedDevice()
+		}
+	}
+	
+	/// Re-evaluates `connectedDevice` from the current `deviceStatus` map
+	/// and writes it as a stored var so @Observable wakes observing views.
+	private func rederiveConnectedDevice() {
+		connectedDevice = devices.first { deviceStatus[$0.uuid] == .connected }
+		print("[CIQ] connectedDevice → \(connectedDevice?.modelName ?? "nil")")
+	}
+	
 	// MARK: - Cold-launch restoration
 	
-	/// Call once from `PaceApp.body { .task }` after the scene is fully set up.
-	///
-	/// Reads `AppSession.pairedDevices`, reconstructs an `IQDevice` for every
-	/// persisted entry, registers for device events, and re-wires the app target
-	/// for the primary paired UUID.  The SDK fires `deviceStatusChanged` almost
-	/// immediately, which populates `deviceStatus` / `connectedDevice`.
+	/// Call once from `PaceApp.body { .task }` after the scene is ready.
 	func restoreSessionIfNeeded() {
 		let persisted = AppSession.pairedDevices
 		guard !persisted.isEmpty else {
-			print("[CIQ] No persisted devices — skipping cold-launch restore")
+			print("[CIQ] No persisted devices — skipping restore")
 			return
 		}
 		
-		print("[CIQ] Restoring \(persisted.count) persisted device(s) on cold launch")
+		print("[CIQ] Restoring \(persisted.count) device(s) from persistence")
 		
-		// Reconstruct IQDevice objects from the persisted identity snapshots.
-		// IQDevice(uuid:friendlyName:modelName:) is a valid public initialiser
-		// that creates a device reference the SDK can use for event registration.
 		let reconstructed: [IQDevice] = persisted.compactMap { entry in
-			
-			guard let uuid = entry.uuid else {
-				print("[CIQ] Skipping entry with invalid UUID: \(entry.uuidString)")
-				return nil
-			}
-			
-			return IQDevice(id: uuid, modelName: entry.friendlyName, friendlyName: entry.modelName)
+			guard let uuid = entry.uuid else { return nil }
+			return IQDevice(id: uuid, modelName: entry.modelName, friendlyName: entry.friendlyName)
 		}
 		
-		guard !reconstructed.isEmpty else {
-			print("[CIQ] No valid devices could be reconstructed")
-			return
-		}
+		guard !reconstructed.isEmpty else { return }
 		
 		DispatchQueue.main.async {
-			// Merge reconstructed devices into the live list without wiping
-			// any devices that may have already arrived via a URL callback.
 			for device in reconstructed {
 				if !self.devices.contains(where: { $0.uuid == device.uuid }) {
 					self.devices.append(device)
 				}
-				// Registering triggers deviceStatusChanged almost immediately,
-				// which sets deviceStatus[uuid] to the real live status.
-				self.connectIQ?.register(forDeviceEvents: device, delegate: self)
+				self.registerAndPollStatus(for: device)
 			}
 			
-			// Re-wire app-messaging target for the primary paired UUID.
 			if let primaryUUID = AppSession.pairedWatchUUID,
 			   let target = reconstructed.first(where: { $0.uuid.uuidString == primaryUUID }) {
-				self.connectToApp(uuidString: target.uuid.uuidString, device: target)
+				self.connectToApp(device: target)
 			}
 		}
 	}
 	
 	// MARK: - Device discovery
 	
-	/// Opens Garmin Connect Mobile for device selection.
-	/// After the user confirms, GCM deep-links back and `handleOpenURL` fires.
 	func findDevices() {
 		connectIQ?.showDeviceSelection()
 	}
 	
-	/// Handles the deep-link callback from Garmin Connect.
-	/// Call from `onOpenURL` in `PaceApp`.
+	/// Handles the GCM deep-link callback. Call from `PaceApp.onOpenURL`.
 	func handleOpenURL(_ url: URL) {
 		guard url.scheme == urlScheme else { return }
 		
 		guard let parsedDevices = connectIQ?.parseDeviceSelectionResponse(from: url) as? [IQDevice],
 			  !parsedDevices.isEmpty else {
-			print("[CIQ] handleOpenURL: no devices in response")
+			print("[CIQ] handleOpenURL: empty response")
 			return
 		}
 		
 		DispatchQueue.main.async {
-			// Replace the in-memory list (SDK docs: always use the latest authorised set)
-			self.devices     = parsedDevices
-			self.deviceStatus = [:]     // reset stale statuses
+			// SDK: always replace with the latest authorised set
+			self.devices         = parsedDevices
+			self.deviceStatus    = [:]
+			self.connectedDevice = nil
 			
 			for device in parsedDevices {
-				self.connectIQ?.register(forDeviceEvents: device, delegate: self)
+				// registerAndPollStatus reads the CURRENT status immediately —
+				// this is what was missing: just register() alone is not enough
+				// because the watch may already be connected at this point.
+				self.registerAndPollStatus(for: device)
 			}
 			
-			// ── Persist for cold-launch restore ──────────────────────────────
+			// Persist for cold-launch restore
 			let snapshot = parsedDevices.map {
 				PersistedDevice(
 					uuidString:   $0.uuid.uuidString,
@@ -206,52 +209,55 @@ class ConnectIQManager: NSObject {
 			AppSession.pairedDevices   = snapshot
 			AppSession.pairedWatchUUID = parsedDevices.first?.uuid.uuidString
 			
-			print("[CIQ] handleOpenURL: saved \(snapshot.count) device(s)")
+			print("[CIQ] handleOpenURL: registered \(snapshot.count) device(s)")
 			snapshot.forEach { print("[CIQ]  • \($0.modelName) (\($0.uuidString))") }
 		}
 	}
 	
 	// MARK: - App communication
 	
-	/// Registers the watch app for bidirectional messaging.
-	/// Also persists the primary UUID so `restoreSessionIfNeeded` knows which
-	/// device to re-target on the next cold launch.
-	func connectToApp(uuidString: String, device: IQDevice) {
-		guard let appUUID   = UUID(uuidString: uuidString) else { return }
-		guard let storeUUID = UUID(uuidString: "7243fd4e-7a56-485b-8a27-7eb3e43638fc") else { return }
+	/// Registers the PaceApp ConnectIQ widget on the given device for messaging.
+	///
+	/// Uses `watchAppUUID` (the .iq widget's UUID) — NOT the device hardware UUID.
+	/// Previously `connectToApp(uuidString:device:)` was receiving the device UUID
+	/// as `uuidString`, creating an invalid IQApp that the SDK silently dropped.
+	func connectToApp(device: IQDevice) {
+		guard let appUUID   = UUID(uuidString: watchAppUUID),
+			  let storeUUID = UUID(uuidString: watchStoreUUID) else { return }
 		
 		let app = IQApp(uuid: appUUID, store: storeUUID, device: device)
 		targetApp = app
 		connectIQ?.register(forAppMessages: app, delegate: self)
 		
 		AppSession.pairedWatchUUID = device.uuid.uuidString
-		print("[CIQ] connectToApp: \(device.modelName ?? device.uuid.uuidString)")
+		print("[CIQ] connectToApp: registered app on \(device.modelName ?? device.uuid.uuidString)")
 	}
 	
-	/// Unregisters all listeners, clears the target app, and wipes persistence.
+	/// Unregisters all listeners, clears all state, and wipes persistence.
 	func disconnectFromApp() {
 		if let app = targetApp {
 			connectIQ?.unregister(forDeviceEvents: app.device, delegate: self)
 			connectIQ?.unregister(forAppMessages: app, delegate: self)
 			targetApp = nil
 		}
-		
 		devices.removeAll()
+		deviceStatus.removeAll()
+		connectedDevice = nil
 		AppSession.pairedWatchUUID = nil
 		AppSession.pairedDevices   = []
-		print("[CIQ] disconnectFromApp: persistence cleared")
+		print("[CIQ] disconnectFromApp: all state cleared")
 	}
 	
-	/// Sends an arbitrary message to the currently targeted watch app.
+	/// Sends a message to the currently targeted watch app.
 	func sendMessage(_ message: Any) {
 		guard let app = targetApp else {
-			print("[CIQ] sendMessage: no targetApp — call connectToApp first")
+			print("[CIQ] sendMessage: no targetApp")
 			return
 		}
 		connectIQ?.sendMessage(message, to: app, progress: { sent, total in
-			print("[CIQ] Progress: \(sent)/\(total)")
+			print("[CIQ] send progress: \(sent)/\(total)")
 		}, completion: { result in
-			print("[CIQ] Send result: \(result.rawValue)")
+			print("[CIQ] send result: \(result.rawValue)")
 		})
 	}
 }
@@ -277,16 +283,9 @@ extension ConnectIQManager: IQUIOverrideDelegate {
 
 extension ConnectIQManager: IQDeviceEventDelegate {
 	
-	/// Single source of truth for all live device connection changes.
-	///
-	/// Fires:
-	/// • During normal use when BT status changes.
-	/// • Almost immediately after `register(forDeviceEvents:)` is called —
-	///   including the calls inside `restoreSessionIfNeeded()` — so this is
-	///   also how we discover connection status after a cold launch.
-	///
-	/// Mutating `deviceStatus` triggers `@Observable` to re-evaluate
-	/// `connectedDevice` and push the change to every observing view.
+	/// Fires when device status CHANGES after registration.
+	/// Does NOT fire if the device is already connected at registration time —
+	/// that case is covered by the `getDeviceStatus` poll in `registerAndPollStatus`.
 	func deviceStatusChanged(_ device: IQDevice!, status: IQDeviceStatus) {
 		guard let device, let uuid = device.uuid else { return }
 		print("[CIQ] deviceStatusChanged — \(device.modelName ?? uuid.uuidString): \(status)")
@@ -294,12 +293,11 @@ extension ConnectIQManager: IQDeviceEventDelegate {
 		DispatchQueue.main.async {
 			self.deviceStatus[uuid] = status
 			
-			// Ensure the device is in the live list.
-			// This covers the cold-launch path where reconstructed devices were
-			// added to `self.devices` before this callback fires.
 			if !self.devices.contains(where: { $0.uuid == uuid }) {
 				self.devices.append(device)
 			}
+			
+			self.rederiveConnectedDevice()
 		}
 	}
 }
@@ -309,7 +307,7 @@ extension ConnectIQManager: IQDeviceEventDelegate {
 extension ConnectIQManager: IQAppMessageDelegate {
 	
 	func receivedMessage(_ message: Any!, from app: IQApp!) {
-		print("[CIQ] Message from \(app.device?.modelName ?? "unknown"): \(message ?? "")")
+		print("[CIQ] message from \(app.device?.modelName ?? "unknown"): \(message ?? "")")
 		DispatchQueue.main.async {
 			if let str = message as? String {
 				self.receivedMessages.append(str)

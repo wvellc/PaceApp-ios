@@ -93,7 +93,7 @@ final class CreateAccountViewModel {
         }
 
         if currentStep == .chooseYourModel, let watch = selectedWatch {
-            ciqManager?.connectToApp(uuidString: watch.uuid.uuidString, device: watch)
+            ciqManager?.connectToApp(device: watch)
         }
 
         if let next = currentStep.next {

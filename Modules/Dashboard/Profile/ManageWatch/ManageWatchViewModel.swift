@@ -15,9 +15,6 @@ final class ManageWatchViewModel {
 
     // MARK: - Watch Manager
 
-    /// Injected once from ManageWatchScreen.onAppear via configure(ciqManager:).
-    /// Views read ciqManager.devices / ciqManager.deviceStatus directly so
-    /// @Observable propagates changes without any Combine subscriptions.
     private(set) var ciqManager: ConnectIQManager?
 
     // MARK: - Step state
@@ -27,19 +24,16 @@ final class ManageWatchViewModel {
 
     // MARK: - Watch state
 
-    /// The device currently treated as "connected" by this flow.
-    /// • Seeded from ciqManager.connectedDevice on configure().
-    /// • Kept live by syncFromManager(), which the Screen calls on every
-    ///   deviceStatus / connectedDevice change.
+    /// Mirrors `ciqManager.connectedDevice` — the currently live watch.
+    /// Kept in sync via `syncFromManager()`, which ManageWatchScreen calls
+    /// on `onChange(of: ciqManager.connectedDevice?.uuid)`.
     var connectedWatch: IQDevice? = nil
 
-    /// Device highlighted by the user in the ChooseYourModel list.
+    /// Device the user has highlighted in the ChooseYourModel list.
     var selectedWatch: IQDevice? = nil
 
     // MARK: - Dynamic footer title
 
-    /// The footer label for .currentConnected changes depending on whether
-    /// a watch is already paired.
     var footerButtonTitle: String {
         switch currentStep {
         case .currentConnected:
@@ -69,18 +63,19 @@ final class ManageWatchViewModel {
 
     // MARK: - Live sync
 
-    /// Mirror the manager's live connectedDevice into our local connectedWatch.
-    /// Call from the Screen's .onChange(of: ciqManager.connectedDevice) so the
-    /// "Manage your watch" step always shows the current reality.
+    /// Read `ciqManager.connectedDevice` (stored var on ConnectIQManager) and
+    /// mirror it into `connectedWatch`.  This is the only path that writes
+    /// `connectedWatch` outside of `onFooterTapped`.
+    ///
+    /// Called by ManageWatchScreen's `.onChange(of: ciqManager.connectedDevice?.uuid)`
+    /// which fires reliably because `connectedDevice` is now a stored @Observable var.
     func syncFromManager() {
-        connectedWatch = ciqManager?.connectedDevice ?? ciqManager?.devices.first
+        connectedWatch = ciqManager?.connectedDevice
     }
 
-    /// Keep selectedWatch pointing at a valid entry in the current device list.
-    /// Called from ManageChooseDevicesStepView.onAppear and onChange(of: devices.count).
+    /// Keep `selectedWatch` pointing at a valid entry in the current device list.
     func syncSelectedWatch() {
         guard let devices = ciqManager?.devices else { return }
-        // Preserve existing choice if it is still in the list
         if let pick = selectedWatch, devices.contains(where: { $0.uuid == pick.uuid }) { return }
         selectedWatch = devices.first
     }
@@ -90,44 +85,34 @@ final class ManageWatchViewModel {
     /// State machine for the primary action button.
     ///
     /// .currentConnected
-    ///   • watch present  → Disconnect → advance to .pairWatch
-    ///   • watch absent   → advance directly to .pairWatch (act as "Connect")
+    ///   • watch present → Disconnect → advance to .pairWatch
+    ///   • watch absent  → advance directly to .pairWatch  ("Connect Device")
     ///
     /// .pairWatch
-    ///   → Open Garmin Connect, then advance to .chooseYourModel
+    ///   → Open Garmin Connect, advance to .chooseYourModel
     ///
     /// .chooseYourModel
-    ///   → Commit selectedWatch, re-register app, go back to .currentConnected
+    ///   → Commit selectedWatch, re-register app, return to .currentConnected
     func onFooterTapped() {
         switch currentStep {
 
-        // ── Step 1: Manage current watch ──────────────────────────────────
         case .currentConnected:
             if connectedWatch != nil {
-                // Disconnect: un-register listeners, wipe persistence, clear local state
+                // Wipes all persistence + state; connectedDevice in manager → nil
+                // which fires onChange in the Screen → syncFromManager() → connectedWatch = nil
                 ciqManager?.disconnectFromApp()
-                connectedWatch = nil
-                selectedWatch  = nil
             }
-            // Whether we disconnected or had no watch, proceed to pair a new one
             advance()
 
-        // ── Step 2: Pair Watch prompt ─────────────────────────────────────
         case .pairWatch:
-            // Launch Garmin Connect for device selection.
-            // handleOpenURL() in PaceApp will call ciqManager.handleOpenURL(_:)
-            // which populates ciqManager.devices, triggering @Observable updates.
             ciqManager?.findDevices()
             advance()
 
-        // ── Step 3: Choose device from list ───────────────────────────────
         case .chooseYourModel:
             guard let watch = selectedWatch else { return }
-            // Re-register app messaging for the newly chosen device
-            ciqManager?.connectToApp(uuidString: watch.uuid.uuidString, device: watch)
-            // Promote to connectedWatch
+			ciqManager?.connectToApp(device: watch)
+            // Optimistically mirror before deviceStatusChanged fires
             connectedWatch = watch
-            // Slide back to the summary step
             slideDirection = .backward
             withAnimation(.easeInOut(duration: 0.3)) {
                 currentStep = .currentConnected
@@ -142,51 +127,36 @@ final class ManageWatchViewModel {
 
     /// Back-button state machine.
     ///
-    /// .currentConnected → dismiss the screen (already at root)
-    ///
+    /// .currentConnected  → dismiss (already at root)
     /// .pairWatch
-    ///   • connectedWatch still set  → slide back to .currentConnected
-    ///   • connectedWatch nil        → dismiss (no point showing empty "current" screen)
-    ///
-    /// .chooseYourModel → always slide back to .pairWatch
+    ///   • connectedWatch set → back to .currentConnected
+    ///   • connectedWatch nil → dismiss (nothing to show on the "current" screen)
+    /// .chooseYourModel   → always back to .pairWatch
     func onBack() {
         switch currentStep {
 
         case .currentConnected:
-            // Root step — dismiss the whole Manage Watch screen
             navigationEvent = .dismiss
 
         case .pairWatch:
             if connectedWatch != nil {
-                // There is still a paired watch to show
                 slideDirection = .backward
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    currentStep = .currentConnected
-                }
+                withAnimation(.easeInOut(duration: 0.3)) { currentStep = .currentConnected }
             } else {
-                // User disconnected and then tapped Back — nothing to show upstream
                 navigationEvent = .dismiss
             }
 
         case .chooseYourModel:
-            // Always allow going back to the "Start Pairing" screen
             slideDirection = .backward
-            withAnimation(.easeInOut(duration: 0.3)) {
-                currentStep = .pairWatch
-            }
+            withAnimation(.easeInOut(duration: 0.3)) { currentStep = .pairWatch }
         }
     }
 
-    // MARK: - Private helpers
+    // MARK: - Private
 
     private func advance() {
-        guard let next = currentStep.next else {
-            navigationEvent = .dismiss
-            return
-        }
+        guard let next = currentStep.next else { navigationEvent = .dismiss; return }
         slideDirection = .forward
-        withAnimation(.easeInOut(duration: 0.3)) {
-            currentStep = next
-        }
+        withAnimation(.easeInOut(duration: 0.3)) { currentStep = next }
     }
 }

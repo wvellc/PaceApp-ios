@@ -6,48 +6,52 @@
 //
 
 import SwiftUI
+import ConnectIQ
 
-///Home screen main view
+// MARK: - HomeScreen
 struct HomeScreen: View {
 	
-	//MARK: Variables
-	@State private var viewModel = HomeViewModel()
+	// MARK: - State
+	
+	@State private var viewModel       = HomeViewModel()
 	@State private var recentActivities = ActivityData.samples
-
+	
 	let runActions: [RunAction] = [
-		RunAction(title: .newRun, symbol: "icNewRun", rout: .createRunEvent),
+		RunAction(title: .newRun,      symbol: "icNewRun",      rout: .createRunEvent),
 		RunAction(title: .favoriteRun, symbol: "icFavoriteRun", rout: .favoritesRun),
 	]
 	
 	// MARK: - Environment
-	@Environment(Router.self) private var router
-	@Environment(ConnectIQManager.self) private var ciqManager
-
 	
-	//MARK: View Builder
+	@Environment(Router.self)           private var router
+	@Environment(ConnectIQManager.self) private var ciqManager
+	
+	// MARK: - Body
+	
 	var body: some View {
 		ZStack {
 			VStack(alignment: .leading, spacing: 0) {
-				// MARK: App Navigation bar
+				
+				// MARK: Navigation bar
 				AppNavigation(trailing: {
-					Button(action: {
-						//Show notification screen
+					Button {
 						router.navigate(to: .notifications)
-					}, label: {
+					} label: {
 						RoundedRectangle(cornerRadius: 100)
 							.foregroundStyle(.whiteApp)
-							.overlay(content: {
+							.overlay {
 								Image(.icNotification)
 									.resizable()
 									.frame(width: 20, height: 20)
-							})
-					})
+							}
+					}
 				})
 				
-				//MARK: Main scrollable content
+				// MARK: Scrollable content
 				ScrollView(showsIndicators: false) {
 					VStack(alignment: .leading, spacing: 0) {
-						//User name & sync status
+						
+						// Greeting + sync status
 						VStack(alignment: .leading) {
 							Text("GM, Jack")
 								.font(.bold28)
@@ -58,7 +62,7 @@ struct HomeScreen: View {
 						}
 						
 						// MARK: Home data & Pair watch view
-						if !ciqManager.isWatchPreviouslyPaired {
+						if ciqManager.connectedDevice == nil {
 							PairWatchView {
 								router.navigate(to: .manageWatch)
 							}
@@ -74,7 +78,6 @@ struct HomeScreen: View {
 								UpcomingActivitySection
 							}
 							.padding(.vertical, 16)
-							
 						}
 					}
 					.padding(.horizontal, 16)
@@ -94,33 +97,37 @@ struct HomeScreen: View {
 				.zIndex(20)
 			}
 		}
+		.onAppear {
+			// Attempt immediately in case the watch was already connected
+			// before this screen appeared (e.g. restored from cold launch).
+			tryShowMetricsPopup()
+		}
+		// Re-attempt whenever connectedDevice changes.
+		// This covers the normal pairing flow (nil → device) AND the cold-launch
+		// path where deviceStatusChanged fires after onAppear.
+		.onChange(of: ciqManager.connectedDevice?.uuid) { _, newUUID in
+			guard newUUID != nil else { return }
+			tryShowMetricsPopup()
+		}
 	}
 	
-	//MARK: Metric Row
+	// MARK: - Metric Row
+	
 	private var metricRow: some View {
 		HStack {
 			ForEach(viewModel.metrics) { metric in
-				// Dynamic space
-				if metric.id != viewModel.metrics.first?.id {
-					Spacer()
-				}
-				
-				// Metric cards
+				if metric.id != viewModel.metrics.first?.id { Spacer() }
 				HomeMetricCard(metric: metric, isHighPerformance: viewModel.isHighPerformance) {
 					viewModel.didTapMetric(metric)
 				}
-				
-				// Dynamic space
-				if metric.id != viewModel.metrics.last?.id {
-					Spacer()
-				}
+				if metric.id != viewModel.metrics.last?.id  { Spacer() }
 			}
 		}
 	}
 	
-	//MARK: Run Action Grid
+	// MARK: - Run Action Grid
+	
 	private var runActionGrid: some View {
-		// Two flexible columns with consistent spacing
 		let spacing: CGFloat = 16
 		let columns = Array(repeating: GridItem(.flexible(), spacing: spacing), count: 2)
 		
@@ -130,9 +137,8 @@ struct HomeScreen: View {
 					router.navigate(to: action.rout)
 				} label: {
 					GeometryReader { geo in
-						let side = geo.size.width
 						RunActionCard(action: action)
-							.frame(width: side, height: side)
+							.frame(width: geo.size.width, height: geo.size.width)
 					}
 					.aspectRatio(1, contentMode: .fit)
 				}
@@ -142,31 +148,48 @@ struct HomeScreen: View {
 		.fixedSize(horizontal: false, vertical: true)
 	}
 	
-	// MARK: Upcoming Activity
+	// MARK: - Upcoming Activity
+	
 	private var UpcomingActivitySection: some View {
 		VStack(alignment: .leading, spacing: 16) {
-			//Activity title
 			Text(.upcomingActivities)
 				.font(.semiBold16)
 				.foregroundColor(.whiteApp)
-
 			
 			VStack(spacing: 16) {
-				//Activity list
 				ForEach(recentActivities) { activity in
-					
 					NavigationLink {
 						EventDetailsScreen(activityData: activity)
 					} label: {
 						UpcomingActivityView(activity: activity)
 					}
-
 				}
+			}
+		}
+	}
+	
+	// MARK: - Metrics popup gate
+	
+	/// Shows the one-time metrics onboarding popup when:
+	/// 1. A watch is currently connected.
+	/// 2. AppSession.canShowMetricsOnboarding is still true.
+	///
+	/// Called from both .onAppear (covers already-connected state) and
+	/// .onChange(of: connectedDevice) (covers the async restore / pairing path).
+	private func tryShowMetricsPopup() {
+		guard ciqManager.connectedDevice != nil else { return }
+		
+		Task { @MainActor in
+			try? await Task.sleep(seconds: 1)
+			viewModel.showMetricPopup = AppSession.canShowMetricsOnboarding
+			if viewModel.showMetricPopup {
+				AppSession.canShowMetricsOnboarding = false
 			}
 		}
 	}
 }
 
+// MARK: - Preview
 
 #Preview {
 	NavigationStack {
@@ -174,4 +197,3 @@ struct HomeScreen: View {
 			.environment(Router())
 	}
 }
-
