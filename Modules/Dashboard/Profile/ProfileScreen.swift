@@ -53,6 +53,9 @@ struct ProfileScreen: View {
 		}
 		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 		.appBackground()
+		.onAppear {
+			viewModel.loadUserInfoFromSession()
+		}
 	}
 	
 	// MARK: - Avatar Section
@@ -82,14 +85,12 @@ struct ProfileScreen: View {
 			VSpace(height: 18)
 			
 			// Name
-			Text(
-				"\(viewModel.firstName ?? "")\(viewModel.firstName != nil ? " " : "")\(viewModel.lastName ?? "")"
-			)
+			Text(profileDisplayName)
 				.font(.bold24)
 				.foregroundStyle(.whiteApp)
 			
-			// Email
-			Text(viewModel.userEmail)
+			// Contact
+			Text(viewModel.contactInfo)
 				.font(.medium14)
 				.foregroundStyle(.white50)
 			
@@ -230,12 +231,25 @@ struct ProfileScreen: View {
 			return fallback
 		}
 		
-		let emailName = viewModel.userEmail
+		let emailName = viewModel.contactInfo
 			.split(separator: "@")
 			.first
 			.map(String.init)
 		
 		return firstCharacters(from: emailName, limit: 2) ?? "PA"
+	}
+
+	private var profileDisplayName: String {
+		let fullName = [viewModel.firstName, viewModel.lastName]
+			.compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+			.filter { !$0.isEmpty }
+			.joined(separator: " ")
+
+		let profileDetails = [fullName, viewModel.gender?.rawValue ?? ""]
+			.filter { !$0.isEmpty }
+			.joined(separator: ", ")
+
+		return profileDetails.isEmpty ? "Pace App" : profileDetails
 	}
 	
 	private func initial(from value: String?) -> String {

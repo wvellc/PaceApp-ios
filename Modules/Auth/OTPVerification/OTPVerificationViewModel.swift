@@ -1,5 +1,5 @@
 //
-//  OTPVerificationScreen.swift
+//  OTPVerificationViewModel.swift
 //  PaceApp
 //
 //  Created by FURKAN VIJAPURA on 4/15/26.
@@ -99,15 +99,31 @@ final class OTPVerificationViewModel {
     func verifyOTPIfNeeded() {
         guard isOTPComplete, !isVerifyingOTP else { return }
 
-
         Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(550))
             await MainActor.run {
                 guard let self else { return }
                 self.isVerifyingOTP = false
+
+                // MARK: - Persist session on successful OTP verification
+                self.persistUserSession()
+
                 self.onOTPVerified?()
             }
         }
+    }
+
+    // MARK: - Session Persistence
+
+    /// Creates a new UserModel with a fresh UUID and marks the user as authenticated.
+    /// Called once on first successful OTP verification.
+    private func persistUserSession() {
+        // Only create a new UUID if one doesn't already exist (idempotent)
+        if AppSession.userDetails == nil {
+            let newUser = UserModel(uuid: UUID().uuidString)
+            AppSession.userDetails = newUser
+        }
+        AppSession.isUserAuthenticated = true
     }
 	
 }

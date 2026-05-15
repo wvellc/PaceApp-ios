@@ -76,6 +76,8 @@ final class LoginViewModel {
 		guard isInputValid && state != .sending else {
 			return
 		}
+
+		saveLoginContact()
 		
 		//Manage state
 		state = .sending
@@ -103,6 +105,21 @@ final class LoginViewModel {
 	func normalizedPhone() -> String {
 		let digits = phoneNumber.filter(\.isNumber)
 		return (countryCode.dialingCode ?? "") + digits
+	}
+
+	private func saveLoginContact() {
+		var user = AppSession.userDetails ?? UserModel(uuid: UUID().uuidString)
+
+		switch loginType {
+			case .email:
+				user.email = email.trimmingCharacters(in: .whitespacesAndNewlines)
+				user.phoneNumber = nil
+			case .phoneNumber:
+				user.phoneNumber = normalizedPhone()
+				user.email = nil
+		}
+
+		AppSession.userDetails = user
 	}
 	
 	/// Switches the login type and resets input + error state.

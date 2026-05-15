@@ -63,15 +63,23 @@ struct PaceApp: App {
                 ciqManager.handleOpenURL(url)
             }
             // ── Cold-launch watch restoration ────────────────────────────────
-            // restoreSessionIfNeeded() reads AppSession.pairedWatchUUID and calls
-            // connectIQ.getKnownDevices() to re-populate ciqManager.devices without
-            // requiring the user to open Garmin Connect again.
-            // deviceStatusChanged() then fires for each known device, updating
-            // ciqManager.deviceStatus and therefore ciqManager.connectedDevice.
             .task {
                 ciqManager.restoreSessionIfNeeded()
             }
+            // ── Session-based root navigation ─────────────────────────────────
+            .task {
+                await resolveStartupRoot()
+            }
         }
+    }
+
+    // MARK: - Startup Root Resolution
+
+    /// Shows splash first, then resolves the static root for the current session.
+    @MainActor
+    private func resolveStartupRoot() async {
+        try? await Task.sleep(for: .milliseconds(1200))
+        router.setupRootNavigation()
     }
 
     // MARK: - Appearance Configuration

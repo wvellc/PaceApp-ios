@@ -62,7 +62,7 @@ struct HomeScreen: View {
 						}
 						
 						// MARK: Home data & Pair watch view
-						if ciqManager.connectedDevice == nil {
+						if !ciqManager.isWatchPreviouslyPaired {
 							PairWatchView {
 								router.navigate(to: .manageWatch)
 							}
@@ -83,6 +83,7 @@ struct HomeScreen: View {
 					.padding(.horizontal, 16)
 					.padding(.bottom, 18)
 				}
+				.scrollBounceBehavior(.basedOnSize)
 			}
 			.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 			.appBackground()

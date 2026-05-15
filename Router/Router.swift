@@ -25,7 +25,7 @@ final class Router {
     var path = NavigationPath()
 
     /// The app's current root flow.
-	var root: RootFlow = .dashboard
+	var root: RootFlow = .splash
 
     // MARK: Private
 
@@ -117,5 +117,36 @@ final class Router {
         root = newRoot
         path = NavigationPath()
         isNavigating = false
+    }
+
+    // MARK: - Root Navigation Setup
+
+    /// Returns the root flow for the current persisted session state without
+    /// mutating navigation. Use this after splash/launch UI has rendered.
+    static func staticRoot() -> RootFlow {
+        guard AppSession.isUserAuthenticated,
+              let user = AppSession.userDetails,
+              !user.uuid.isEmpty else {
+            return .auth
+        }
+
+        return user.isProfileCompleted ? .dashboard : .accountCreation
+    }
+
+    /// Determines the correct root flow based on the current session state and
+    /// transitions to it. Mirrors the Dart `setupRootNavigation()` logic.
+    ///
+    /// Decision tree:
+    /// 1. Not authenticated → `.auth` (login)
+    /// 2. Authenticated but profile incomplete (first/last name nil or empty) → `.accountCreation`
+    /// 3. Authenticated + profile complete → `.dashboard`
+    func setupRootNavigation() {
+        let resolvedRoot = Self.staticRoot()
+
+        if resolvedRoot == .auth {
+            AppSession.removeAllData()
+        }
+
+        setRoot(resolvedRoot, forward: true)
     }
 }

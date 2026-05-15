@@ -11,6 +11,8 @@ extension Router {
     ///
     /// Switch between them via `router.setRoot(_:)`.
     enum RootFlow {
+        /// Startup splash shown before resolving the session-based root.
+        case splash
         /// First-launch / unauthenticated onboarding sequence.
         case welcome
         /// Standard auth screens (login / sign-up).

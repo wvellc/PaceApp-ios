@@ -17,6 +17,7 @@ extension Router {
 	@ViewBuilder
 	func rootView() -> some View {
 		switch root {
+			case .splash: SplashScreen()
 			case .welcome: WelcomeScreen()
 			case .auth:       LoginScreen()
 			case .dashboard:  TabBarScreen()   //tab-bar
@@ -76,4 +77,3 @@ extension Router {
 		}
 	}
 }
-

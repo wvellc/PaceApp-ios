@@ -15,14 +15,8 @@ struct ProfileStepView: View {
 
 	//MARK: States
     @Bindable var viewModel: CreateAccountViewModel
-    @FocusState private var focusedField: Field?
+    @FocusState private var focusedField: CreateAccountProfileField?
     @State private var isKeyboardVisible: Bool = false
-	
-	//MARK: Field enum
-    private enum Field {
-        case firstName
-        case lastName
-    }
 
 	//MARK: View Builder
     var body: some View {
@@ -48,13 +42,14 @@ struct ProfileStepView: View {
             VStack(spacing: 16) {
                 AppTextField(
                     text: $viewModel.firstName,
-						placeholder: .firstName,
+					placeholder: .firstName,
+					validation: .name,
                     leadingView: AnyView(
 							Image(.icPerson)
                     ),
                     textContentType: .givenName,
                     autocapitalization: .words,
-						submitLabel: .next
+					submitLabel: .next,
                 )
                 .focused($focusedField, equals: .firstName)
                 .onSubmit {
@@ -63,7 +58,8 @@ struct ProfileStepView: View {
 
                 AppTextField(
                     text: $viewModel.lastName,
-						placeholder: .lastName,
+					placeholder: .lastName,
+					validation: .name,
                     leadingView: AnyView(
 						Image(.icPerson)
                     ),
@@ -100,9 +96,13 @@ struct ProfileStepView: View {
             NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
         }
         .onChange(of: focusedField) { _, newValue in
+            viewModel.focusedField = newValue
             withAnimation(.easeInOut(duration: 0.2)) {
                 isKeyboardVisible = newValue != nil
             }
+        }
+        .onChange(of: viewModel.focusedField) { _, newValue in
+            focusedField = newValue
         }
 
     }

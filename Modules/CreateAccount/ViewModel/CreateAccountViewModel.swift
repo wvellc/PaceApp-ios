@@ -8,6 +8,11 @@
 import SwiftUI
 import ConnectIQ
 
+enum CreateAccountProfileField: Hashable {
+    case firstName
+    case lastName
+}
+
 // MARK: - CreateAccountViewModel
 
 /// Manages state and actions for the entire Create Account onboarding flow.
@@ -31,6 +36,7 @@ final class CreateAccountViewModel {
 
     var firstName: String = ""
     var lastName: String = ""
+    var focusedField: CreateAccountProfileField?
     var selectedGender: Gender = .male {
         didSet { applyDefaultGaitLengths(for: selectedGender) }
     }
@@ -88,6 +94,11 @@ final class CreateAccountViewModel {
     // MARK: - Actions
 
     func onFooterTapped() {
+        if currentStep == .profile {
+            guard validateProfile() else { return }
+            saveUserProfile()
+        }
+
         if currentStep == .pairWatch {
             ciqManager?.findDevices()
         }
@@ -121,6 +132,8 @@ final class CreateAccountViewModel {
             slideDirection = .forward
             withAnimation(.easeInOut(duration: 0.3)) { currentStep = .setGait }
         default:
+            // Skipping final steps — still persist the profile info collected so far
+            saveUserProfile()
             navigationEvent = .skip
         }
     }
@@ -129,5 +142,41 @@ final class CreateAccountViewModel {
 
     private func applyDefaultGaitLengths(for gender: Gender) {
         AppSession.userGaitData = gender.defaultGaitData
+    }
+
+    // MARK: - Validation
+
+    @discardableResult
+    private func validateProfile() -> Bool {
+        let trimmedFirstName = firstName.trimmingCharacters(in: .whitespaces)
+        let trimmedLastName = lastName.trimmingCharacters(in: .whitespaces)
+
+        guard !trimmedFirstName.isEmpty,
+              ValidationProvider.isValid(text: trimmedFirstName, type: .name) else {
+            focusedField = .firstName
+            return false
+        }
+
+        guard !trimmedLastName.isEmpty,
+              ValidationProvider.isValid(text: trimmedLastName, type: .name) else {
+            focusedField = .lastName
+            return false
+        }
+
+        focusedField = nil
+        return true
+    }
+
+    // MARK: - Session Persistence
+
+    /// Saves first name, last name, and gender into the persisted UserModel.
+    /// Profile is considered complete once both names are non-empty.
+    private func saveUserProfile() {
+        // Start from the existing model so we never overwrite the UUID
+        var user = AppSession.userDetails ?? UserModel(uuid: UUID().uuidString)
+        user.firstName = firstName.trimmingCharacters(in: .whitespaces)
+        user.lastName = lastName.trimmingCharacters(in: .whitespaces)
+        user.gender = selectedGender
+        AppSession.userDetails = user
     }
 }
