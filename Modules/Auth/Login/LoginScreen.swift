@@ -177,6 +177,7 @@ struct LoginScreen: View {
 					}
 				)
 			)
+			.foregroundStyle(.blackApp)
 		}
 		.onAppear {
 			DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {

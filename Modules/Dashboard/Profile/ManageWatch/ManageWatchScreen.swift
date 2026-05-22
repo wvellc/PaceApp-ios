@@ -85,7 +85,7 @@ struct ManageWatchScreen: View {
 	private var stepContent: some View {
 		switch viewModel.currentStep {
 			case .currentConnected:
-				ConnectWatchStepView(watch: viewModel.connectedWatch)
+				ConnectWatchStepView(watch: viewModel.selectedWatch)
 			case .pairWatch:
 				PairWatchStepView()
 			case .chooseYourModel:

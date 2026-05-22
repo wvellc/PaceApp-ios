@@ -38,6 +38,7 @@ struct HomeScreen: View {
 						router.navigate(to: .notifications)
 					} label: {
 						RoundedRectangle(cornerRadius: 100)
+							.frame(width: 40, height: 40)
 							.foregroundStyle(.whiteApp)
 							.overlay {
 								Image(.icNotification)

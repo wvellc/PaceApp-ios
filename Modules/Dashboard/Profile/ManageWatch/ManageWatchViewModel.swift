@@ -37,7 +37,7 @@ final class ManageWatchViewModel {
     var footerButtonTitle: String {
         switch currentStep {
         case .currentConnected:
-            return connectedWatch != nil ? "Disconnect Device" : "Connect Device"
+			return selectedWatch != nil ? "Disconnect Device" : "Connect Device"
         case .pairWatch:
             return ManageWatchStep.pairWatch.footerButtonTitle
         case .chooseYourModel:
@@ -59,6 +59,8 @@ final class ManageWatchViewModel {
         guard self.ciqManager == nil else { return }
         self.ciqManager = ciqManager
         syncFromManager()
+		syncSelectedWatch()
+
     }
 
     // MARK: - Live sync
@@ -77,7 +79,21 @@ final class ManageWatchViewModel {
     func syncSelectedWatch() {
         guard let devices = ciqManager?.devices else { return }
         if let pick = selectedWatch, devices.contains(where: { $0.uuid == pick.uuid }) { return }
-        selectedWatch = devices.first
+		
+		if devices.first != nil {
+			print("Watch selected \(devices.first?.modelName ?? "--")")
+			selectedWatch = devices.first
+			
+			currentStep = devices.count == 1 ?  .currentConnected : .chooseYourModel
+			
+		} else {
+//			if currentStep == .chooseYourModel {
+//				self.onBack()
+				selectedWatch = nil
+				currentStep = .pairWatch
+//				ToastManager.shared.present(.error("No watch connected. Pair again."))
+//			}
+		}
     }
 
     // MARK: - onFooterTapped
@@ -97,7 +113,7 @@ final class ManageWatchViewModel {
         switch currentStep {
 
         case .currentConnected:
-            if connectedWatch != nil {
+				if selectedWatch != nil {
                 // Wipes all persistence + state; connectedDevice in manager → nil
                 // which fires onChange in the Screen → syncFromManager() → connectedWatch = nil
                 ciqManager?.disconnectFromApp()

@@ -84,11 +84,23 @@ final class CreateAccountViewModel {
     /// Re-evaluate selectedWatch against the current device list.
     /// Call from ChooseDevicesStepView.onAppear / onChange(of: ciqManager.devices).
     func syncSelectedWatch() {
-        guard let devices = ciqManager?.devices else { return }
-        if let current = selectedWatch, devices.contains(where: { $0.uuid == current.uuid }) {
+		guard let devices = ciqManager?.devices else {
+			return
+		}
+
+		if let current = selectedWatch, devices.contains(where: { $0.uuid == current.uuid }) {
             return // still valid
         }
-        selectedWatch = devices.first
+		
+		if devices.first != nil {
+			print("Watch selected \(devices.first?.modelName ?? "--")")
+			selectedWatch = devices.first
+		} else {
+			if currentStep == .chooseYourModel {
+				self.onBack()
+				ToastManager.shared.present(.error("No watch connected. Pair again."))
+			}
+		}
     }
 
     // MARK: - Actions

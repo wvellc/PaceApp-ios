@@ -28,7 +28,13 @@ struct OTPVerificationScreen: View {
 				.multilineTextAlignment(.leading)
 				.lineSpacing(12)
 
-			VSpace(height: 38)
+			HStack {
+				Spacer()
+				
+				VSpace(height: 38)
+				
+				Spacer()
+			}
 
 			OTPFieldView(numberOfFields: Constant.Config.OTPLength, otp: $viewModel.otp)
 				.focused($isOTPFieldFocused)
@@ -60,11 +66,11 @@ struct OTPVerificationScreen: View {
 
 			VSpace(height: 34)
 
-			AppButton(.next) {
-				viewModel.verifyOTPIfNeeded()
-			}
-			.setDisabled(!(viewModel.isOTPComplete) || viewModel.isVerifyingOTP)
-			.ignoresSafeArea(.keyboard, edges: .bottom)
+//			AppButton(.next) {
+//				viewModel.verifyOTPIfNeeded()
+//			}
+//			.setDisabled(!(viewModel.isOTPComplete) || viewModel.isVerifyingOTP)
+//			.ignoresSafeArea(.keyboard, edges: .bottom)
 
 			Spacer(minLength: Constant.UI.defaultPadding)
 		}
