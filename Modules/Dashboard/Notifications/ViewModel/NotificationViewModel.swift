@@ -8,9 +8,6 @@
 import SwiftUI
 import Observation
 
-import SwiftUI
-import Observation
-
 // MARK: - ViewModel
 @Observable
 class NotificationsViewModel {

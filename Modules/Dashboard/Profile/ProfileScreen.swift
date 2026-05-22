@@ -17,9 +17,9 @@ struct ProfileScreen: View {
 			
 			// MARK: App Navigation Bar
 			AppNavigation(trailing: {
-				Button(action: {
+				Button {
 					router.navigate(to: .settings)
-				}, label: {
+				} label: {
 					RoundedRectangle(cornerRadius: 100)
 						.foregroundStyle(.whiteApp)
 						.frame(width: 40, height: 40)
@@ -28,9 +28,7 @@ struct ProfileScreen: View {
 								.resizable()
 								.frame(width: 20, height: 20)
 						})
-				})
-				.buttonStyle(.plainSelected(active: .clear, pressed: .radiantBlue))
-
+				}
 			})
 			
 			ScrollView(showsIndicators: false) {

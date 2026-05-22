@@ -69,10 +69,11 @@ class ConnectIQManager: NSObject {
 	/// `deviceStatusChanged` (live updates thereafter).
 	var connectedDevice: IQDevice? = nil
 	
-	/// `true` when `AppSession.pairedDevices` is non-empty.
-	var isWatchPreviouslyPaired: Bool {
-		!AppSession.pairedDevices.isEmpty
-	}
+	/// `true` when a watch identity has been persisted.
+	///
+	/// This is a stored var so SwiftUI views that read it, such as HomeScreen's
+	/// pair-watch branch, are invalidated when pairing is saved or cleared.
+	var isWatchPreviouslyPaired: Bool = !AppSession.pairedDevices.isEmpty
 	
 	/// Messages received from the watch app.
 	var receivedMessages: [String] = []
@@ -141,9 +142,11 @@ class ConnectIQManager: NSObject {
 	func restoreSessionIfNeeded() {
 		let persisted = AppSession.pairedDevices
 		guard !persisted.isEmpty else {
+			isWatchPreviouslyPaired = false
 			print("[CIQ] No persisted devices — skipping restore")
 			return
 		}
+		isWatchPreviouslyPaired = true
 		
 		print("[CIQ] Restoring \(persisted.count) device(s) from persistence")
 		
@@ -208,6 +211,7 @@ class ConnectIQManager: NSObject {
 			}
 			AppSession.pairedDevices   = snapshot
 			AppSession.pairedWatchUUID = parsedDevices.first?.uuid.uuidString
+			self.isWatchPreviouslyPaired = !snapshot.isEmpty
 			
 			print("[CIQ] handleOpenURL: registered \(snapshot.count) device(s)")
 			snapshot.forEach { print("[CIQ]  • \($0.modelName) (\($0.uuidString))") }
@@ -230,6 +234,7 @@ class ConnectIQManager: NSObject {
 		connectIQ?.register(forAppMessages: app, delegate: self)
 		
 		AppSession.pairedWatchUUID = device.uuid.uuidString
+		isWatchPreviouslyPaired = true
 		print("[CIQ] connectToApp: registered app on \(device.modelName ?? device.uuid.uuidString)")
 	}
 	
@@ -245,6 +250,7 @@ class ConnectIQManager: NSObject {
 		connectedDevice = nil
 		AppSession.pairedWatchUUID = nil
 		AppSession.pairedDevices   = []
+		isWatchPreviouslyPaired = false
 		print("[CIQ] disconnectFromApp: all state cleared")
 	}
 	

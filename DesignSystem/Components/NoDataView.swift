@@ -37,7 +37,7 @@ struct NoDataView : View {
 		//No Data
 		VStack {
 			//Image or icon
-			if let icon {
+			if icon != nil {
 				// Button gives native debounce — prevents duplicate action fires on rapid taps.
 				// Only rendered when a tap callback is actually provided.
 				if let onIconTap {

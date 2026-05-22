@@ -13,7 +13,7 @@ struct HomeScreen: View {
 	
 	// MARK: - State
 	
-	@State private var viewModel       = HomeViewModel()
+	@State private var viewModel        = HomeViewModel()
 	@State private var recentActivities = ActivityData.samples
 	
 	let runActions: [RunAction] = [

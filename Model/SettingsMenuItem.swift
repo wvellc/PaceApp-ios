@@ -16,7 +16,7 @@ struct SettingsMenuItem: Identifiable {
 	let title: LocalizedStringResource
 }
 
-enum SettingsMenuItemID {
+enum SettingsMenuItemID: Hashable {
     case notifications
     case privacyPolicy
     case termsConditions

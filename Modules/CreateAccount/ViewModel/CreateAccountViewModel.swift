@@ -95,11 +95,15 @@ final class CreateAccountViewModel {
 		if devices.first != nil {
 			print("Watch selected \(devices.first?.modelName ?? "--")")
 			selectedWatch = devices.first
+//			currentStep = .chooseYourModel
+
 		} else {
 			if currentStep == .chooseYourModel {
-				self.onBack()
+				currentStep = .pairWatch
 				ToastManager.shared.present(.error("No watch connected. Pair again."))
 			}
+			selectedWatch = nil
+
 		}
     }
 

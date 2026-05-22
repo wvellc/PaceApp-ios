@@ -10,8 +10,12 @@ struct SettingScreen: View {
 	
 	@Environment(Router.self) private var router
 	@State private var viewModel = SettingsViewModel()
+
+	//Selection for Navigation
+	@State private var selectedMenuItem: SettingsMenuItemID? = nil
 	
 	var body: some View {
+		@Bindable var viewModel = viewModel
 		VStack(spacing: 0) {
 			// MARK: Scrollable Content
 			ScrollView(showsIndicators: false) {
@@ -52,7 +56,31 @@ struct SettingScreen: View {
 		}
 		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 		.appBackground()
-		.navigationAppTitle(title: .settings) 
+		.navigationAppTitle(title: .settings)
+		// MARK: - Navigation using selectedMenuItem
+		.navigationDestination(item: $selectedMenuItem) { item in
+			destinationView(for: item)
+		}
+	}
+	
+	// MARK: - Destination Builder
+	@ViewBuilder
+	private func destinationView(for item: SettingsMenuItemID) -> some View {
+		switch item {
+			case .termsConditions:
+				AppWebViewScreen(
+					requestUrl: NetworkConst.WebUrl.termsOfService
+				)
+			case .privacyPolicy	:
+				AppWebViewScreen(
+					requestUrl: NetworkConst.WebUrl.privacyPolicy
+				)
+			case .licenses		:
+				AppWebViewScreen(
+					requestUrl: NetworkConst.WebUrl.licences
+				)
+			default: EmptyView()
+		}
 	}
 		
 	// MARK: - Standard Menu Row (reuses profileMenuRow pattern)
@@ -113,7 +141,6 @@ struct SettingScreen: View {
 	}
 	
 	// MARK: - Actions
-	
 	private func handleMenuTap(item: SettingsMenuItem) {
 		switch item.id {
 			case .notifications:
@@ -121,21 +148,18 @@ struct SettingScreen: View {
 				if let url = URL(string: UIApplication.openSettingsURLString) {
 					UIApplication.shared.open(url)
 				}
-			case .privacyPolicy:
-				router.navigate(to: .privacyPolicy)
-			case .termsConditions:
-				router.navigate(to: .termsOfService)
-			case .licenses:
-				router.navigate(to: .licenses)
 			case .developedBy:
 				withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
 					viewModel.isDevelopedByExpanded.toggle()
 				}
+			case .privacyPolicy, .termsConditions, .licenses:
+				selectedMenuItem = item.id
 		}
 	}
 	
 	private func handleLogout() {
 		viewModel.showLogoutAlert {
+			selectedMenuItem = nil
 			AppSession.removeAllData()
 			router.setRoot(.auth)
 		}
@@ -144,9 +168,9 @@ struct SettingScreen: View {
 	private func handleDeleteAccount() {
 		viewModel.showDeleteAccountAlert {
 			//TODO: Call delete account API then clear session
+			selectedMenuItem = nil
 			AppSession.removeAllData()
 			router.setRoot(.auth)
-
 		}
 	}
 }

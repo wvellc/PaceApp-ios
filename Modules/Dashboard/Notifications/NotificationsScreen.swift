@@ -67,21 +67,18 @@ struct NotificationsScreen: View {
 					.foregroundStyle(.whiteApp)
 			}
 
-			if !viewModel.notifications.isEmpty {
-				ToolbarItem(placement: .topBarTrailing) {
-					Button(action: { viewModel.clearAllNotification() }) {
-						Image(.icClearAll)
-							.resizable()
-							.scaledToFit()
-							.foregroundStyle(.whiteApp)
-							.frame(width: 19.20, height: 19.20)
-					}
+			ToolbarItem(placement: .topBarTrailing) {
+				Button(action: { viewModel.clearAllNotification() }) {
+					Image(.icClearAll)
+						.resizable()
+						.scaledToFit()
+						.foregroundStyle(.whiteApp)
+						.frame(width: 19.20, height: 19.20)
 				}
+				.opacity(viewModel.notifications.isEmpty ? 0 : 1)
+				.disabled(viewModel.notifications.isEmpty)
 			}
-			
-			
 		}
-		.toolbarBackground(.hidden, for: .navigationBar)
 		.appBackground()
 	}
 	
