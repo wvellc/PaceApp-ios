@@ -23,6 +23,7 @@
 		E61FA4222F67BE3C001DA088 /* AppTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61FA4212F67BE3C001DA088 /* AppTextField.swift */; };
 		E61FA4262F67C706001DA088 /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61FA4252F67C706001DA088 /* WebView.swift */; };
 		E61FA42E2F67D252001DA088 /* String+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61FA42D2F67D252001DA088 /* String+Ext.swift */; };
+		E6246E432FC05D1700FA465B /* Debouncer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6246E422FC05D1700FA465B /* Debouncer.swift */; };
 		E629AD772FB44F1E00ABF3CD /* Task+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E629AD762FB44F1600ABF3CD /* Task+Ext.swift */; };
 		E6370ED22F83A70000007CDF /* AppLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6370ED12F83A70000007CDF /* AppLabel.swift */; };
 		E6370ED42F83AACF00007CDF /* AppCardBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6370ED32F83AACF00007CDF /* AppCardBackground.swift */; };
@@ -77,6 +78,7 @@
 		E61FA4212F67BE3C001DA088 /* AppTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTextField.swift; sourceTree = "<group>"; };
 		E61FA4252F67C706001DA088 /* WebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebView.swift; sourceTree = "<group>"; };
 		E61FA42D2F67D252001DA088 /* String+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Ext.swift"; sourceTree = "<group>"; };
+		E6246E422FC05D1700FA465B /* Debouncer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Debouncer.swift; sourceTree = "<group>"; };
 		E629AD762FB44F1600ABF3CD /* Task+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Task+Ext.swift"; sourceTree = "<group>"; };
 		E6370ED12F83A70000007CDF /* AppLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLabel.swift; sourceTree = "<group>"; };
 		E6370ED32F83AACF00007CDF /* AppCardBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCardBackground.swift; sourceTree = "<group>"; };
@@ -285,6 +287,7 @@
 		E6C4BEFD2F618C5900C17C69 /* Helpers */ = {
 			isa = PBXGroup;
 			children = (
+				E6246E422FC05D1700FA465B /* Debouncer.swift */,
 				E61FA41F2F67BDFD001DA088 /* ValidationProvider.swift */,
 			);
 			path = Helpers;
@@ -437,6 +440,7 @@
 				E6370ED22F83A70000007CDF /* AppLabel.swift in Sources */,
 				E684F1E72F769CDF0059C38F /* ProfilePhotoShape.swift in Sources */,
 				E61F83B82F64277400C215DF /* AppButton.swift in Sources */,
+				E6246E432FC05D1700FA465B /* Debouncer.swift in Sources */,
 				E659B8D82FA895BF0012AC29 /* AppAlertView.swift in Sources */,
 				E659B8D62FA895B10012AC29 /* AppAlertManager.swift in Sources */,
 				E61F82232F63E6CC00C215DF /* AppBackground.swift in Sources */,
@@ -609,7 +613,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 6LK9SH63JD;
 				ENABLE_APP_SANDBOX = YES;
@@ -667,7 +671,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 6LK9SH63JD;
 				ENABLE_APP_SANDBOX = YES;
