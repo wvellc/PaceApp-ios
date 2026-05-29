@@ -159,7 +159,7 @@ struct HomeScreen: View {
 				.foregroundColor(.whiteApp)
 			
 			VStack(spacing: 16) {
-				ForEach(recentActivities) { activity in
+				ForEach(ciqManager.syncedActivities + recentActivities) { activity in
 					NavigationLink {
 						EventDetailsScreen(activityData: activity)
 					} label: {

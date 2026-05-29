@@ -42,6 +42,38 @@ struct ActivityData: Identifiable, Hashable {
 		self.gaitType = gaitType
 	}
 
+	init?(connectIQPayload payload: [String: Any]) {
+		guard
+			let title = payload["name"] as? String,
+			let dateText = payload["date"] as? String
+		else {
+			return nil
+		}
+
+		let measure = (payload["measure"] as? String) ?? "Miles"
+		let unit = measure == "Miles" ? "mi" : "km"
+		let distanceText: String
+		if let distance = payload["distance"] as? String {
+			distanceText = "\(distance) \(unit)"
+		} else if let distance = payload["distance"] as? NSNumber {
+			distanceText = String(format: "%.2f %@", distance.floatValue, unit)
+		} else {
+			distanceText = "0.00 \(unit)"
+		}
+
+		self.init(
+			title: title,
+			date: Self.parseConnectIQDate(dateText) ?? Date(),
+			distance: distanceText,
+			duration: (payload["goal"] as? String) ?? "00:00:00",
+			avgPace: "",
+			delta: "",
+			deltaColor: .fluorescentMint,
+			location: (payload["location"] as? String) ?? "",
+			gaitType: Self.gaitType(from: payload["activity"] as? String)
+		)
+	}
+
 	var displayDate: String {
 		Self.displayDateFormatter.string(from: date)
 	}
@@ -89,5 +121,26 @@ private extension ActivityData {
 			fatalError("Invalid RecentActivity sample date.")
 		}
 		return date
+	}
+
+	static func parseConnectIQDate(_ value: String) -> Date? {
+		let formatter = DateFormatter()
+		formatter.locale = Locale(identifier: "en_US_POSIX")
+		for format in ["MMM/d/yyyy", "MMM/dd/yyyy", "yyyy-MM-dd"] {
+			formatter.dateFormat = format
+			if let date = formatter.date(from: value) {
+				return date
+			}
+		}
+		return nil
+	}
+
+	static func gaitType(from activity: String?) -> GaitType {
+		switch activity {
+			case "Walk", "Walking":
+				return .walking
+			default:
+				return .running
+		}
 	}
 }

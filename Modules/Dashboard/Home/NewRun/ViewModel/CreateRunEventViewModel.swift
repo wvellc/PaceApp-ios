@@ -22,6 +22,7 @@ class CreateRunEventViewModel {
 	var router: Router?
 	
 	// MARK: Step 1 – Event Details
+    var id: Int = Int(Date().timeIntervalSince1970)
 	var eventName: String = ""
 	var location: String = ""
 	var eventDate: Date = Date()
@@ -188,10 +189,10 @@ class CreateRunEventViewModel {
 		}
 		return true
 	}
-	
+
 	func validateCurrentSegment() -> Bool {
 		guard currentSegmentIndex < segments.count else { return false }
-		
+
 		let currentSegment     = segments[currentSegmentIndex]
 		let completedSegments  = Array(segments.prefix(currentSegmentIndex + 1))
 		let cumulativeDistance = completedSegments.reduce(0.0) { $0 + $1.distance }
@@ -345,9 +346,41 @@ class CreateRunEventViewModel {
 	
 	private func submitForm() {
 		// TODO: Pass to coordinator / API layer
+		let eventPayload = connectIQEventPayload()
+		ConnectIQManager.shared.sendMessage(["event": eventPayload])
+		ConnectIQManager.shared.upsertSyncedActivity(from: eventPayload)
 		print("Form submitted: \(eventName), \(location), \(eventDate)")
-		
+
 		ToastManager.shared.present(.success("\(eventType.rawValue) event created"))
 		router?.navigateToRoot()
 	}
+
+	private func connectIQEventPayload() -> [String: Any] {
+		[
+            "id": id,
+			"name": eventName,
+			"location": location,
+			"date": Self.connectIQDateFormatter.string(from: eventDate),
+			"distance": String(format: "%.2f", distance),
+			"measure": distanceType == .miles ? "Miles" : "Kilometers",
+			"intervals": "\(lookBackIntervals)",
+			"goal": goalTimeFormatted,
+			"activity": eventType.rawValue,
+			"segmentCount": wantsSegments ? segments.count : 1,
+			"segments": wantsSegments ? segments.map { segment in
+				[
+					"distance": segment.distance,
+					"eta": segment.formattedGoalTime
+				]
+			} : [[String: Any]](),
+			"completedSegments": [[String: Any]]()
+		]
+	}
+
+	private static let connectIQDateFormatter: DateFormatter = {
+		let formatter = DateFormatter()
+		formatter.locale = Locale(identifier: "en_US_POSIX")
+		formatter.dateFormat = "MMM/d/yyyy"
+		return formatter
+	}()
 }

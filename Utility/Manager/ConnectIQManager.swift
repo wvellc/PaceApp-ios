@@ -49,7 +49,7 @@ class ConnectIQManager: NSObject {
 	// MARK: - ConnectIQ App UUID
 	// This is the UUID of the PaceApp .iq widget installed on the Garmin watch.
 	// It is NOT the device hardware UUID — those are different things.
-	private let watchAppUUID = "7243fd4e-7a56-485b-8a27-7eb3e43638fc"
+	private let watchAppUUID = "bec1b23d90564b958370b9ded9266942"
 	private let watchStoreUUID = "7243fd4e-7a56-485b-8a27-7eb3e43638fc"
 	
 	// MARK: - Public stored state
@@ -77,6 +77,9 @@ class ConnectIQManager: NSObject {
 	
 	/// Messages received from the watch app.
 	var receivedMessages: [String] = []
+
+	/// Events synced from the watch or created locally and sent to the watch.
+	var syncedActivities: [ActivityData] = []
 	
 	/// `true` while the Garmin Connect install prompt is visible.
 	var showInstallGarminConnect: Bool = false
@@ -86,11 +89,13 @@ class ConnectIQManager: NSObject {
 	private let urlScheme = "connect"
 	private let connectIQ = ConnectIQ.sharedInstance()
 	private var targetApp: IQApp?
+	private static let syncedEventsStorageKey = "connectIQ.syncedEvents"
 	
 	// MARK: - Lifecycle
 	
 	private override init() {
 		super.init()
+		syncedActivities = Self.loadSyncedActivities()
 		connectIQ?.initialize(
 			withUrlScheme: urlScheme,
 			uiOverrideDelegate: self,
@@ -226,13 +231,10 @@ class ConnectIQManager: NSObject {
 	/// Previously `connectToApp(uuidString:device:)` was receiving the device UUID
 	/// as `uuidString`, creating an invalid IQApp that the SDK silently dropped.
 	func connectToApp(device: IQDevice) {
-		guard let appUUID   = UUID(uuidString: watchAppUUID),
-			  let storeUUID = UUID(uuidString: watchStoreUUID) else { return }
-		
-		let app = IQApp(uuid: appUUID, store: storeUUID, device: device)
-		targetApp = app
-		connectIQ?.register(forAppMessages: app, delegate: self)
-		
+        if let app = getIQApp(device: device) {
+            targetApp = app
+            connectIQ?.register(forAppMessages: app, delegate: self)
+        }
 		AppSession.pairedWatchUUID = device.uuid.uuidString
 		isWatchPreviouslyPaired = true
 		print("[CIQ] connectToApp: registered app on \(device.modelName ?? device.uuid.uuidString)")
@@ -260,12 +262,60 @@ class ConnectIQManager: NSObject {
 			print("[CIQ] sendMessage: no targetApp")
 			return
 		}
+        
 		connectIQ?.sendMessage(message, to: app, progress: { sent, total in
 			print("[CIQ] send progress: \(sent)/\(total)")
 		}, completion: { result in
 			print("[CIQ] send result: \(result.rawValue)")
 		})
 	}
+
+	func upsertSyncedActivity(_ activity: ActivityData) {
+		if syncedActivities.contains(where: { existing in
+			existing.title == activity.title &&
+			existing.date == activity.date &&
+			existing.distance == activity.distance &&
+			existing.duration == activity.duration &&
+			existing.location == activity.location
+		}) {
+			return
+		}
+
+		syncedActivities.insert(activity, at: 0)
+	}
+
+	func upsertSyncedActivity(from payload: [String: Any]) {
+		guard let activity = ActivityData(connectIQPayload: payload) else { return }
+		if syncedActivities.contains(where: { existing in
+			existing.title == activity.title &&
+			existing.date == activity.date &&
+			existing.distance == activity.distance &&
+			existing.duration == activity.duration &&
+			existing.location == activity.location
+		}) {
+			return
+		}
+
+		syncedActivities.insert(activity, at: 0)
+		persistSyncedEventPayload(payload)
+	}
+
+	private static func loadSyncedActivities() -> [ActivityData] {
+		let payloads = UserDefaults.standard.array(forKey: syncedEventsStorageKey) as? [[String: Any]] ?? []
+		return payloads.compactMap(ActivityData.init(connectIQPayload:))
+	}
+
+	private func persistSyncedEventPayload(_ payload: [String: Any]) {
+		var payloads = UserDefaults.standard.array(forKey: Self.syncedEventsStorageKey) as? [[String: Any]] ?? []
+		payloads.insert(payload, at: 0)
+		UserDefaults.standard.set(payloads, forKey: Self.syncedEventsStorageKey)
+	}
+    
+    func getIQApp(device: IQDevice) -> IQApp? {
+        guard let appUUID   = UUID(uuidString: watchAppUUID),
+              let storeUUID = UUID(uuidString: watchStoreUUID) else { return nil }
+       return IQApp(uuid: appUUID, store: storeUUID, device: device)
+    }
 }
 
 // MARK: - IQUIOverrideDelegate
@@ -302,7 +352,11 @@ extension ConnectIQManager: IQDeviceEventDelegate {
 			if !self.devices.contains(where: { $0.uuid == uuid }) {
 				self.devices.append(device)
 			}
-			
+            if status == .connected {
+                self.targetApp = self.getIQApp(device: device)
+            }
+            
+
 			self.rederiveConnectedDevice()
 		}
 	}
@@ -319,6 +373,8 @@ extension ConnectIQManager: IQAppMessageDelegate {
 				self.receivedMessages.append(str)
 			} else if let dict = message as? [String: Any] {
 				self.receivedMessages.append(dict.description)
+				let eventPayload = (dict["event"] as? [String: Any]) ?? (dict["payload"] as? [String: Any]) ?? dict
+				self.upsertSyncedActivity(from: eventPayload)
 			}
 		}
 	}
