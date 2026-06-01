@@ -10,6 +10,7 @@ import SwiftUI
 // MARK: - Recent Activity Model
 struct ActivityData: Identifiable, Hashable {
     let id = UUID()
+	let syncId: Int?
     var title: String
     let date: Date
     let distance: String
@@ -29,8 +30,10 @@ struct ActivityData: Identifiable, Hashable {
 		delta: String,
 		deltaColor: Color,
 		location: String,
-		gaitType: GaitType = .running
+		gaitType: GaitType = .running,
+		syncId: Int? = nil
 	) {
+		self.syncId = syncId
 		self.title = title
 		self.date = date
 		self.distance = distance
@@ -65,12 +68,13 @@ struct ActivityData: Identifiable, Hashable {
 			title: title,
 			date: Self.parseConnectIQDate(dateText) ?? Date(),
 			distance: distanceText,
-			duration: (payload["goal"] as? String) ?? "00:00:00",
+			duration: (payload["actualTime"] as? String) ?? (payload["goal"] as? String) ?? "00:00:00",
 			avgPace: "",
 			delta: "",
 			deltaColor: .fluorescentMint,
 			location: (payload["location"] as? String) ?? "",
-			gaitType: Self.gaitType(from: payload["activity"] as? String)
+			gaitType: Self.gaitType(from: payload["activity"] as? String),
+			syncId: Self.connectIQId(from: payload["id"])
 		)
 	}
 
@@ -142,5 +146,18 @@ private extension ActivityData {
 			default:
 				return .running
 		}
+	}
+
+	static func connectIQId(from value: Any?) -> Int? {
+		if let value = value as? Int {
+			return value
+		}
+		if let value = value as? NSNumber {
+			return value.intValue
+		}
+		if let value = value as? String {
+			return Int(value)
+		}
+		return nil
 	}
 }

@@ -86,6 +86,9 @@ class ConnectIQManager: NSObject {
     
     /// Events synced from the watch or created locally and sent to the watch.
     var syncedActivities: [ActivityData] = []
+
+    /// Completed events synced from the watch.
+    var syncedCompletedActivities: [ActivityData] = []
     
     /// `true` while the Garmin Connect install prompt is visible.
     var showInstallGarminConnect: Bool = false
@@ -95,13 +98,23 @@ class ConnectIQManager: NSObject {
     private let urlScheme = "connect"
     private let connectIQ = ConnectIQ.sharedInstance()
     private var targetApp: IQApp?
+    private var activeEventPayloads: [[String: Any]] = []
+    private var completedEventPayloads: [[String: Any]] = []
+    private var deletedEventIds: [Int] = []
     private static let syncedEventsStorageKey = "connectIQ.syncedEvents"
+    private static let syncedCompletedEventsStorageKey = "connectIQ.syncedCompletedEvents"
+    private static let deletedEventsStorageKey = "connectIQ.deletedEventIds"
     
     // MARK: - Lifecycle
     
     private override init() {
         super.init()
-        syncedActivities = Self.loadSyncedActivities()
+        activeEventPayloads = Self.loadEventPayloads(forKey: Self.syncedEventsStorageKey)
+        completedEventPayloads = Self.loadEventPayloads(forKey: Self.syncedCompletedEventsStorageKey)
+        deletedEventIds = Self.loadDeletedEventIds()
+        pruneActivePayloadsAlreadyCompleted()
+        syncedActivities = Self.activities(from: activeEventPayloads)
+        syncedCompletedActivities = Self.activities(from: completedEventPayloads)
         connectIQ?.initialize(
             withUrlScheme: urlScheme,
             uiOverrideDelegate: self,
@@ -272,6 +285,10 @@ class ConnectIQManager: NSObject {
         AppSession.pairedWatchUUID = device.uuid.uuidString
         isWatchPreviouslyPaired = true
         print("[CIQ] connectToApp ✅ targetApp set + messages registered on \(device.modelName ?? device.uuid.uuidString)")
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.requestFullSync()
+        }
     }
     
     /// Unregisters all listeners, clears all state, and wipes persistence.
@@ -303,6 +320,10 @@ class ConnectIQManager: NSObject {
             print("[CIQ] send result: \(result.rawValue)")
         })
     }
+
+    func requestFullSync() {
+        sendFullSync(command: "sync_request")
+    }
     
     func upsertSyncedActivity(_ activity: ActivityData) {
         if syncedActivities.contains(where: { existing in
@@ -319,30 +340,199 @@ class ConnectIQManager: NSObject {
     }
     
     func upsertSyncedActivity(from payload: [String: Any]) {
-        guard let activity = ActivityData(connectIQPayload: payload) else { return }
-        if syncedActivities.contains(where: { existing in
-            existing.title == activity.title &&
-            existing.date == activity.date &&
-            existing.distance == activity.distance &&
-            existing.duration == activity.duration &&
-            existing.location == activity.location
-        }) {
-            return
-        }
-        
-        syncedActivities.insert(activity, at: 0)
-        persistSyncedEventPayload(payload)
+        upsertEventPayload(payload, syncType: "active", syncStatus: "pending")
     }
     
-    private static func loadSyncedActivities() -> [ActivityData] {
-        let payloads = UserDefaults.standard.array(forKey: syncedEventsStorageKey) as? [[String: Any]] ?? []
+    func deleteSyncedEvent(id: Int, syncType: String = "active") {
+        applyDeletedEventId(id)
+        sendMessage([
+            "command": "delete_event",
+            "id": id,
+            "syncType": syncType
+        ])
+    }
+
+    private static func loadEventPayloads(forKey key: String) -> [[String: Any]] {
+        UserDefaults.standard.array(forKey: key) as? [[String: Any]] ?? []
+    }
+
+    private static func loadDeletedEventIds() -> [Int] {
+        let values = UserDefaults.standard.array(forKey: deletedEventsStorageKey) ?? []
+        return values.compactMap { value in
+            if let intValue = value as? Int { return intValue }
+            if let numberValue = value as? NSNumber { return numberValue.intValue }
+            if let stringValue = value as? String { return Int(stringValue) }
+            return nil
+        }
+    }
+
+    private static func activities(from payloads: [[String: Any]]) -> [ActivityData] {
         return payloads.compactMap(ActivityData.init(connectIQPayload:))
     }
     
-    private func persistSyncedEventPayload(_ payload: [String: Any]) {
-        var payloads = UserDefaults.standard.array(forKey: Self.syncedEventsStorageKey) as? [[String: Any]] ?? []
-        payloads.insert(payload, at: 0)
-        UserDefaults.standard.set(payloads, forKey: Self.syncedEventsStorageKey)
+    private func handleSyncMessage(_ dict: [String: Any]) -> Bool {
+        guard let command = dict["command"] as? String else { return false }
+
+        switch command {
+        case "sync_request":
+            applyDeletedEventIds(eventIds(from: dict["deletedEventIds"]))
+            mergeEventPayloads(eventPayloads(from: dict["completedEvents"]), syncType: "completed", syncStatus: "synced")
+            mergeEventPayloads(eventPayloads(from: dict["activeEvents"]), syncType: "active", syncStatus: "synced")
+            persistSyncState()
+            sendFullSync(command: "sync_all")
+            return true
+
+        case "sync_all":
+            applyDeletedEventIds(eventIds(from: dict["deletedEventIds"]))
+            mergeEventPayloads(eventPayloads(from: dict["completedEvents"]), syncType: "completed", syncStatus: "synced")
+            mergeEventPayloads(eventPayloads(from: dict["activeEvents"]), syncType: "active", syncStatus: "synced")
+            persistSyncState()
+            if (dict["source"] as? String) == "watch" {
+                sendFullSync(command: "sync_all")
+            }
+            return true
+
+        case "delete_event":
+            if let id = eventId(from: dict) {
+                applyDeletedEventId(id)
+                persistSyncState()
+            }
+            return true
+
+        default:
+            return false
+        }
+    }
+
+    private func sendFullSync(command: String) {
+        sendMessage([
+            "command": command,
+            "source": "phone",
+            "activeEvents": activeEventPayloads,
+            "completedEvents": completedEventPayloads,
+            "deletedEventIds": deletedEventIds
+        ])
+    }
+
+    private func mergeEventPayloads(_ payloads: [[String: Any]], syncType: String, syncStatus: String) {
+        for payload in payloads {
+            upsertEventPayload(payload, syncType: syncType, syncStatus: syncStatus)
+        }
+    }
+
+    private func upsertEventPayload(_ payload: [String: Any], syncType: String, syncStatus: String) {
+        var normalizedPayload = payload
+        let id = eventId(from: normalizedPayload) ?? Int(Date().timeIntervalSince1970)
+        if deletedEventIds.contains(id) {
+            return
+        }
+
+        normalizedPayload["id"] = id
+        normalizedPayload["syncType"] = syncType
+        normalizedPayload["syncStatus"] = syncStatus
+
+        if syncType == "completed" {
+            activeEventPayloads.removeAll { eventId(from: $0) == id }
+            upsertPayload(normalizedPayload, in: &completedEventPayloads)
+        } else {
+            guard !completedEventPayloads.contains(where: { eventId(from: $0) == id }) else {
+                persistSyncState()
+                return
+            }
+            upsertPayload(normalizedPayload, in: &activeEventPayloads)
+        }
+
+        persistSyncState()
+    }
+
+    private func upsertPayload(_ payload: [String: Any], in payloads: inout [[String: Any]]) {
+        guard let id = eventId(from: payload) else {
+            payloads.insert(payload, at: 0)
+            return
+        }
+
+        if let index = payloads.firstIndex(where: { eventId(from: $0) == id }) {
+            payloads[index] = payload
+        } else {
+            payloads.insert(payload, at: 0)
+        }
+    }
+
+    private func applyDeletedEventIds(_ ids: [Int]) {
+        for id in ids {
+            applyDeletedEventId(id)
+        }
+    }
+
+    private func applyDeletedEventId(_ id: Int) {
+        if !deletedEventIds.contains(id) {
+            deletedEventIds.append(id)
+        }
+
+        activeEventPayloads.removeAll { eventId(from: $0) == id }
+        completedEventPayloads.removeAll { eventId(from: $0) == id }
+        rebuildSyncedActivities()
+    }
+
+    private func pruneActivePayloadsAlreadyCompleted() {
+        let completedIds = Set(completedEventPayloads.compactMap { eventId(from: $0) })
+        guard !completedIds.isEmpty else { return }
+
+        activeEventPayloads.removeAll { payload in
+            guard let id = eventId(from: payload) else { return false }
+            return completedIds.contains(id)
+        }
+    }
+
+    private func persistSyncState() {
+        pruneActivePayloadsAlreadyCompleted()
+        rebuildSyncedActivities()
+        UserDefaults.standard.set(activeEventPayloads, forKey: Self.syncedEventsStorageKey)
+        UserDefaults.standard.set(completedEventPayloads, forKey: Self.syncedCompletedEventsStorageKey)
+        UserDefaults.standard.set(deletedEventIds, forKey: Self.deletedEventsStorageKey)
+    }
+
+    private func rebuildSyncedActivities() {
+        syncedActivities = Self.activities(from: activeEventPayloads)
+        syncedCompletedActivities = Self.activities(from: completedEventPayloads)
+    }
+
+    private func eventPayloads(from value: Any?) -> [[String: Any]] {
+        if let payloads = value as? [[String: Any]] {
+            return payloads
+        }
+        if let array = value as? NSArray {
+            return array.compactMap { $0 as? [String: Any] }
+        }
+        return []
+    }
+
+    private func eventIds(from value: Any?) -> [Int] {
+        if let ids = value as? [Int] {
+            return ids
+        }
+        if let array = value as? [Any] {
+            return array.compactMap { value in
+                if let intValue = value as? Int { return intValue }
+                if let numberValue = value as? NSNumber { return numberValue.intValue }
+                if let stringValue = value as? String { return Int(stringValue) }
+                return nil
+            }
+        }
+        return []
+    }
+
+    private func eventId(from payload: [String: Any]) -> Int? {
+        if let id = payload["id"] as? Int {
+            return id
+        }
+        if let id = payload["id"] as? NSNumber {
+            return id.intValue
+        }
+        if let id = payload["id"] as? String {
+            return Int(id)
+        }
+        return nil
     }
     
     func getIQApp(device: IQDevice) -> IQApp? {
@@ -402,8 +592,13 @@ extension ConnectIQManager: IQAppMessageDelegate {
                 self.receivedMessages.append(str)
             } else if let dict = message as? [String: Any] {
                 self.receivedMessages.append(dict.description)
+                if self.handleSyncMessage(dict) {
+                    return
+                }
                 let eventPayload = (dict["event"] as? [String: Any]) ?? (dict["payload"] as? [String: Any]) ?? dict
-                self.upsertSyncedActivity(from: eventPayload)
+                let syncType = (eventPayload["syncType"] as? String) == "completed" ? "completed" : "active"
+                self.upsertEventPayload(eventPayload, syncType: syncType, syncStatus: "synced")
+                self.sendFullSync(command: "sync_all")
             }
         }
     }

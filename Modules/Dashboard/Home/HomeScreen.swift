@@ -14,7 +14,7 @@ struct HomeScreen: View {
 	// MARK: - State
 	
 	@State private var viewModel        = HomeViewModel()
-	@State private var recentActivities = ActivityData.samples
+    @State private var recentActivities = []//ActivityData.samples
 	
 	let runActions: [RunAction] = [
 		RunAction(title: .newRun,      symbol: "icNewRun",      rout: .createRunEvent),
@@ -159,7 +159,7 @@ struct HomeScreen: View {
 				.foregroundColor(.whiteApp)
 			
 			VStack(spacing: 16) {
-				ForEach(ciqManager.syncedActivities + recentActivities) { activity in
+				ForEach(ciqManager.syncedActivities) { activity in
 					NavigationLink {
 						EventDetailsScreen(activityData: activity)
 					} label: {

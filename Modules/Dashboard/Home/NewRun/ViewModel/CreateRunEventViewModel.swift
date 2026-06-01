@@ -358,6 +358,8 @@ class CreateRunEventViewModel {
 	private func connectIQEventPayload() -> [String: Any] {
 		[
             "id": id,
+            "syncType": "active",
+            "syncStatus": "pending",
 			"name": eventName,
 			"location": location,
 			"date": Self.connectIQDateFormatter.string(from: eventDate),

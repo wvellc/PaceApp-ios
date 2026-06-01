@@ -21,7 +21,8 @@ struct HistoryScreen: View {
 	
 	//MARK: Environment
 	@Environment(Router.self) private var router
-	
+    @Environment(ConnectIQManager.self) private var ciqManager
+
 	// MARK: Body
 	var body: some View {
 			VStack(spacing: 0) {
@@ -36,7 +37,7 @@ struct HistoryScreen: View {
 				
 				// Activity List
 				Group {
-					if viewModel.filteredActivities.isEmpty {
+					if ciqManager.syncedCompletedActivities.isEmpty {
 						Spacer(minLength: 25)
 						NoDataView(
 							icon: .icEmptyHistory,
@@ -54,7 +55,7 @@ struct HistoryScreen: View {
 							.transition(.opacity)
 					}
 				}
-				.animation(.easeInOut(duration: 0.25), value: viewModel.filteredActivities.isEmpty)
+				.animation(.easeInOut(duration: 0.25), value: ciqManager.syncedCompletedActivities.isEmpty)
 			}
 			.appBackground()
 			.sheet(isPresented: $isFilterSheetPresented) {
@@ -106,7 +107,7 @@ private extension HistoryScreen {
 	var activityList: some View {
 		// We remove 'selection: $selectedActivity' from List because it causes gesture conflicts
 		List(selection: $selectedActivity) {
-			ForEach(viewModel.filteredActivities) { activity in
+			ForEach(ciqManager.syncedCompletedActivities) { activity in
 				Button {
 					selectedActivity = activity
 				} label: {
@@ -118,7 +119,13 @@ private extension HistoryScreen {
 				.listRowSeparator(.hidden)
 				.swipeActions(edge: .trailing, allowsFullSwipe: true) {
 					Button(role: .destructive) {
-						withAnimation { viewModel.delete(event: activity) }
+						withAnimation {
+							if let syncId = activity.syncId {
+								ciqManager.deleteSyncedEvent(id: syncId, syncType: "completed")
+							} else {
+								viewModel.delete(event: activity)
+							}
+						}
 					} label: {
 						Image(systemName: "trash.fill")
 					}
@@ -142,4 +149,3 @@ private extension HistoryScreen {
 #Preview {
 	HistoryScreen()
 }
-
