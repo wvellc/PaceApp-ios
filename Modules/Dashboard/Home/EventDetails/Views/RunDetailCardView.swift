@@ -80,7 +80,8 @@ struct RunDetailCardView: View {
             RunSegmentsSectionView(
                 segments: viewModel.segments,
                 isExpanded: viewModel.isSegmentsExpanded,
-                onToggle: viewModel.toggleSegments
+                onToggle: viewModel.toggleSegments,
+                distanceUnit: (viewModel.activityData?.measure ?? "Miles") == "Miles" ? "mi" : "km"
             )
         }
 		.padding(Constant.UI.defaultPadding)

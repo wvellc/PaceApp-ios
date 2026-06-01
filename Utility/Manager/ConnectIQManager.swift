@@ -321,8 +321,17 @@ class ConnectIQManager: NSObject {
         })
     }
 
+    /// Requests a full sync from the watch. Called when the phone connects
+    /// or when the user manually triggers a sync.
     func requestFullSync() {
         sendFullSync(command: "sync_request")
+    }
+
+    /// Forces a complete resync — clears local cached sync state and
+    /// re-sends everything with `is_force_update: true`.
+    /// The watch will also resend all its data, ignoring previous sync state.
+    func forceResync() {
+        sendFullSync(command: "sync_request", isForceUpdate: true)
     }
     
     func upsertSyncedActivity(_ activity: ActivityData) {
@@ -370,32 +379,72 @@ class ConnectIQManager: NSObject {
         return payloads.compactMap(ActivityData.init(connectIQPayload:))
     }
     
+    // MARK: - Sync Message Handler
+
+    /// Dispatches incoming sync commands from the watch.
+    /// Returns true if the message was handled as a sync command.
+    ///
+    /// Supported commands:
+    ///   - `sync_request`: Watch asks phone to send all data (phone responds with sync_all)
+    ///   - `sync_all`: Watch sends all its data (phone merges, does NOT echo back)
+    ///   - `delete_event`: Watch deleted an event
+    ///   - `create_event`: Watch created a new active event
+    ///   - `finish_event`: Watch finished an event (move active → completed)
     private func handleSyncMessage(_ dict: [String: Any]) -> Bool {
         guard let command = dict["command"] as? String else { return false }
+        let isForce = dict["is_force_update"] as? Bool ?? false
 
         switch command {
+
+        // --- SYNC REQUEST: Watch asks phone to send all data ---
         case "sync_request":
-            applyDeletedEventIds(eventIds(from: dict["deletedEventIds"]))
-            mergeEventPayloads(eventPayloads(from: dict["completedEvents"]), syncType: "completed", syncStatus: "synced")
-            mergeEventPayloads(eventPayloads(from: dict["activeEvents"]), syncType: "active", syncStatus: "synced")
-            persistSyncState()
-            sendFullSync(command: "sync_all")
-            return true
-
-        case "sync_all":
-            applyDeletedEventIds(eventIds(from: dict["deletedEventIds"]))
-            mergeEventPayloads(eventPayloads(from: dict["completedEvents"]), syncType: "completed", syncStatus: "synced")
-            mergeEventPayloads(eventPayloads(from: dict["activeEvents"]), syncType: "active", syncStatus: "synced")
-            persistSyncState()
-            if (dict["source"] as? String) == "watch" {
-                sendFullSync(command: "sync_all")
+            if isForce {
+                // Force resync: clear local state to accept everything fresh
+                activeEventPayloads.removeAll()
+                completedEventPayloads.removeAll()
+                deletedEventIds.removeAll()
             }
+            applyDeletedEventIds(eventIds(from: dict["deletedEventIds"]))
+            mergeEventPayloads(eventPayloads(from: dict["completedEvents"]), syncType: "completed", syncStatus: "synced")
+            mergeEventPayloads(eventPayloads(from: dict["activeEvents"]), syncType: "active", syncStatus: "synced")
+            persistSyncState()
+            // Respond with our full data so the watch gets our events too
+            sendFullSync(command: "sync_all", isForceUpdate: isForce)
             return true
 
+        // --- SYNC ALL: Watch sends all its data (response to our sync_request) ---
+        // We merge but do NOT echo sync_all back — prevents infinite loop.
+        case "sync_all":
+            if isForce {
+                activeEventPayloads.removeAll()
+                completedEventPayloads.removeAll()
+                deletedEventIds.removeAll()
+            }
+            applyDeletedEventIds(eventIds(from: dict["deletedEventIds"]))
+            mergeEventPayloads(eventPayloads(from: dict["completedEvents"]), syncType: "completed", syncStatus: "synced")
+            mergeEventPayloads(eventPayloads(from: dict["activeEvents"]), syncType: "active", syncStatus: "synced")
+            persistSyncState()
+            return true
+
+        // --- DELETE EVENT: Watch deleted a specific event ---
         case "delete_event":
             if let id = eventId(from: dict) {
                 applyDeletedEventId(id)
                 persistSyncState()
+            }
+            return true
+
+        // --- CREATE EVENT: Watch created a new active event ---
+        case "create_event":
+            if let eventPayload = extractEventRecord(from: dict) {
+                upsertEventPayload(eventPayload, syncType: "active", syncStatus: "synced")
+            }
+            return true
+
+        // --- FINISH EVENT: Watch finished an event (active → completed) ---
+        case "finish_event":
+            if let eventPayload = extractEventRecord(from: dict) {
+                upsertEventPayload(eventPayload, syncType: "completed", syncStatus: "synced")
             }
             return true
 
@@ -404,10 +453,15 @@ class ConnectIQManager: NSObject {
         }
     }
 
-    private func sendFullSync(command: String) {
+    /// Sends a full sync payload to the watch.
+    /// - Parameters:
+    ///   - command: "sync_request" (asking watch to respond) or "sync_all" (sending our data)
+    ///   - isForceUpdate: when true, tells the watch to ignore previous sync state
+    private func sendFullSync(command: String, isForceUpdate: Bool = false) {
         sendMessage([
             "command": command,
             "source": "phone",
+            "is_force_update": isForceUpdate,
             "activeEvents": activeEventPayloads,
             "completedEvents": completedEventPayloads,
             "deletedEventIds": deletedEventIds
@@ -484,12 +538,25 @@ class ConnectIQManager: NSObject {
         }
     }
 
+    /// Persists all sync state to UserDefaults.
+    /// Also prunes stale data before saving.
     private func persistSyncState() {
         pruneActivePayloadsAlreadyCompleted()
+        pruneDeletedEventIds()
         rebuildSyncedActivities()
         UserDefaults.standard.set(activeEventPayloads, forKey: Self.syncedEventsStorageKey)
         UserDefaults.standard.set(completedEventPayloads, forKey: Self.syncedCompletedEventsStorageKey)
         UserDefaults.standard.set(deletedEventIds, forKey: Self.deletedEventsStorageKey)
+    }
+
+    /// Removes deleted event IDs that no longer exist in any event list.
+    /// Prevents the deletedEventIds array from growing unbounded.
+    private func pruneDeletedEventIds() {
+        let activeIds = Set(activeEventPayloads.compactMap { eventId(from: $0) })
+        let completedIds = Set(completedEventPayloads.compactMap { eventId(from: $0) })
+        deletedEventIds.removeAll { id in
+            !activeIds.contains(id) && !completedIds.contains(id)
+        }
     }
 
     private func rebuildSyncedActivities() {
@@ -585,6 +652,9 @@ extension ConnectIQManager: IQDeviceEventDelegate {
 
 extension ConnectIQManager: IQAppMessageDelegate {
     
+    /// Handles all incoming messages from the watch app.
+    /// First tries to dispatch as a sync command; if not recognized,
+    /// falls back to treating the message as a raw event record (legacy support).
     func receivedMessage(_ message: Any!, from app: IQApp!) {
         print("[CIQ] message from \(app.device?.modelName ?? "unknown"): \(message ?? "")")
         DispatchQueue.main.async {
@@ -592,14 +662,37 @@ extension ConnectIQManager: IQAppMessageDelegate {
                 self.receivedMessages.append(str)
             } else if let dict = message as? [String: Any] {
                 self.receivedMessages.append(dict.description)
+
+                // Try to handle as a sync command first
                 if self.handleSyncMessage(dict) {
                     return
                 }
-                let eventPayload = (dict["event"] as? [String: Any]) ?? (dict["payload"] as? [String: Any]) ?? dict
-                let syncType = (eventPayload["syncType"] as? String) == "completed" ? "completed" : "active"
-                self.upsertEventPayload(eventPayload, syncType: syncType, syncStatus: "synced")
-                self.sendFullSync(command: "sync_all")
+
+                // Legacy fallback: treat unrecognized dict as a raw event record
+                if let eventPayload = self.extractEventRecord(from: dict) {
+                    let syncType = (eventPayload["syncType"] as? String) == "completed" ? "completed" : "active"
+                    self.upsertEventPayload(eventPayload, syncType: syncType, syncStatus: "synced")
+                }
             }
         }
+    }
+}
+
+// MARK: - Payload Extraction Helper
+
+extension ConnectIQManager {
+
+    /// Extracts an event record from various message formats.
+    /// Mirrors the watch's `getEventRecordFromPayload()` function.
+    ///
+    /// Supports:
+    ///   - `{ "event": { ... } }` — event nested under "event" key
+    ///   - `{ "payload": { ... } }` — event nested under "payload" key
+    ///   - `{ "name": ..., "date": ... }` — event fields directly in dict
+    func extractEventRecord(from dict: [String: Any]) -> [String: Any]? {
+        if let event = dict["event"] as? [String: Any] { return event }
+        if let payload = dict["payload"] as? [String: Any] { return payload }
+        if dict["name"] != nil || dict["date"] != nil || dict["distance"] != nil { return dict }
+        return nil
     }
 }

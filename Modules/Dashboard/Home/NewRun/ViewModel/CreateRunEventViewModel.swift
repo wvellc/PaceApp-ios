@@ -343,11 +343,31 @@ class CreateRunEventViewModel {
 	}
 	
 	// MARK: - Submit
-	
-	private func submitForm() {
-		// TODO: Pass to coordinator / API layer
+
+	/// Public entry point for the duplicate event flow.
+	/// Saves the event locally and sends create_event to the watch.
+	/// Unlike submitForm(), does NOT navigate to root (the caller handles dismiss).
+	func submitDuplicate() {
 		let eventPayload = connectIQEventPayload()
-		ConnectIQManager.shared.sendMessage(["event": eventPayload])
+		ConnectIQManager.shared.sendMessage([
+			"command": "create_event",
+			"event": eventPayload
+		])
+		ConnectIQManager.shared.upsertSyncedActivity(from: eventPayload)
+		print("Duplicate submitted: \(eventName), \(location), \(eventDate)")
+	}
+
+	private func submitForm() {
+		let eventPayload = connectIQEventPayload()
+
+		// Send as a create_event command so the watch handles it properly
+		// (checks deleted IDs, normalizes, and saves via saveActiveEvent)
+		ConnectIQManager.shared.sendMessage([
+			"command": "create_event",
+			"event": eventPayload
+		])
+
+		// Also save locally on the phone
 		ConnectIQManager.shared.upsertSyncedActivity(from: eventPayload)
 		print("Form submitted: \(eventName), \(location), \(eventDate)")
 

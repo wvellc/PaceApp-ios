@@ -21,6 +21,7 @@ struct EventDetailsScreen: View {
 	
 	// MARK: Environment
 	@Environment(\.dismiss) private var dismiss
+	@Environment(ConnectIQManager.self) private var ciqManager
 	
 	// MARK: Init
 	init(activityData: ActivityData?) {
@@ -50,22 +51,23 @@ struct EventDetailsScreen: View {
 		ScrollView(.vertical, showsIndicators: false) {
 			VStack(spacing: 16) {
 				
-				// MARK: Route Map
-				NavigationLink {
-					MapViewFullScreen(
-						coordinates: viewModel.routeCoordinates,
-					)
-					.navigationBarTitle(
-						"\(activityData?.gaitType?.label ?? "")\(activityData?.gaitType?.label != nil ? " " : "")Details",
-						displayMode: .inline
-					)
-
-				} label: {
-					MapViewRunDetail(
-						coordinates: viewModel.routeCoordinates,
-					)
+				// MARK: Route Map (only shown when GPS data is available)
+				if viewModel.hasRouteData {
+					NavigationLink {
+						MapViewFullScreen(
+							coordinates: viewModel.routeCoordinates,
+						)
+						.navigationBarTitle(
+							"\(activityData?.gaitType?.label ?? "")\(activityData?.gaitType?.label != nil ? " " : "")Details",
+							displayMode: .inline
+						)
+					} label: {
+						MapViewRunDetail(
+							coordinates: viewModel.routeCoordinates,
+						)
+					}
+					.frame(height: 220)
 				}
-				.frame(height: 220)
 								
 				// MARK: Detail Card (Basic details, Analysis, Intervals, Segments)
 				RunDetailCardView(viewModel: viewModel)
@@ -105,6 +107,11 @@ struct EventDetailsScreen: View {
 	private var bottomActions: some View {
 		FooterActions(
 			onDelete: {
+				// Actually delete the event from ConnectIQManager and sync to watch
+				if let syncId = activityData?.syncId {
+					let syncType = viewModel.isCompletedEvent ? "completed" : "active"
+					ciqManager.deleteSyncedEvent(id: syncId, syncType: syncType)
+				}
 				dismiss()
 			},
 			onEdit: viewModel.editEvent

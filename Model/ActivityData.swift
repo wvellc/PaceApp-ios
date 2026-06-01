@@ -7,20 +7,38 @@
 
 import SwiftUI
 
-// MARK: - Recent Activity Model
+// MARK: - Activity Data Model
+//
+// Represents an event (active or completed) synced between watch and phone.
+// All fields map to the ConnectIQ event payload keys.
+
 struct ActivityData: Identifiable, Hashable {
     let id = UUID()
 	let syncId: Int?
     var title: String
     let date: Date
-    let distance: String
-    let duration: String
+    let distance: String        // e.g. "5.00 mi" or "10.00 km"
+    let duration: String        // goal time for active, actual time for completed (HH:MM:SS)
     let avgPace: String
-    let delta: String
+    let delta: String           // time delta display string (e.g. "+01:10")
 	let deltaColor: Color
 	var location: String
-	let gaitType : GaitType?
-	
+	let gaitType: GaitType?
+
+	// --- Extended fields from ConnectIQ payload ---
+	let goal: String             // goal time as HH:MM:SS
+	let measure: String          // "Miles" or "Kilometers"
+	let intervals: String        // look-back intervals count
+	let segmentCount: Int        // number of segments
+	let segments: [[String: Any]]          // segment definitions [{distance, eta}, ...]
+	let completedSegments: [[String: Any]] // completed segment data from watch
+	let actualDist: String       // completed: actual distance covered
+	let timeVar: String          // completed: time variance string
+	let avgHeartRate: Int        // completed: average heart rate (0 if unavailable)
+	let paces: [[String: Any]]             // completed: per-interval pace data
+
+	// MARK: - Full Initializer
+
 	init(
 		title: String,
 		date: Date,
@@ -31,7 +49,17 @@ struct ActivityData: Identifiable, Hashable {
 		deltaColor: Color,
 		location: String,
 		gaitType: GaitType = .running,
-		syncId: Int? = nil
+		syncId: Int? = nil,
+		goal: String = "00:00:00",
+		measure: String = "Miles",
+		intervals: String = "1",
+		segmentCount: Int = 0,
+		segments: [[String: Any]] = [],
+		completedSegments: [[String: Any]] = [],
+		actualDist: String = "",
+		timeVar: String = "",
+		avgHeartRate: Int = 0,
+		paces: [[String: Any]] = []
 	) {
 		self.syncId = syncId
 		self.title = title
@@ -43,7 +71,22 @@ struct ActivityData: Identifiable, Hashable {
 		self.deltaColor = deltaColor
 		self.location = location
 		self.gaitType = gaitType
+		self.goal = goal
+		self.measure = measure
+		self.intervals = intervals
+		self.segmentCount = segmentCount
+		self.segments = segments
+		self.completedSegments = completedSegments
+		self.actualDist = actualDist
+		self.timeVar = timeVar
+		self.avgHeartRate = avgHeartRate
+		self.paces = paces
 	}
+
+	// MARK: - ConnectIQ Payload Initializer
+	//
+	// Parses a raw dictionary from the watch/sync into an ActivityData.
+	// Maps all known keys including completed-event fields.
 
 	init?(connectIQPayload payload: [String: Any]) {
 		guard
@@ -53,8 +96,9 @@ struct ActivityData: Identifiable, Hashable {
 			return nil
 		}
 
-		let measure = (payload["measure"] as? String) ?? "Miles"
-		let unit = measure == "Miles" ? "mi" : "km"
+		// --- Distance formatting ---
+		let measureStr = (payload["measure"] as? String) ?? "Miles"
+		let unit = measureStr == "Miles" ? "mi" : "km"
 		let distanceText: String
 		if let distance = payload["distance"] as? String {
 			distanceText = "\(distance) \(unit)"
@@ -64,17 +108,69 @@ struct ActivityData: Identifiable, Hashable {
 			distanceText = "0.00 \(unit)"
 		}
 
+		// --- Goal & actual time ---
+		let goalStr = (payload["goal"] as? String) ?? "00:00:00"
+		let actualTimeStr = (payload["actualTime"] as? String) ?? ""
+		// Duration: use actualTime for completed events, goal for active
+		let durationStr = actualTimeStr.isEmpty ? goalStr : actualTimeStr
+
+		// --- Time variance / delta ---
+		let timeVarStr = (payload["timeVar"] as? String) ?? ""
+		let deltaColor: Color = timeVarStr.hasPrefix("-") ? .fluorescentMint : .redBoho
+
+		// --- Actual distance (completed events) ---
+		let actualDistStr: String
+		if let ad = payload["actualDist"] as? String {
+			actualDistStr = ad
+		} else if let ad = payload["actualDist"] as? NSNumber {
+			actualDistStr = String(format: "%.2f", ad.floatValue)
+		} else {
+			actualDistStr = ""
+		}
+
+		// --- Heart rate ---
+		let heartRate: Int
+		if let hr = payload["avgHeartRate"] as? Int {
+			heartRate = hr
+		} else if let hr = payload["avgHeartRate"] as? NSNumber {
+			heartRate = hr.intValue
+		} else {
+			heartRate = 0
+		}
+
+		// --- Segments ---
+		let segArray = Self.arrayOfDicts(from: payload["segments"])
+		let completedSegArray = Self.arrayOfDicts(from: payload["completedSegments"])
+		let segCount: Int
+		if let sc = payload["segmentCount"] as? Int {
+			segCount = sc
+		} else if let sc = payload["segmentCount"] as? NSNumber {
+			segCount = sc.intValue
+		} else {
+			segCount = segArray.count
+		}
+
 		self.init(
 			title: title,
 			date: Self.parseConnectIQDate(dateText) ?? Date(),
 			distance: distanceText,
-			duration: (payload["actualTime"] as? String) ?? (payload["goal"] as? String) ?? "00:00:00",
+			duration: durationStr,
 			avgPace: "",
-			delta: "",
-			deltaColor: .fluorescentMint,
+			delta: timeVarStr,
+			deltaColor: deltaColor,
 			location: (payload["location"] as? String) ?? "",
 			gaitType: Self.gaitType(from: payload["activity"] as? String),
-			syncId: Self.connectIQId(from: payload["id"])
+			syncId: Self.connectIQId(from: payload["id"]),
+			goal: goalStr,
+			measure: measureStr,
+			intervals: (payload["intervals"] as? String) ?? "1",
+			segmentCount: segCount,
+			segments: segArray,
+			completedSegments: completedSegArray,
+			actualDist: actualDistStr,
+			timeVar: timeVarStr,
+			avgHeartRate: heartRate,
+			paces: Self.arrayOfDicts(from: payload["paces"])
 		)
 	}
 
@@ -107,6 +203,17 @@ struct ActivityData: Identifiable, Hashable {
 			location: "Twin Falls"
         )
     ]
+
+	// MARK: - Hashable
+	// Only hash by syncId + title + date so Hashable works with non-Hashable dict fields
+
+	func hash(into hasher: inout Hasher) {
+		hasher.combine(id)
+	}
+
+	static func == (lhs: ActivityData, rhs: ActivityData) -> Bool {
+		lhs.id == rhs.id
+	}
 }
 
 private extension ActivityData {
@@ -159,5 +266,15 @@ private extension ActivityData {
 			return Int(value)
 		}
 		return nil
+	}
+
+	/// Safely converts a value to an array of dictionaries.
+	/// Handles NSArray from ConnectIQ which isn't directly castable to [[String: Any]].
+	static func arrayOfDicts(from value: Any?) -> [[String: Any]] {
+		if let arr = value as? [[String: Any]] { return arr }
+		if let nsArr = value as? NSArray {
+			return nsArr.compactMap { $0 as? [String: Any] }
+		}
+		return []
 	}
 }

@@ -14,6 +14,7 @@ struct RunSegmentsSectionView: View {
     let segments: [RunSegment]
     let isExpanded: Bool
     let onToggle: () -> Void
+    var distanceUnit: String = "mi"  // "mi" or "km"
 
     var body: some View {
         VStack(spacing: 0) {
@@ -34,7 +35,7 @@ struct RunSegmentsSectionView: View {
                                 .foregroundStyle(.darkCharcoal)
                                 .frame(width: 28, alignment: .leading)
                             Spacer()
-                            Text("\(segment.formattedGoalTime) / \(String(format: "%.2f", segment.distance))mi")
+                            Text("\(segment.formattedGoalTime) / \(String(format: "%.2f", segment.distance))\(distanceUnit)")
                                 .font(.semiBold16)
                                 .foregroundStyle(.darkCharcoal)
                         }
