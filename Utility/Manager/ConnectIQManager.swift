@@ -288,6 +288,7 @@ class ConnectIQManager: NSObject {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             self?.requestFullSync()
+//            self?.forceResync()
         }
     }
     
