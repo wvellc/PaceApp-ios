@@ -7,6 +7,7 @@
 
 import Combine
 import SwiftUI
+import FirebaseAuth
 
 @Observable
 final class OTPVerificationViewModel {
@@ -98,31 +99,51 @@ final class OTPVerificationViewModel {
     @MainActor
     func verifyOTPIfNeeded() {
         guard isOTPComplete, !isVerifyingOTP else { return }
+        isVerifyingOTP = true
 
         Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(550))
-            await MainActor.run {
-                guard let self else { return }
-                self.isVerifyingOTP = false
-
-                // MARK: - Persist session on successful OTP verification
-                self.persistUserSession()
-
-                self.onOTPVerified?()
+            do {
+                guard let self = self else { return }
+                guard let verificationID = UserDefaults.standard.string(forKey: "authVerificationID") else {
+                    throw NSError(
+                        domain: "OTPVerificationViewModel",
+                        code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "Verification ID not found. Please try sending OTP again."]
+                    )
+                }
+                
+                let user = try await AuthManager.shared.verifyOTP(verificationID: verificationID, code: self.otp)
+                
+                self.persistUserSession(userId: user.uid, phoneNumber: user.phoneNumber)
+                
+                await MainActor.run {
+                    self.isVerifyingOTP = false
+                    self.onOTPVerified?()
+                }
+            } catch {
+                await MainActor.run {
+                    self?.isVerifyingOTP = false
+                    ToastManager.shared.present(.error(error.localizedDescription))
+                }
             }
         }
     }
 
     // MARK: - Session Persistence
 
-    /// Creates a new UserModel with a fresh UUID and marks the user as authenticated.
-    /// Called once on first successful OTP verification.
-    private func persistUserSession() {
-        // Only create a new UUID if one doesn't already exist (idempotent)
-        if AppSession.userDetails == nil {
-            let newUser = UserModel(uuid: UUID().uuidString)
-            AppSession.userDetails = newUser
+    /// Persists user session on successful verification.
+    private func persistUserSession(userId: String, phoneNumber: String?) {
+        var user = AppSession.userDetails
+        if user == nil {
+            user = UserModel(uuid: userId)
+        } else {
+            user?.uuid = userId
         }
+        if let phone = phoneNumber {
+            user?.phoneNumber = phone
+        }
+        AppSession.userDetails = user
+        AppSession.userId = userId
         AppSession.isUserAuthenticated = true
     }
 	

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import FirebaseAuth
 
 @main
 struct PaceApp: App {
@@ -25,6 +26,7 @@ struct PaceApp: App {
     init() {
         setNavigationAppearance()
         configureSegmentedAppearance()
+        AuthManager.shared.configure()
     }
 
     // MARK: - Scene
@@ -60,7 +62,20 @@ struct PaceApp: App {
             .installAppAlert()
             .onOpenURL { url in
                 print("[PaceApp] Received URL: \(url)")
-                ciqManager.handleOpenURL(url)
+                if AuthManager.shared.isSignIn(withEmailLink: url.absoluteString) {
+                    Task {
+                        do {
+                            let email = UserDefaults.standard.string(forKey: "emailForSignIn") ?? ""
+                            let user = try await AuthManager.shared.signInWithEmailLink(email: email, link: url.absoluteString)
+                            print("[PaceApp] Signed in with email link: \(user.uid)")
+                            router.setupRootNavigation()
+                        } catch {
+                            ToastManager.shared.present(.error(error.localizedDescription))
+                        }
+                    }
+                } else {
+                    ciqManager.handleOpenURL(url)
+                }
             }
             // ── Cold-launch watch restoration ────────────────────────────────
             .task {

@@ -7,6 +7,8 @@
 
 import Foundation
 import ConnectIQ
+import FirebaseAuth
+import FirebaseFirestore
 
 // MARK: - IQDeviceStatus helpers
 
@@ -517,6 +519,20 @@ class ConnectIQManager: NSObject {
         }
 
         persistSyncState()
+
+        if let userId = Auth.auth().currentUser?.uid {
+            let db = Firestore.firestore()
+            let docRef = db.collection("users").document(userId).collection("activities").document(String(id))
+            let cleaned = cleanPayloadForFirestore(normalizedPayload)
+            Task {
+                do {
+                    try await docRef.setData(cleaned, merge: true)
+                    print("[CIQ] Synced upserted event \(id) to Firestore for user \(userId)")
+                } catch {
+                    print("[CIQ] Failed to sync upserted event \(id) to Firestore: \(error.localizedDescription)")
+                }
+            }
+        }
     }
 
     private func upsertPayload(_ payload: [String: Any], in payloads: inout [[String: Any]]) {
@@ -546,6 +562,38 @@ class ConnectIQManager: NSObject {
         activeEventPayloads.removeAll { eventId(from: $0) == id }
         completedEventPayloads.removeAll { eventId(from: $0) == id }
         rebuildSyncedActivities()
+
+        if let userId = Auth.auth().currentUser?.uid {
+            let db = Firestore.firestore()
+            let docRef = db.collection("users").document(userId).collection("activities").document(String(id))
+            Task {
+                do {
+                    try await docRef.delete()
+                    print("[CIQ] Synced deletion of event \(id) to Firestore for user \(userId)")
+                } catch {
+                    print("[CIQ] Failed to sync deletion of event \(id) to Firestore: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    private func cleanPayloadForFirestore(_ payload: [String: Any]) -> [String: Any] {
+        var cleaned: [String: Any] = [:]
+        for (key, value) in payload {
+            if let nsArray = value as? NSArray {
+                cleaned[key] = nsArray.compactMap { element -> Any? in
+                    if let dict = element as? [String: Any] {
+                        return cleanPayloadForFirestore(dict)
+                    }
+                    return element
+                }
+            } else if let nestedDict = value as? [String: Any] {
+                cleaned[key] = cleanPayloadForFirestore(nestedDict)
+            } else {
+                cleaned[key] = value
+            }
+        }
+        return cleaned
     }
 
     private func pruneActivePayloadsAlreadyCompleted() {

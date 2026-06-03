@@ -82,21 +82,22 @@ final class LoginViewModel {
 		//Manage state
 		state = .sending
 		
-		
 		do {
-			// OTP sending logic goes here.
-			try await Task.sleep(for: .seconds(0.8))
-			
-			//TO Verify OTP
-			await navigateToVerification()
-			
-			//Manage state
-			state = .success
-					
+			if loginType == .phoneNumber {
+				let formattedNumber = normalizedPhone()
+				let verificationID = try await AuthManager.shared.sendOTP(phoneNumber: formattedNumber)
+				state = .otpSent(verificationID: verificationID)
+				UserDefaults.standard.set(verificationID, forKey: "authVerificationID")
+				await navigateToVerification()
+			} else {
+				let cleanEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+				try await AuthManager.shared.sendEmailLink(email: cleanEmail)
+				state = .success
+				ToastManager.shared.present(.success("Login link sent! Please check your email inbox."))
+			}
 		} catch {
-			//Manage state
 			state = .error(error.localizedDescription)
-
+			ToastManager.shared.present(.error(error.localizedDescription))
 		}
 	}
 	

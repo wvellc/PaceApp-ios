@@ -111,7 +111,11 @@ struct LoginScreen: View {
 					}
 					
 					// Send OTP Button
-					AppButton(viewModel.state == .sending ? "Sending..." : .sendOtp) {
+					AppButton(
+						viewModel.state == .sending ? LocalizedStringResource("Sending...") : (
+							viewModel.loginType == .email ? LocalizedStringResource("Send Login Link") : LocalizedStringResource("Send OTP")
+						)
+					) {
 						Task { await viewModel.sendOTP() }
 					}
 					.disabled(!viewModel.isInputValid)
