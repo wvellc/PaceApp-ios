@@ -158,7 +158,6 @@ struct HomeScreen: View {
 				.font(.semiBold16)
 				.foregroundColor(.whiteApp)
 			
-			// Use List to enable swipe actions on active events
 			VStack(spacing: 16) {
 				ForEach(ciqManager.syncedActivities) { activity in
 					NavigationLink {
@@ -166,12 +165,11 @@ struct HomeScreen: View {
 					} label: {
 						UpcomingActivityView(activity: activity)
 					}
-					// Swipe to delete active event (syncs deletion to watch)
 					.swipeActions(edge: .trailing, allowsFullSwipe: true) {
 						Button(role: .destructive) {
 							withAnimation {
 								if let syncId = activity.syncId {
-									ciqManager.deleteSyncedEvent(id: syncId, syncType: "active")
+									ciqManager.deleteSyncedEvent(id: syncId)
 								}
 							}
 						} label: {
@@ -213,3 +211,4 @@ struct HomeScreen: View {
 			.environment(Router())
 	}
 }
+

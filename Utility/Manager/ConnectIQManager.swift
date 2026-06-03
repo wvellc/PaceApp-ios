@@ -104,6 +104,7 @@ class ConnectIQManager: NSObject {
     private static let syncedEventsStorageKey = "connectIQ.syncedEvents"
     private static let syncedCompletedEventsStorageKey = "connectIQ.syncedCompletedEvents"
     private static let deletedEventsStorageKey = "connectIQ.deletedEventIds"
+    private static let settingsStorageKey = "connectIQ.settings"
     
     // MARK: - Lifecycle
     
@@ -287,8 +288,8 @@ class ConnectIQManager: NSObject {
         print("[CIQ] connectToApp ✅ targetApp set + messages registered on \(device.modelName ?? device.uuid.uuidString)")
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.requestFullSync()
-//            self?.forceResync()
+//            self?.requestFullSync()
+            self?.forceResync()
         }
     }
     
@@ -350,15 +351,15 @@ class ConnectIQManager: NSObject {
     }
     
     func upsertSyncedActivity(from payload: [String: Any]) {
-        upsertEventPayload(payload, syncType: "active", syncStatus: "pending")
+        upsertEventPayload(payload, isCompleted: false, syncStatus: "pending")
     }
     
-    func deleteSyncedEvent(id: Int, syncType: String = "active") {
+    func deleteSyncedEvent(id: Int) {
         applyDeletedEventId(id)
         sendMessage([
             "command": "delete_event",
-            "id": id,
-            "syncType": syncType
+            "source": "phone",
+            "id": id
         ])
     }
 
@@ -391,6 +392,7 @@ class ConnectIQManager: NSObject {
     ///   - `delete_event`: Watch deleted an event
     ///   - `create_event`: Watch created a new active event
     ///   - `finish_event`: Watch finished an event (move active → completed)
+    ///   - `sync_settings`: Watch sends updated settings (alerts, gait)
     private func handleSyncMessage(_ dict: [String: Any]) -> Bool {
         guard let command = dict["command"] as? String else { return false }
         let isForce = dict["is_force_update"] as? Bool ?? false
@@ -406,8 +408,12 @@ class ConnectIQManager: NSObject {
                 deletedEventIds.removeAll()
             }
             applyDeletedEventIds(eventIds(from: dict["deletedEventIds"]))
-            mergeEventPayloads(eventPayloads(from: dict["completedEvents"]), syncType: "completed", syncStatus: "synced")
-            mergeEventPayloads(eventPayloads(from: dict["activeEvents"]), syncType: "active", syncStatus: "synced")
+            mergeEventPayloads(eventPayloads(from: dict["completedEvents"]), isCompleted: true, syncStatus: "synced")
+            mergeEventPayloads(eventPayloads(from: dict["activeEvents"]), isCompleted: false, syncStatus: "synced")
+            // Apply remote settings if included
+            if let remoteSettings = dict["settings"] as? [String: Any] {
+                applyRemoteSettings(remoteSettings)
+            }
             persistSyncState()
             // Respond with our full data so the watch gets our events too
             sendFullSync(command: "sync_all", isForceUpdate: isForce)
@@ -422,8 +428,12 @@ class ConnectIQManager: NSObject {
                 deletedEventIds.removeAll()
             }
             applyDeletedEventIds(eventIds(from: dict["deletedEventIds"]))
-            mergeEventPayloads(eventPayloads(from: dict["completedEvents"]), syncType: "completed", syncStatus: "synced")
-            mergeEventPayloads(eventPayloads(from: dict["activeEvents"]), syncType: "active", syncStatus: "synced")
+            mergeEventPayloads(eventPayloads(from: dict["completedEvents"]), isCompleted: true, syncStatus: "synced")
+            mergeEventPayloads(eventPayloads(from: dict["activeEvents"]), isCompleted: false, syncStatus: "synced")
+            // Apply remote settings if included
+            if let remoteSettings = dict["settings"] as? [String: Any] {
+                applyRemoteSettings(remoteSettings)
+            }
             persistSyncState()
             return true
 
@@ -438,14 +448,21 @@ class ConnectIQManager: NSObject {
         // --- CREATE EVENT: Watch created a new active event ---
         case "create_event":
             if let eventPayload = extractEventRecord(from: dict) {
-                upsertEventPayload(eventPayload, syncType: "active", syncStatus: "synced")
+                upsertEventPayload(eventPayload, isCompleted: false, syncStatus: "synced")
             }
             return true
 
         // --- FINISH EVENT: Watch finished an event (active → completed) ---
         case "finish_event":
             if let eventPayload = extractEventRecord(from: dict) {
-                upsertEventPayload(eventPayload, syncType: "completed", syncStatus: "synced")
+                upsertEventPayload(eventPayload, isCompleted: true, syncStatus: "synced")
+            }
+            return true
+
+        // --- SYNC SETTINGS: Watch sends updated settings ---
+        case "sync_settings":
+            if let remoteSettings = dict["settings"] as? [String: Any] {
+                applyRemoteSettings(remoteSettings)
             }
             return true
 
@@ -465,17 +482,18 @@ class ConnectIQManager: NSObject {
             "is_force_update": isForceUpdate,
             "activeEvents": activeEventPayloads,
             "completedEvents": completedEventPayloads,
-            "deletedEventIds": deletedEventIds
+            "deletedEventIds": deletedEventIds,
+            "settings": getSettingsPayload()
         ])
     }
 
-    private func mergeEventPayloads(_ payloads: [[String: Any]], syncType: String, syncStatus: String) {
+    private func mergeEventPayloads(_ payloads: [[String: Any]], isCompleted: Bool, syncStatus: String) {
         for payload in payloads {
-            upsertEventPayload(payload, syncType: syncType, syncStatus: syncStatus)
+            upsertEventPayload(payload, isCompleted: isCompleted, syncStatus: syncStatus)
         }
     }
 
-    private func upsertEventPayload(_ payload: [String: Any], syncType: String, syncStatus: String) {
+    private func upsertEventPayload(_ payload: [String: Any], isCompleted: Bool, syncStatus: String) {
         var normalizedPayload = payload
         let id = eventId(from: normalizedPayload) ?? Int(Date().timeIntervalSince1970)
         if deletedEventIds.contains(id) {
@@ -483,10 +501,11 @@ class ConnectIQManager: NSObject {
         }
 
         normalizedPayload["id"] = id
-        normalizedPayload["syncType"] = syncType
         normalizedPayload["syncStatus"] = syncStatus
+        // Remove legacy syncType if present
+        normalizedPayload.removeValue(forKey: "syncType")
 
-        if syncType == "completed" {
+        if isCompleted {
             activeEventPayloads.removeAll { eventId(from: $0) == id }
             upsertPayload(normalizedPayload, in: &completedEventPayloads)
         } else {
@@ -603,6 +622,52 @@ class ConnectIQManager: NSObject {
         return nil
     }
     
+    // MARK: - Settings Sync
+    
+    /// Settings keys synced between watch and phone.
+    /// These match the watch's Application.Storage keys exactly.
+    private static let settingsKeys: [String] = [
+        "vibrate_alert",
+        "beep_alert",
+        "walking_gait",
+        "walking_gait_measure",
+        "running_gait",
+        "running_gait_measure"
+    ]
+
+    /// Returns a dictionary of all synced settings from UserDefaults.
+    func getSettingsPayload() -> [String: Any] {
+        var settings: [String: Any] = [:]
+        let stored = UserDefaults.standard.dictionary(forKey: Self.settingsStorageKey) ?? [:]
+        for key in Self.settingsKeys {
+            settings[key] = stored[key]
+        }
+        return settings
+    }
+
+    /// Applies settings received from the watch to local UserDefaults.
+    /// Only updates keys that are present and non-nil in the remote payload.
+    func applyRemoteSettings(_ settings: [String: Any]) {
+        var stored = UserDefaults.standard.dictionary(forKey: Self.settingsStorageKey) ?? [:]
+        for key in Self.settingsKeys {
+            if let value = settings[key] {
+                stored[key] = value
+            }
+        }
+        UserDefaults.standard.set(stored, forKey: Self.settingsStorageKey)
+        print("[CIQ] Settings applied: \(stored)")
+    }
+
+    /// Sends all current settings to the watch as a sync_settings command.
+    /// Call this when the user changes any setting on the phone.
+    func sendSettings() {
+        sendMessage([
+            "command": "sync_settings",
+            "source": "phone",
+            "settings": getSettingsPayload()
+        ])
+    }
+    
     func getIQApp(device: IQDevice) -> IQApp? {
         guard let appUUID   = UUID(uuidString: watchAppUUID),
               let storeUUID = UUID(uuidString: watchStoreUUID) else { return nil }
@@ -671,8 +736,7 @@ extension ConnectIQManager: IQAppMessageDelegate {
 
                 // Legacy fallback: treat unrecognized dict as a raw event record
                 if let eventPayload = self.extractEventRecord(from: dict) {
-                    let syncType = (eventPayload["syncType"] as? String) == "completed" ? "completed" : "active"
-                    self.upsertEventPayload(eventPayload, syncType: syncType, syncStatus: "synced")
+                    self.upsertEventPayload(eventPayload, isCompleted: false, syncStatus: "synced")
                 }
             }
         }

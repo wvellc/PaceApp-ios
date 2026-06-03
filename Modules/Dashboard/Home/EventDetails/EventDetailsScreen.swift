@@ -110,7 +110,7 @@ struct EventDetailsScreen: View {
 				// Actually delete the event from ConnectIQManager and sync to watch
 				if let syncId = activityData?.syncId {
 					let syncType = viewModel.isCompletedEvent ? "completed" : "active"
-					ciqManager.deleteSyncedEvent(id: syncId, syncType: syncType)
+					ciqManager.deleteSyncedEvent(id: syncId)
 				}
 				dismiss()
 			},

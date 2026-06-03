@@ -121,7 +121,7 @@ private extension HistoryScreen {
 					Button(role: .destructive) {
 						withAnimation {
 							if let syncId = activity.syncId {
-								ciqManager.deleteSyncedEvent(id: syncId, syncType: "completed")
+								ciqManager.deleteSyncedEvent(id: syncId)
 							} else {
 								viewModel.delete(event: activity)
 							}
