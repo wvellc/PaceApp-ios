@@ -2,11 +2,10 @@
 //  AuthManager.swift
 //  PaceApp
 //
-//  Created by Antigravity on 06/03/26.
+//  Created by FURKAN VIJAPURA on 06/03/26.
 //
 
 import Foundation
-import FirebaseCore
 import FirebaseAuth
 import FirebaseFirestore
 import SwiftUI
@@ -20,6 +19,8 @@ final class AuthManager {
     static let shared = AuthManager()
     
     // MARK: - Properties
+    /// `nonisolated(unsafe)` is safe here because `AuthManager` is a singleton
+    /// that is never deallocated — the `deinit` listener removal is purely defensive.
     nonisolated(unsafe) private var authStateListenerHandle: AuthStateDidChangeListenerHandle?
     
     var currentUser: User? {
@@ -84,17 +85,7 @@ final class AuthManager {
     /// - Parameter phoneNumber: The normalized phone number in E.164 format.
     /// - Returns: The verification ID needed to verify the code.
     func sendOTP(phoneNumber: String) async throws -> String {
-        return try await withCheckedThrowingContinuation { continuation in
-            PhoneAuthProvider.provider().verifyPhoneNumber(phoneNumber, uiDelegate: nil) { verificationID, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                } else if let verificationID = verificationID {
-                    continuation.resume(returning: verificationID)
-                } else {
-                    continuation.resume(throwing: NSError(domain: "AuthManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Verification ID is nil"]))
-                }
-            }
-        }
+        return try await PhoneAuthProvider.provider().verifyPhoneNumber(phoneNumber, uiDelegate: nil)
     }
     
     /// Verifies the SMS verification code and signs the user in.
@@ -118,16 +109,18 @@ final class AuthManager {
     /// - Parameter email: The user's email address.
     func sendEmailLink(email: String) async throws {
         let actionCodeSettings = ActionCodeSettings()
-        // Default link that handles sign in inside the app.
-        // Make sure this matches the domain allowed in console (default project domain)
-        let fallbackURL = "https://\(FirebaseApp.app()?.options.projectID ?? "thepaceapp").firebaseapp.com/__/auth/action"
-        actionCodeSettings.url = URL(string: fallbackURL)
+        // Use the root of the Firebase Hosting domain (NOT /__/auth/action).
+        // iOS intercepts this URL via the `applinks:` Associated Domain entry
+        // set up in the Xcode project, so the app—not Safari—handles the link.
+        let projectID = Auth.auth().app?.options.projectID ?? "thepaceapp"
+        actionCodeSettings.url = URL(string: "https://\(projectID).firebaseapp.com")
         actionCodeSettings.handleCodeInApp = true
         actionCodeSettings.setIOSBundleID(Bundle.main.bundleIdentifier!)
         
         try await Auth.auth().sendSignInLink(toEmail: email, actionCodeSettings: actionCodeSettings)
         
-        // Save email locally to complete login on link redirect
+        // Save email locally to complete login on link redirect.
+        // Required because the sign-in must be completed on the same device.
         UserDefaults.standard.set(email, forKey: "emailForSignIn")
     }
     

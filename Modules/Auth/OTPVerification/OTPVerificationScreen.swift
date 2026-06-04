@@ -86,10 +86,10 @@ struct OTPVerificationScreen: View {
 				// 1. Create a transaction
 				var transaction = Transaction()
 				
-				// 2. Attach the completion handler
-				// This block executes on the Main Thread automatically
+				// 2. Attach the completion handler — use setupRootNavigation() so that
+				//    returning users go to dashboard and brand-new users go to accountCreation.
 				transaction.addAnimationCompletion {
-					router?.setRoot(.accountCreation)
+					router?.setupRootNavigation()
 				}
 				
 				// 3. Execute the state change within that transaction

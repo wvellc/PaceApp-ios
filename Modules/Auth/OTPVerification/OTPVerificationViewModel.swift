@@ -92,8 +92,21 @@ final class OTPVerificationViewModel {
 
     // MARK: - Actions
     func triggerResend() {
-        // TODO: Call resend API
+        otp = ""
         startResendTimer()
+        
+        // Re-invoke Firebase to send a new SMS to the same phone number.
+        guard let phoneNumber = AppSession.userDetails?.phoneNumber, !phoneNumber.isEmpty else { return }
+        
+        Task { @MainActor in
+            do {
+                let verificationID = try await AuthManager.shared.sendOTP(phoneNumber: phoneNumber)
+                // Overwrite the old verification ID so the next verify attempt uses the latest code.
+                UserDefaults.standard.set(verificationID, forKey: "authVerificationID")
+            } catch {
+                ToastManager.shared.present(.error(error.localizedDescription))
+            }
+        }
     }
 
     @MainActor

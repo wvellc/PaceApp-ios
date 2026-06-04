@@ -26,7 +26,7 @@ struct PaceApp: App {
     init() {
         setNavigationAppearance()
         configureSegmentedAppearance()
-        AuthManager.shared.configure()
+        // AuthManager.configure() is called in AppDelegate after FirebaseApp.configure().
     }
 
     // MARK: - Scene
@@ -65,7 +65,13 @@ struct PaceApp: App {
                 if AuthManager.shared.isSignIn(withEmailLink: url.absoluteString) {
                     Task {
                         do {
-                            let email = UserDefaults.standard.string(forKey: "emailForSignIn") ?? ""
+                            // Guard: email must be stored on this device for the link to work.
+                            // If the link was opened on a different device, ask the user to sign in again.
+                            guard let email = UserDefaults.standard.string(forKey: "emailForSignIn"),
+                                  !email.isEmpty else {
+                                ToastManager.shared.present(.error("Email not found. Please enter your email address and request a new login link."))
+                                return
+                            }
                             let user = try await AuthManager.shared.signInWithEmailLink(email: email, link: url.absoluteString)
                             print("[PaceApp] Signed in with email link: \(user.uid)")
                             router.setupRootNavigation()
