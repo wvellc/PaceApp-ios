@@ -57,5 +57,30 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // Not a Firebase notification — handle other cases here if needed.
         completionHandler(.noData)
     }
+    // MARK: - Universal Links — Required for Firebase Email Sign-In
+    //
+    // Apple delivers Universal Links (https:// links that match the app's
+    // associated-domains entitlement) through NSUserActivity, NOT through
+    // application(_:open:options:). Without this method returning `true`,
+    // iOS silently opens Safari instead of the app — even when the
+    // apple-app-site-association file validates correctly in Diagnostics.
+    //
+    // SwiftUI's `.onOpenURL` modifier works only after this method fires
+    // and returns `true`, which forwards the URL to the SwiftUI scene.
+    func application(
+        _ application: UIApplication,
+        continue userActivity: NSUserActivity,
+        restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
+    ) -> Bool {
+        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+              let url = userActivity.webpageURL else {
+            return false
+        }
+        print("[AppDelegate] Universal Link received: \(url.absoluteString)")
+        // Returning true tells iOS the app handled the link.
+        // SwiftUI's WindowGroup automatically forwards webpageURL
+        // to .onOpenURL, where PaceApp.swift completes the sign-in.
+        return true
+    }
 }
 

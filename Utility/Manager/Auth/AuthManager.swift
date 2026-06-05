@@ -14,55 +14,61 @@ import SwiftUI
 @Observable
 @MainActor
 final class AuthManager {
-    
+
     // MARK: - Singleton
     static let shared = AuthManager()
-    
+
     // MARK: - Properties
     /// `nonisolated(unsafe)` is safe here because `AuthManager` is a singleton
     /// that is never deallocated — the `deinit` listener removal is purely defensive.
     nonisolated(unsafe) private var authStateListenerHandle: AuthStateDidChangeListenerHandle?
-    
-    var currentUser: User? {
-        Auth.auth().currentUser
+
+    var currentUser: User? { Auth.auth().currentUser }
+    var isUserAuthenticated: Bool { currentUser != nil }
+
+    // MARK: - Firebase Hosting domain constants
+    //
+    // These MUST stay in sync with:
+    //   1. PaceApp.entitlements  → com.apple.developer.associated-domains (applinks:)
+    //   2. Firebase Console       → Authentication > Sign-in method > Email link > Authorized domains
+    //   3. Firebase Console       → Hosting > Custom domains (if using a custom domain)
+    //
+    // The continueURL is the domain iOS uses to match the Universal Link and hand
+    // the URL back to the app via onOpenURL instead of opening it in Safari.
+    // It must be the BARE domain root — NOT /__/auth/action — because Firebase
+    // appends its own query parameters and path; sending a full /__/auth/action URL
+    // causes a double-path issue that results in a "Site Not Found" page.
+    private enum EmailLinkDomain {
+        /// Primary domain listed first in entitlements — used as the continueURL.
+        static let continueURL = "https://thepaceapp.firebaseapp.com"
+        /// Must match the applinks: entry in PaceApp.entitlements exactly.
+        static let appLinksDomain = "thepaceapp.firebaseapp.com"
     }
-    
-    var isUserAuthenticated: Bool {
-        currentUser != nil
-    }
-    
+
     // MARK: - Lifecycle & Configuration
-    
+
     private init() {}
-    
+
     /// Registers the global authentication state listener.
-    /// Call this from `PaceApp.swift` or `AppDelegate.swift` on launch.
+    /// Called from AppDelegate after FirebaseApp.configure().
     func configure() {
         guard authStateListenerHandle == nil else { return }
-        
+
         authStateListenerHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             guard let self = self else { return }
-            
             Task { @MainActor in
                 if let user = user {
                     print("[AuthManager] User logged in: \(user.uid)")
                     AppSession.isUserAuthenticated = true
                     AppSession.userId = user.uid
-                    
-                    // Retrieve/update user session details
+
                     var cachedUser = AppSession.userDetails ?? UserModel(uuid: user.uid)
                     cachedUser.uuid = user.uid
-                    if cachedUser.email == nil {
-                        cachedUser.email = user.email
-                    }
-                    if cachedUser.phoneNumber == nil {
-                        cachedUser.phoneNumber = user.phoneNumber
-                    }
+                    if cachedUser.email == nil      { cachedUser.email       = user.email }
+                    if cachedUser.phoneNumber == nil { cachedUser.phoneNumber = user.phoneNumber }
                     AppSession.userDetails = cachedUser
-                    
-                    // Sync to Firestore
+
                     await self.syncUserToFirestore(userId: user.uid)
-                    // Sync watch events
                     await self.syncLocalActivitiesToFirestore(userId: user.uid)
                 } else {
                     print("[AuthManager] User logged out")
@@ -72,208 +78,179 @@ final class AuthManager {
             }
         }
     }
-    
+
     deinit {
         if let handle = authStateListenerHandle {
             Auth.auth().removeStateDidChangeListener(handle)
         }
     }
-    
+
     // MARK: - Phone Authentication (OTP)
-    
-    /// Initiates phone number verification via SMS OTP.
-    /// - Parameter phoneNumber: The normalized phone number in E.164 format.
-    /// - Returns: The verification ID needed to verify the code.
+
+    /// Initiates phone number verification via SMS OTP using the modern async Firebase API.
+    /// - Parameter phoneNumber: E.164-formatted number, e.g. "+14155552671".
+    /// - Returns: The verification ID needed to verify the SMS code.
     func sendOTP(phoneNumber: String) async throws -> String {
-        return try await PhoneAuthProvider.provider().verifyPhoneNumber(phoneNumber, uiDelegate: nil)
+        let verificationID = try await PhoneAuthProvider.provider()
+            .verifyPhoneNumber(phoneNumber, uiDelegate: nil)
+        // Persist so it survives backgrounding / memory pressure between send & verify.
+        UserDefaults.standard.set(verificationID, forKey: Keys.authVerificationID)
+        return verificationID
     }
-    
-    /// Verifies the SMS verification code and signs the user in.
-    /// - Parameters:
-    ///   - verificationID: The verification ID returned by `sendOTP`.
-    ///   - code: The 6-digit SMS code entered by the user.
-    /// - Returns: The authenticated Firebase `User`.
+
+    /// Verifies the 6-digit SMS code and signs the user in.
     @discardableResult
     func verifyOTP(verificationID: String, code: String) async throws -> User {
         let credential = PhoneAuthProvider.provider().credential(
             withVerificationID: verificationID,
             verificationCode: code
         )
-        let authResult = try await Auth.auth().signIn(with: credential)
-        return authResult.user
+        return try await Auth.auth().signIn(with: credential).user
     }
-    
+
     // MARK: - Email Link Authentication (Passwordless)
-    
-    /// Sends a sign-in link to the specified email address.
-    /// - Parameter email: The user's email address.
+
+    /// Sends a passwordless sign-in link to the given email address.
+    ///
+    /// ### Why the URL is set to the bare domain root
+    /// Firebase wraps our `continueURL` inside its own `/__/auth/action?...` redirect.
+    /// If we pass `https://thepaceapp.firebaseapp.com/__/auth/action` the final URL
+    /// becomes `…/__/auth/action?continueUrl=/__/auth/action&…`, which breaks.
+    /// The bare domain `https://thepaceapp.firebaseapp.com` is correct — Firebase
+    /// appends the action path itself.
+    ///
+    /// ### Why this domain (not the project-ID domain)
+    /// The `applinks:` entry in PaceApp.entitlements is `thepaceapp.firebaseapp.com`.
+    /// The continueURL domain MUST exactly match an applinks entry so iOS intercepts
+    /// the link and delivers it to `onOpenURL` instead of opening Safari.
     func sendEmailLink(email: String) async throws {
-        let actionCodeSettings = ActionCodeSettings()
-        // Use the root of the Firebase Hosting domain (NOT /__/auth/action).
-        // iOS intercepts this URL via the `applinks:` Associated Domain entry
-        // set up in the Xcode project, so the app—not Safari—handles the link.
-        let projectID = Auth.auth().app?.options.projectID ?? "thepaceapp"
-        actionCodeSettings.url = URL(string: "https://\(projectID).firebaseapp.com")
-        actionCodeSettings.handleCodeInApp = true
-        actionCodeSettings.setIOSBundleID(Bundle.main.bundleIdentifier!)
-        
-        try await Auth.auth().sendSignInLink(toEmail: email, actionCodeSettings: actionCodeSettings)
-        
-        // Save email locally to complete login on link redirect.
-        // Required because the sign-in must be completed on the same device.
-        UserDefaults.standard.set(email, forKey: "emailForSignIn")
+        let settings = ActionCodeSettings()
+        // ✅ Bare domain root — matches applinks: in entitlements exactly.
+        settings.url = URL(string: EmailLinkDomain.continueURL)
+        // ✅ Required: tells Firebase this link must be handled inside the app.
+        settings.handleCodeInApp = true
+        // ✅ Required: Firebase uses this to construct the Universal Link for iOS.
+        settings.setIOSBundleID(Bundle.main.bundleIdentifier!)
+
+        try await Auth.auth().sendSignInLink(toEmail: email, actionCodeSettings: settings)
+
+        // Persist the email on THIS device so it is available when the link re-opens the app.
+        // If the user opens the link on a different device, onOpenURL shows a re-entry prompt.
+        UserDefaults.standard.set(email, forKey: Keys.emailForSignIn)
     }
-    
-    /// Checks if a dynamic/universal link is a sign-in link.
+
+    /// Returns true when `linkString` is a valid Firebase email sign-in link.
     func isSignIn(withEmailLink linkString: String) -> Bool {
-        return Auth.auth().isSignIn(withEmailLink: linkString)
+        Auth.auth().isSignIn(withEmailLink: linkString)
     }
-    
-    /// Signs in a user using the email and the sign-in link retrieved from the openURL handler.
-    /// - Parameters:
-    ///   - email: The email address the link was sent to (retrieved from UserDefaults or user entry).
-    ///   - link: The absolute string URL received when opening the app.
-    /// - Returns: The authenticated Firebase `User`.
+
+    /// Completes the email link sign-in. Called from `PaceApp.onOpenURL` after
+    /// `isSignIn(withEmailLink:)` returns `true`.
     @discardableResult
     func signInWithEmailLink(email: String, link: String) async throws -> User {
         let cleanEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanEmail.isEmpty else {
-            throw NSError(domain: "AuthManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Email address is required to complete sign-in."])
+            throw NSError(
+                domain: "AuthManager", code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "Email address is required to complete sign-in."]
+            )
         }
-        let authResult = try await Auth.auth().signIn(withEmail: cleanEmail, link: link)
-        UserDefaults.standard.removeObject(forKey: "emailForSignIn")
-        return authResult.user
+        let user = try await Auth.auth().signIn(withEmail: cleanEmail, link: link).user
+        UserDefaults.standard.removeObject(forKey: Keys.emailForSignIn)
+        return user
     }
-    
+
     // MARK: - Sign Out & Delete Account
-    
-    /// Logs the user out of Firebase and clears the local session.
+
     func logout() async throws {
         try Auth.auth().signOut()
-        
-        // Clear all sync and session data locally
         ConnectIQManager.shared.disconnectFromApp()
         AppSession.removeAllData()
     }
-    
-    /// Deletes the current user profile from Firebase and Firestore, then logs out.
+
     func deleteAccount() async throws {
         guard let user = currentUser else { return }
-        
         let db = Firestore.firestore()
-        let userId = user.uid
-        
-        // 1. Delete activities subcollection in Firestore
-        let activitiesSnapshot = try await db.collection("users").document(userId).collection("activities").getDocuments()
-        for doc in activitiesSnapshot.documents {
-            try await doc.reference.delete()
-        }
-        
-        // 2. Delete user document in Firestore
-        try await db.collection("users").document(userId).delete()
-        
-        // 3. Delete user account from Firebase Auth
+        let uid = user.uid
+        let activitiesSnap = try await db.collection("users").document(uid)
+            .collection("activities").getDocuments()
+        for doc in activitiesSnap.documents { try await doc.reference.delete() }
+        try await db.collection("users").document(uid).delete()
         try await user.delete()
-        
-        // 4. Clean up local session
         ConnectIQManager.shared.disconnectFromApp()
         AppSession.removeAllData()
     }
-    
-    // MARK: - Firestore Profile Operations
-    
-    /// Synchronizes the current user's profile information to Firestore.
+
+    // MARK: - Firestore Profile Sync
+
     func syncUserToFirestore(userId: String) async {
         guard let userModel = AppSession.userDetails else { return }
-        
-        let db = Firestore.firestore()
-        let ref = db.collection("users").document(userId)
-        
         let data: [String: Any] = [
-            "uuid": userId,
-            "firstName": userModel.firstName ?? "",
-            "lastName": userModel.lastName ?? "",
-            "gender": userModel.gender?.rawValue ?? "",
-            "email": userModel.email ?? "",
+            "uuid":        userId,
+            "firstName":   userModel.firstName   ?? "",
+            "lastName":    userModel.lastName    ?? "",
+            "gender":      userModel.gender?.rawValue ?? "",
+            "email":       userModel.email       ?? "",
             "phoneNumber": userModel.phoneNumber ?? "",
             "lastSyncedAt": FieldValue.serverTimestamp()
         ]
-        
         do {
-            try await ref.setData(data, merge: true)
-            print("[AuthManager] Successfully synced user profile info to Firestore")
+            try await Firestore.firestore()
+                .collection("users").document(userId).setData(data, merge: true)
+            print("[AuthManager] Synced profile to Firestore")
         } catch {
-            print("[AuthManager] Error syncing user profile info to Firestore: \(error.localizedDescription)")
+            print("[AuthManager] Firestore sync error: \(error.localizedDescription)")
         }
     }
-    
-    /// Retrieves user profile details from Firestore and merges them into the local session.
+
     func fetchUserProfileInfo(userId: String) async throws -> UserModel {
-        let db = Firestore.firestore()
-        let snapshot = try await db.collection("users").document(userId).getDocument()
-        
+        let snapshot = try await Firestore.firestore()
+            .collection("users").document(userId).getDocument()
         guard let data = snapshot.data() else {
-            throw NSError(domain: "AuthManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User profile document not found."])
+            throw NSError(domain: "AuthManager", code: -1,
+                          userInfo: [NSLocalizedDescriptionKey: "User profile document not found."])
         }
-        
-        var userModel = AppSession.userDetails ?? UserModel(uuid: userId)
-        if let firstName = data["firstName"] as? String { userModel.firstName = firstName }
-        if let lastName = data["lastName"] as? String { userModel.lastName = lastName }
-        if let genderRaw = data["gender"] as? String, let gender = Gender(rawValue: genderRaw) { userModel.gender = gender }
-        if let email = data["email"] as? String { userModel.email = email }
-        if let phoneNumber = data["phoneNumber"] as? String { userModel.phoneNumber = phoneNumber }
-        
-        AppSession.userDetails = userModel
-        return userModel
+        var model = AppSession.userDetails ?? UserModel(uuid: userId)
+        if let v = data["firstName"]   as? String            { model.firstName   = v }
+        if let v = data["lastName"]    as? String            { model.lastName    = v }
+        if let v = data["gender"]      as? String,
+           let g = Gender(rawValue: v)                       { model.gender      = g }
+        if let v = data["email"]       as? String            { model.email       = v }
+        if let v = data["phoneNumber"] as? String            { model.phoneNumber = v }
+        AppSession.userDetails = model
+        return model
     }
-    
-    // MARK: - Local watch events to Firestore Sync helper
-    
-    /// Uploads any locally cached watch events to Firestore after authentication.
+
+    // MARK: - Local Activity Sync (ConnectIQ → Firestore)
+
     private func syncLocalActivitiesToFirestore(userId: String) async {
         let db = Firestore.firestore()
-        
-        // Combine active and completed activities
-        let activeEvents = UserDefaults.standard.array(forKey: "connectIQ.syncedEvents") as? [[String: Any]] ?? []
-        let completedEvents = UserDefaults.standard.array(forKey: "connectIQ.syncedCompletedEvents") as? [[String: Any]] ?? []
-        let allEvents = activeEvents + completedEvents
-        
-        for payload in allEvents {
+        let active    = UserDefaults.standard.array(forKey: "connectIQ.syncedEvents")
+                        as? [[String: Any]] ?? []
+        let completed = UserDefaults.standard.array(forKey: "connectIQ.syncedCompletedEvents")
+                        as? [[String: Any]] ?? []
+        for payload in active + completed {
             let id: String
-            if let syncId = payload["id"] as? Int {
-                id = String(syncId)
-            } else if let syncId = payload["id"] as? String {
-                id = syncId
-            } else {
-                continue
-            }
-            
-            let ref = db.collection("users").document(userId).collection("activities").document(id)
-            
-            // Clean payload to ensure it is Firestore compatible (contains only basic JSON types)
-            let cleanedPayload = cleanPayloadForFirestore(payload)
-            
-            do {
-                try await ref.setData(cleanedPayload, merge: true)
-            } catch {
-                print("[AuthManager] Failed to upload local activity \(id): \(error.localizedDescription)")
-            }
+            if      let v = payload["id"] as? Int    { id = String(v) }
+            else if let v = payload["id"] as? String { id = v }
+            else { continue }
+            let ref = db.collection("users").document(userId)
+                .collection("activities").document(id)
+            do { try await ref.setData(cleanPayloadForFirestore(payload), merge: true) }
+            catch { print("[AuthManager] Failed to sync activity \(id): \(error.localizedDescription)") }
         }
     }
-    
-    /// Helper to convert payload structures (like nested Arrays or NSObjects) into Firestore-compatible values.
+
     private func cleanPayloadForFirestore(_ payload: [String: Any]) -> [String: Any] {
         var cleaned: [String: Any] = [:]
         for (key, value) in payload {
-            if let nsArray = value as? NSArray {
-                cleaned[key] = nsArray.compactMap { element -> Any? in
-                    if let dict = element as? [String: Any] {
-                        return cleanPayloadForFirestore(dict)
-                    }
+            if let arr = value as? NSArray {
+                cleaned[key] = arr.compactMap { element -> Any? in
+                    if let dict = element as? [String: Any] { return cleanPayloadForFirestore(dict) }
                     return element
                 }
-            } else if let nestedDict = value as? [String: Any] {
-                cleaned[key] = cleanPayloadForFirestore(nestedDict)
+            } else if let dict = value as? [String: Any] {
+                cleaned[key] = cleanPayloadForFirestore(dict)
             } else {
                 cleaned[key] = value
             }

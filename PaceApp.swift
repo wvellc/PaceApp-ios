@@ -31,12 +31,6 @@ struct PaceApp: App {
 
     // MARK: - Scene
 
-    /// Root scene containing a NavigationStack driven by the shared router.
-    ///
-    /// Root transitions (setRoot) are animated via a CATransition applied
-    /// directly on the window layer inside Router.setRoot(_:forward:), so no
-    /// SwiftUI .transition / .id modifiers are needed here — keeping the
-    /// NavigationStack clean and preventing the multi-screen bleed-through bug.
     var body: some Scene {
         WindowGroup {
             NavigationStack(path: $router.path) {
@@ -44,7 +38,6 @@ struct PaceApp: App {
                     .navigationDestination(for: Destinations.self) { dest in
                         router.destination(for: dest)
                             .onDisappear {
-                                // Tells the entire app to stop editing
                                 UIApplication.shared.sendAction(
                                     #selector(UIResponder.resignFirstResponder),
                                     to: nil, from: nil, for: nil
@@ -60,61 +53,80 @@ struct PaceApp: App {
             .environment(ciqManager)
             .installToast(position: .top)
             .installAppAlert()
+
+            // MARK: Universal Link / Deep Link handler
+            //
+            // Firebase email-link sign-in flow:
+            //  1. User taps "Send Login Link" → AuthManager.sendEmailLink() sends the email.
+            //  2. User taps the link in their email client.
+            //  3. iOS matches the link domain against the `applinks:` entitlement entry
+            //     (thepaceapp.firebaseapp.com) and calls this handler instead of Safari.
+            //  4. We verify it is a sign-in link, retrieve the saved email, and sign in.
+            //
+            // "Site Not Found" fix summary:
+            //  • continueURL must be the BARE domain root (https://thepaceapp.firebaseapp.com)
+            //    — NOT /__/auth/action. Firebase appends the action path itself.
+            //  • The domain must EXACTLY match the `applinks:` entry in PaceApp.entitlements.
+            //  • handleCodeInApp = true and setIOSBundleID() must be set in ActionCodeSettings.
             .onOpenURL { url in
-                print("[PaceApp] Received URL: \(url)")
-                if AuthManager.shared.isSignIn(withEmailLink: url.absoluteString) {
-                    Task {
-                        do {
-                            // Guard: email must be stored on this device for the link to work.
-                            // If the link was opened on a different device, ask the user to sign in again.
-                            guard let email = UserDefaults.standard.string(forKey: "emailForSignIn"),
-                                  !email.isEmpty else {
-                                ToastManager.shared.present(.error("Email not found. Please enter your email address and request a new login link."))
-                                return
-                            }
-                            let user = try await AuthManager.shared.signInWithEmailLink(email: email, link: url.absoluteString)
-                            print("[PaceApp] Signed in with email link: \(user.uid)")
-                            router.setupRootNavigation()
-                        } catch {
-                            ToastManager.shared.present(.error(error.localizedDescription))
-                        }
-                    }
-                } else {
+                print("[PaceApp] Received URL: \(url.absoluteString)")
+
+                guard AuthManager.shared.isSignIn(withEmailLink: url.absoluteString) else {
+                    // Not a Firebase email link — forward to ConnectIQ.
                     ciqManager.handleOpenURL(url)
+                    return
+                }
+
+                Task { @MainActor in
+                    // Retrieve the email that was saved when the link was sent.
+                    // This MUST be the same device — Firebase email links are device-bound.
+                    let savedEmail = UserDefaults.standard.string(forKey: Keys.emailForSignIn) ?? ""
+
+                    guard !savedEmail.isEmpty else {
+                        // Link opened on a different device: the email is unknown.
+                        // Navigate back to Login so the user can re-enter it.
+                        ToastManager.shared.present(
+                            .error("Please open this link on the device where you requested it, or request a new login link.")
+                        )
+                        router.setRoot(.auth, forward: false)
+                        return
+                    }
+
+                    do {
+                        let user = try await AuthManager.shared.signInWithEmailLink(
+                            email: savedEmail,
+                            link: url.absoluteString
+                        )
+                        print("[PaceApp] Email link sign-in successful: \(user.uid)")
+                        router.setupRootNavigation()
+                    } catch {
+                        ToastManager.shared.present(.error(error.localizedDescription))
+                    }
                 }
             }
-            // ── Cold-launch watch restoration ────────────────────────────────
-            .task {
-                ciqManager.restoreSessionIfNeeded()
-            }
-            // ── Session-based root navigation ─────────────────────────────────
-            .task {
-                await resolveStartupRoot()
-            }
+            // Cold-launch watch restoration
+            .task { ciqManager.restoreSessionIfNeeded() }
+            // Session-based root navigation after splash
+            .task { await resolveStartupRoot() }
         }
     }
 
     // MARK: - Startup Root Resolution
 
-    /// Shows splash first, then resolves the static root for the current session.
     @MainActor
     private func resolveStartupRoot() async {
-        try? await Task.sleep(for: .milliseconds(1200))
+        try? await Task.sleep(for: .milliseconds(1600))
         router.setupRootNavigation()
     }
 
     // MARK: - Appearance Configuration
 
-    /// Sets up UINavigationBar and text input appearance used throughout the app.
     fileprivate func setNavigationAppearance() {
         let appearance = UINavigationBarAppearance()
-
-        // 1. Base Configuration
         appearance.configureWithTransparentBackground()
         appearance.backgroundColor = .clear
-        appearance.shadowColor = .clear     // Removes the bottom separator line
+        appearance.shadowColor = .clear
 
-        // Configure custom fonts for navigation bar titles
         let titleFont      = UIFont.systemFont(ofSize: 16, weight: .medium)
         let largeTitleFont = UIFont.systemFont(ofSize: 34, weight: .semibold)
 
@@ -122,26 +134,20 @@ struct PaceApp: App {
             .foregroundColor: UIColor.whiteApp,
             .font: titleFont
         ]
-
         appearance.largeTitleTextAttributes = [
             .foregroundColor: UIColor.whiteApp,
             .font: largeTitleFont
         ]
 
-        // 3. Apply the configured appearance globally
         let navBarProxy = UINavigationBar.appearance()
         navBarProxy.standardAppearance   = appearance
         navBarProxy.scrollEdgeAppearance = appearance
         navBarProxy.compactAppearance    = appearance
-
-        // 4. Set global tint (affects back buttons and navigation icons)
         navBarProxy.tintColor = .whiteApp
 
-        // 5. Global Keyboard Appearance
         UITextField.appearance().keyboardAppearance = .dark
     }
 
-    // Configure segmented control appearance once
     fileprivate func configureSegmentedAppearance() {
         let appearance = UISegmentedControl.appearance()
         appearance.backgroundColor = .grayHint
