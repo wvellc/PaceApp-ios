@@ -354,7 +354,6 @@ class CreateRunEventViewModel {
 			"event": eventPayload
 		])
 		ConnectIQManager.shared.upsertSyncedActivity(from: eventPayload)
-		print("Duplicate submitted: \(eventName), \(location), \(eventDate)")
 	}
 
 	private func submitForm() {
@@ -369,7 +368,6 @@ class CreateRunEventViewModel {
 
 		// Also save locally on the phone
 		ConnectIQManager.shared.upsertSyncedActivity(from: eventPayload)
-		print("Form submitted: \(eventName), \(location), \(eventDate)")
 
 		ToastManager.shared.present(.success("\(eventType.rawValue) event created"))
 		router?.navigateToRoot()

@@ -92,9 +92,8 @@ final class CreateAccountViewModel {
             return // still valid
         }
 		
-		if devices.first != nil {
-			print("Watch selected \(devices.first?.modelName ?? "--")")
-			selectedWatch = devices.first
+		if let firstDevice = devices.first {
+			selectedWatch = firstDevice
 //			currentStep = .chooseYourModel
 
 		} else {

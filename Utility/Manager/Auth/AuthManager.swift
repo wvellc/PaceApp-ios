@@ -8,6 +8,7 @@
 import Foundation
 import FirebaseAuth
 import FirebaseFirestore
+import Logging
 import SwiftUI
 
 /// Central coordinator for Firebase Authentication and Firestore User Profile/Watch Event sync.
@@ -21,7 +22,8 @@ final class AuthManager {
     // MARK: - Properties
     /// `nonisolated(unsafe)` is safe here because `AuthManager` is a singleton
     /// that is never deallocated — the `deinit` listener removal is purely defensive.
-    nonisolated(unsafe) private var authStateListenerHandle: AuthStateDidChangeListenerHandle?
+	nonisolated(unsafe) private var authStateListenerHandle: AuthStateDidChangeListenerHandle?
+    private let logger = Logger(label: "net.paceapp.auth")
 
     var currentUser: User? { Auth.auth().currentUser }
     var isUserAuthenticated: Bool { currentUser != nil }
@@ -58,7 +60,9 @@ final class AuthManager {
             guard let self = self else { return }
             Task { @MainActor in
                 if let user = user {
-                    print("[AuthManager] User logged in: \(user.uid)")
+                    self.logger.info("User signed in", metadata: [
+                        "userId": "\(user.uid)"
+                    ])
                     AppSession.isUserAuthenticated = true
                     AppSession.userId = user.uid
 
@@ -71,7 +75,7 @@ final class AuthManager {
                     await self.syncUserToFirestore(userId: user.uid)
                     await self.syncLocalActivitiesToFirestore(userId: user.uid)
                 } else {
-                    print("[AuthManager] User logged out")
+                    self.logger.info("User signed out")
                     AppSession.isUserAuthenticated = false
                     AppSession.userId = nil
                 }
@@ -111,14 +115,6 @@ final class AuthManager {
     // MARK: - Email Link Authentication (Passwordless)
 
     /// Sends a passwordless sign-in link to the given email address.
-    ///
-    /// ### Why the URL is set to the bare domain root
-    /// Firebase wraps our `continueURL` inside its own `/__/auth/action?...` redirect.
-    /// If we pass `https://thepaceapp.firebaseapp.com/__/auth/action` the final URL
-    /// becomes `…/__/auth/action?continueUrl=/__/auth/action&…`, which breaks.
-    /// The bare domain `https://thepaceapp.firebaseapp.com` is correct — Firebase
-    /// appends the action path itself.
-    ///
     /// ### Why this domain (not the project-ID domain)
     /// The `applinks:` entry in PaceApp.entitlements is `thepaceapp.firebaseapp.com`.
     /// The continueURL domain MUST exactly match an applinks entry so iOS intercepts
@@ -174,9 +170,9 @@ final class AuthManager {
         let uid = user.uid
         let activitiesSnap = try await db.collection("users").document(uid)
             .collection("activities").getDocuments()
-        for doc in activitiesSnap.documents { try await doc.reference.delete() }
-        try await db.collection("users").document(uid).delete()
-        try await user.delete()
+        for doc in activitiesSnap.documents { try? await doc.reference.delete() }
+        try? await db.collection("users").document(uid).delete()
+        try? await user.delete()
         ConnectIQManager.shared.disconnectFromApp()
         AppSession.removeAllData()
     }
@@ -197,9 +193,11 @@ final class AuthManager {
         do {
             try await Firestore.firestore()
                 .collection("users").document(userId).setData(data, merge: true)
-            print("[AuthManager] Synced profile to Firestore")
         } catch {
-            print("[AuthManager] Firestore sync error: \(error.localizedDescription)")
+            logger.error("Failed to sync user profile to Firestore", metadata: [
+                "userId": "\(userId)",
+                "error": "\(error.localizedDescription)"
+            ])
         }
     }
 
@@ -237,7 +235,13 @@ final class AuthManager {
             let ref = db.collection("users").document(userId)
                 .collection("activities").document(id)
             do { try await ref.setData(cleanPayloadForFirestore(payload), merge: true) }
-            catch { print("[AuthManager] Failed to sync activity \(id): \(error.localizedDescription)") }
+            catch {
+                logger.error("Failed to sync local activity to Firestore", metadata: [
+                    "activityId": "\(id)",
+                    "userId": "\(userId)",
+                    "error": "\(error.localizedDescription)"
+                ])
+            }
         }
     }
 

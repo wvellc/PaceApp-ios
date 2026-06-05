@@ -9,6 +9,7 @@ import Foundation
 import ConnectIQ
 import FirebaseAuth
 import FirebaseFirestore
+import Logging
 
 // MARK: - IQDeviceStatus helpers
 
@@ -96,7 +97,7 @@ class ConnectIQManager: NSObject {
     var showInstallGarminConnect: Bool = false
     
     // MARK: - Private
-    
+	private let logger = Logger(label: "net.paceapp.connectiq")
     private let urlScheme = "connect"
     private let connectIQ = ConnectIQ.sharedInstance()
     private var targetApp: IQApp?
@@ -142,7 +143,10 @@ class ConnectIQManager: NSObject {
         guard let uuid = device.uuid else { return }
         let currentStatus = connectIQ?.getDeviceStatus(device) ?? .invalidDevice
         
-        print("[CIQ] polled \(device.modelName ?? uuid.uuidString): \(currentStatus)")
+        logger.debug("Polled ConnectIQ device status", metadata: [
+            "device": "\(device.modelName ?? uuid.uuidString)",
+            "status": "\(currentStatus)"
+        ])
         
         // 3. Seed deviceStatus and connectedDevice right now, on the main thread
         DispatchQueue.main.async {
@@ -180,7 +184,10 @@ class ConnectIQManager: NSObject {
             targetApp = nil
         }
         
-        print("[CIQ] connectedDevice → \(connectedDevice?.modelName ?? "nil") | targetApp → \(targetApp != nil ? "✅ set" : "❌ nil")")
+        logger.debug("Updated connected ConnectIQ device", metadata: [
+            "device": "\(connectedDevice?.modelName ?? "nil")",
+            "targetAppRegistered": "\(targetApp != nil)"
+        ])
     }
     
     // MARK: - Cold-launch restoration
@@ -190,12 +197,13 @@ class ConnectIQManager: NSObject {
         let persisted = AppSession.pairedDevices
         guard !persisted.isEmpty else {
             isWatchPreviouslyPaired = false
-            print("[CIQ] No persisted devices — skipping restore")
             return
         }
         isWatchPreviouslyPaired = true
         
-        print("[CIQ] Restoring \(persisted.count) device(s) from persistence")
+        logger.info("Restoring persisted ConnectIQ devices", metadata: [
+            "deviceCount": "\(persisted.count)"
+        ])
         
         let reconstructed: [IQDevice] = persisted.compactMap { entry in
             guard let uuid = entry.uuid else { return nil }
@@ -231,7 +239,7 @@ class ConnectIQManager: NSObject {
         
         guard let parsedDevices = connectIQ?.parseDeviceSelectionResponse(from: url) as? [IQDevice],
               !parsedDevices.isEmpty else {
-            print("[CIQ] handleOpenURL: empty response")
+            logger.warning("ConnectIQ device selection returned no devices")
             return
         }
         
@@ -260,8 +268,9 @@ class ConnectIQManager: NSObject {
             AppSession.pairedWatchUUID = parsedDevices.first?.uuid.uuidString
             self.isWatchPreviouslyPaired = !snapshot.isEmpty
             
-            print("[CIQ] handleOpenURL: registered \(snapshot.count) device(s)")
-            snapshot.forEach { print("[CIQ]  • \($0.modelName) (\($0.uuidString))") }
+            self.logger.info("Registered ConnectIQ devices from callback", metadata: [
+                "deviceCount": "\(snapshot.count)"
+            ])
         }
     }
     
@@ -274,7 +283,7 @@ class ConnectIQManager: NSObject {
     /// here so `register(forAppMessages:)` is never accidentally skipped.
     func connectToApp(device: IQDevice) {
         guard let app = getIQApp(device: device) else {
-            print("[CIQ] ❌ connectToApp: getIQApp returned nil — verify watchAppUUID format (needs dashes: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)")
+            logger.error("Failed to build ConnectIQ app for device")
             return
         }
         
@@ -287,7 +296,9 @@ class ConnectIQManager: NSObject {
         connectIQ?.register(forAppMessages: app, delegate: self)
         AppSession.pairedWatchUUID = device.uuid.uuidString
         isWatchPreviouslyPaired = true
-        print("[CIQ] connectToApp ✅ targetApp set + messages registered on \(device.modelName ?? device.uuid.uuidString)")
+        logger.info("Registered ConnectIQ app messages", metadata: [
+            "device": "\(device.modelName ?? device.uuid.uuidString)"
+        ])
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
 //            self?.requestFullSync()
@@ -308,20 +319,20 @@ class ConnectIQManager: NSObject {
         AppSession.pairedWatchUUID = nil
         AppSession.pairedDevices   = []
         isWatchPreviouslyPaired = false
-        print("[CIQ] disconnectFromApp: all state cleared")
+        logger.info("Disconnected ConnectIQ app and cleared local watch state")
     }
     
     /// Sends a message to the currently targeted watch app.
     func sendMessage(_ message: Any) {
         guard let app = targetApp else {
-            print("[CIQ] sendMessage: no targetApp")
+            logger.warning("Skipped ConnectIQ message because no target app is registered")
             return
         }
         
-        connectIQ?.sendMessage(message, to: app, progress: { sent, total in
-            print("[CIQ] send progress: \(sent)/\(total)")
-        }, completion: { result in
-            print("[CIQ] send result: \(result.rawValue)")
+        connectIQ?.sendMessage(message, to: app, progress: nil, completion: { [logger] result in
+            logger.debug("ConnectIQ message send completed", metadata: [
+                "result": "\(result.rawValue)"
+            ])
         })
     }
 
@@ -527,9 +538,12 @@ class ConnectIQManager: NSObject {
             Task {
                 do {
                     try await docRef.setData(cleaned, merge: true)
-                    print("[CIQ] Synced upserted event \(id) to Firestore for user \(userId)")
                 } catch {
-                    print("[CIQ] Failed to sync upserted event \(id) to Firestore: \(error.localizedDescription)")
+                    logger.error("Failed to sync upserted ConnectIQ event to Firestore", metadata: [
+                        "eventId": "\(id)",
+                        "userId": "\(userId)",
+                        "error": "\(error.localizedDescription)"
+                    ])
                 }
             }
         }
@@ -569,9 +583,12 @@ class ConnectIQManager: NSObject {
             Task {
                 do {
                     try await docRef.delete()
-                    print("[CIQ] Synced deletion of event \(id) to Firestore for user \(userId)")
                 } catch {
-                    print("[CIQ] Failed to sync deletion of event \(id) to Firestore: \(error.localizedDescription)")
+                    logger.error("Failed to sync deleted ConnectIQ event to Firestore", metadata: [
+                        "eventId": "\(id)",
+                        "userId": "\(userId)",
+                        "error": "\(error.localizedDescription)"
+                    ])
                 }
             }
         }
@@ -703,7 +720,9 @@ class ConnectIQManager: NSObject {
             }
         }
         UserDefaults.standard.set(stored, forKey: Self.settingsStorageKey)
-        print("[CIQ] Settings applied: \(stored)")
+        logger.debug("Applied ConnectIQ settings", metadata: [
+            "settingCount": "\(stored.count)"
+        ])
     }
 
     /// Sends all current settings to the watch as a sync_settings command.
@@ -728,7 +747,7 @@ class ConnectIQManager: NSObject {
 extension ConnectIQManager: IQUIOverrideDelegate {
     
     func needsToInstallConnectMobile() {
-        print("[CIQ] Garmin Connect not installed")
+        logger.warning("Garmin Connect is not installed")
         Task {
             self.showInstallGarminConnect = true
             ToastManager.shared.present(
@@ -749,7 +768,10 @@ extension ConnectIQManager: IQDeviceEventDelegate {
     /// that case is covered by the `getDeviceStatus` poll in `registerAndPollStatus`.
     func deviceStatusChanged(_ device: IQDevice!, status: IQDeviceStatus) {
         guard let device, let uuid = device.uuid else { return }
-        print("[CIQ] deviceStatusChanged — \(device.modelName ?? uuid.uuidString): \(status)")
+        logger.debug("ConnectIQ device status changed", metadata: [
+            "device": "\(device.modelName ?? uuid.uuidString)",
+            "status": "\(status)"
+        ])
         
         DispatchQueue.main.async {
             self.deviceStatus[uuid] = status
@@ -770,7 +792,6 @@ extension ConnectIQManager: IQAppMessageDelegate {
     /// First tries to dispatch as a sync command; if not recognized,
     /// falls back to treating the message as a raw event record (legacy support).
     func receivedMessage(_ message: Any!, from app: IQApp!) {
-        print("[CIQ] message from \(app.device?.modelName ?? "unknown"): \(message ?? "")")
         DispatchQueue.main.async {
             if let str = message as? String {
                 self.receivedMessages.append(str)

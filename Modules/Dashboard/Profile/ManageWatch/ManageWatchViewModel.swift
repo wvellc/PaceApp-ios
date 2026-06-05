@@ -80,9 +80,8 @@ final class ManageWatchViewModel {
         guard let devices = ciqManager?.devices else { return }
         if let pick = selectedWatch, devices.contains(where: { $0.uuid == pick.uuid }) { return }
 		
-		if devices.first != nil {
-			print("Watch selected \(devices.first?.modelName ?? "--")")
-			selectedWatch = devices.first
+		if let firstDevice = devices.first {
+			selectedWatch = firstDevice
 			
 			currentStep = devices.count == 1 ?  .currentConnected : .chooseYourModel
 			

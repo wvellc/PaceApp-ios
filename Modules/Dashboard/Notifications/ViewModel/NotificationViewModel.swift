@@ -17,12 +17,7 @@ class NotificationsViewModel {
 	
 	//MARK: Initializer
 	init() {
-		print("\(self) :---> Allocated 🟦")
 		loadData()
-	}
-	
-	deinit {
-		print("\(self) :---> Deallocated 🟩")
 	}
 	
 	//MARK: Methods

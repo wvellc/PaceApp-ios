@@ -12,11 +12,6 @@ import Foundation
  AppSession.userId = "user_778899"
  AppSession.isUserAuthenticated = true
  
- // Reading data
- if AppSession.isUserAuthenticated {
- print("Welcome back, \(AppSession.userId ?? "Unknown")!")
- }
- 
  // Clearing data on logout
  AppSession.removeAllData()
  

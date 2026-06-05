@@ -9,11 +9,12 @@ import SwiftUI
 import ConnectIQ
 import FirebaseCore
 import FirebaseAuth
+import Logging
 
 class AppDelegate: NSObject, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-        print("App launched with options: \(String(describing: launchOptions))")
+        logger.debug("Application did finish launching")
 		
 		// Configure Firebase — MUST run before any Auth.auth() calls.
 		FirebaseApp.configure()
@@ -41,7 +42,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     /// Phone auth will fall back to reCAPTCHA verification when this happens.
     func application(_ application: UIApplication,
                      didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        print("[AppDelegate] Failed to register for remote notifications: \(error.localizedDescription)")
+        logger.error("Failed to register for remote notifications", metadata: [
+            "error": "\(error.localizedDescription)"
+        ])
     }
 
     /// Forwards silent remote notifications to Firebase Auth.
@@ -76,11 +79,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
               let url = userActivity.webpageURL else {
             return false
         }
-        print("[AppDelegate] Universal Link received: \(url.absoluteString)")
+        logger.debug("Received universal link", metadata: [
+            "url": "\(url.absoluteString)"
+        ])
         // Returning true tells iOS the app handled the link.
         // SwiftUI's WindowGroup automatically forwards webpageURL
         // to .onOpenURL, where PaceApp.swift completes the sign-in.
         return true
     }
 }
-

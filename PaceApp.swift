@@ -7,6 +7,7 @@
 
 import SwiftUI
 import FirebaseAuth
+import Logging
 
 @main
 struct PaceApp: App {
@@ -19,6 +20,7 @@ struct PaceApp: App {
     /// Central router that manages navigation path and destination resolution.
     @State private var router = Router()
     @State private var ciqManager = ConnectIQManager.shared
+    private let logger = Logger(label: "net.paceapp")
 
     // MARK: - Initialization
 
@@ -63,7 +65,9 @@ struct PaceApp: App {
             //     (thepaceapp.firebaseapp.com) and calls this handler instead of Safari.
             //  4. We verify it is a sign-in link, retrieve the saved email, and sign in.
             .onOpenURL { url in
-                print("[PaceApp] Received URL: \(url.absoluteString)")
+                logger.debug("Received app URL", metadata: [
+                    "url": "\(url.absoluteString)"
+                ])
 
                 guard AuthManager.shared.isSignIn(withEmailLink: url.absoluteString) else {
                     // Not a Firebase email link — forward to ConnectIQ.
@@ -91,7 +95,9 @@ struct PaceApp: App {
                             email: savedEmail,
                             link: url.absoluteString
                         )
-                        print("[PaceApp] Email link sign-in successful: \(user.uid)")
+                        logger.info("Email link sign-in succeeded", metadata: [
+                            "userId": "\(user.uid)"
+                        ])
                         router.setupRootNavigation()
                     } catch {
                         ToastManager.shared.present(.error(error.localizedDescription))

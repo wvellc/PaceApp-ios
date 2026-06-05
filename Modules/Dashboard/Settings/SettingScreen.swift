@@ -5,6 +5,7 @@
 //  Created by FURKAN VIJAPURA on 4/24/26.
 //
 import SwiftUI
+import Logging
 
 struct SettingScreen: View {
 	
@@ -157,23 +158,52 @@ struct SettingScreen: View {
 		}
 	}
 	
+	// MARK: - View Actions
 	private func handleLogout() {
 		viewModel.showLogoutAlert {
-			selectedMenuItem = nil
-			AppSession.removeAllData()
-			router.setRoot(.auth)
+			performAccountAction(
+				action: { try await AuthManager.shared.logout() },
+				errorMessage: "Failed to log out. Please try again."
+			)
 		}
 	}
 	
 	private func handleDeleteAccount() {
 		viewModel.showDeleteAccountAlert {
-			//TODO: Call delete account API then clear session
-			selectedMenuItem = nil
-			AppSession.removeAllData()
-			router.setRoot(.auth)
+			performAccountAction(
+				action: { try await AuthManager.shared.deleteAccount() },
+				errorMessage: "Failed to delete account. Please try again."
+			)
 		}
 	}
-}
+	
+	// MARK: - Helper Core Logic
+	private func performAccountAction(
+		action: @escaping () async throws -> Void,
+		errorMessage: String
+	) {
+		//Clear selection immediately to update side menu/navigation UI
+		selectedMenuItem = nil
+				
+		Task { @MainActor in
+			do {
+				// 3. Execute the async network call
+				try await action()
+				
+				// 4. On success, route away
+				router.setRoot(.auth)
+			} catch {
+				// Handle the error properly instead of swallowing it
+				logger.error("Account action error: \(error.localizedDescription)")
+				
+				AppSession.removeAllData()
+				
+				// On success, route away
+				router.setRoot(.auth)
+			}
+			
+		}
+	}}
 
 #Preview {
 	SettingScreen()

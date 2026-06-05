@@ -65,7 +65,7 @@ final class LoginViewModel {
     func sendOTP() async {
         guard isInputValid, state != .sending else { return }
 
-        saveLoginContact()
+//        saveLoginContact()
         state = .sending
 
         do {
