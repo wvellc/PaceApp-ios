@@ -62,12 +62,6 @@ struct PaceApp: App {
             //  3. iOS matches the link domain against the `applinks:` entitlement entry
             //     (thepaceapp.firebaseapp.com) and calls this handler instead of Safari.
             //  4. We verify it is a sign-in link, retrieve the saved email, and sign in.
-            //
-            // "Site Not Found" fix summary:
-            //  • continueURL must be the BARE domain root (https://thepaceapp.firebaseapp.com)
-            //    — NOT /__/auth/action. Firebase appends the action path itself.
-            //  • The domain must EXACTLY match the `applinks:` entry in PaceApp.entitlements.
-            //  • handleCodeInApp = true and setIOSBundleID() must be set in ActionCodeSettings.
             .onOpenURL { url in
                 print("[PaceApp] Received URL: \(url.absoluteString)")
 
