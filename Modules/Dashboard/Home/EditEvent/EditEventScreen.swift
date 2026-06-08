@@ -14,6 +14,7 @@ struct EditEventScreen: View {
 
 	//MARK: Environment
 	@Environment(\.dismiss) var dismiss
+	@Environment(ConnectIQManager.self) private var ciqManager
 	
 	//MARK: States
 	@FocusState private var focusedField: EventDetailsStepViewField?
@@ -72,6 +73,10 @@ struct EditEventScreen: View {
 		.appBackground()
 		.navigationBarTitleDisplayMode(.inline)
 		.navigationAppTitle(title: "Edit \(eventData?.gaitType?.label ?? "")")
+		.onAppear {
+			eventName = eventData?.title ?? ""
+			location = eventData?.location ?? ""
+		}
 		.onChange(of: focusedField) { oldField, newField in
 			focusedField = newField
 		}
@@ -80,9 +85,24 @@ struct EditEventScreen: View {
 	// MARK: - Methods
 	private func saveEvent() {
 		if validateEventDetails() {
-			//Update data using two way binding
-			eventData?.title = eventName
-			eventData?.location = location
+			let trimmedName = eventName.trimmingCharacters(in: .whitespaces)
+			let trimmedLocation = location.trimmingCharacters(in: .whitespaces)
+
+			eventData?.title = trimmedName
+			eventData?.location = trimmedLocation
+
+			if let syncId = eventData?.syncId {
+				ciqManager.updateEventMetadata(eventId: syncId, name: trimmedName, location: trimmedLocation)
+			} else if let userId = AuthManager.shared.currentUserID {
+				Task {
+					try? await FirestoreEventRepository.shared.updateMetadata(
+						eventId: Int(Date().timeIntervalSince1970),
+						userId: userId,
+						name: trimmedName,
+						location: trimmedLocation
+					)
+				}
+			}
 			
 			//Close screen
 			dismiss()

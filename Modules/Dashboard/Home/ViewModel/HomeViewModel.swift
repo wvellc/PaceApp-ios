@@ -20,10 +20,16 @@ final class HomeViewModel {
 	var isHighPerformance: Bool = false
 	var showMetricPopup: Bool = false
 	var selectedMetricIndex: Int = 0
-	
+
+	var upcomingEvents: [ActivityData] = []
+	var isLoadingEvents: Bool = false
+
+	private let eventRepository: EventRepositoryProtocol
+	private var activeEventsListener: ListenerRegistrationToken?
 
 	//MARK: Intializer
-	init() {
+	init(eventRepository: EventRepositoryProtocol = FirestoreEventRepository.shared) {
+		self.eventRepository = eventRepository
 		self.metrics = [
 			.init(
 				symbol: "icMatricsBpm",
@@ -70,7 +76,22 @@ final class HomeViewModel {
 	
 	//MARK: DeIntializer
 	deinit {
+		activeEventsListener?.remove()
 		timer?.invalidate()
+	}
+
+	func startObservingEvents(userId: String) {
+		activeEventsListener?.remove()
+		isLoadingEvents = true
+		activeEventsListener = eventRepository.observeActiveEvents(userId: userId) { [weak self] events in
+			self?.upcomingEvents = events
+			self?.isLoadingEvents = false
+		}
+	}
+
+	func stopObservingEvents() {
+		activeEventsListener?.remove()
+		activeEventsListener = nil
 	}
 	
 	//MARK: Methods

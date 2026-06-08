@@ -47,8 +47,10 @@ struct FavoritesRunScreen: View {
 		.navigationDestination(item: $selectedActivity) { activity in
 			EventDetailsScreen(activityData: activity)
 		}
-		
-		
+		.task(id: AuthManager.shared.currentUserID) {
+			guard let userId = AuthManager.shared.currentUserID else { return }
+			await viewModel.loadFavorites(userId: userId)
+		}
 	}
 	
 	
@@ -77,8 +79,9 @@ struct FavoritesRunScreen: View {
 				//Swipe to Delete (Matches the second image)
 				.swipeActions(edge: .trailing, allowsFullSwipe: true) {
 					Button(role: .destructive) {
-						withAnimation {
-							viewModel.unFavorite(run: activity)
+						guard let userId = AuthManager.shared.currentUserID else { return }
+						Task {
+							await viewModel.unFavorite(run: activity, userId: userId)
 						}
 					} label: {
 						Image(.icUnFavorite)

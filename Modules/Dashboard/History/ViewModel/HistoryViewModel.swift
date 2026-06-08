@@ -37,88 +37,33 @@ final class HistoryViewModel {
 	
 	// MARK: - Activities Data
 	
-	final var activities: [ActivityData] = [
-		ActivityData(
-			title: "Thursday Run",
-			date: makeDate(day: 29, month: 1),
-			distance: "5.00 mi",
-			duration: "0:45",
-			avgPace: "9:00 /mi",
-			delta: "+01:10",
-			deltaColor: .redBoho,
-			location: "New York City"
-		),
-		ActivityData(
-			title: "Saturday Long Run",
-			date: makeDate(day: 31, month: 1),
-			distance: "12.00 mi",
-			duration: "1:48",
-			avgPace: "9:00 /mi",
-			delta: "-00:15",
-			deltaColor: .fluorescentMint,
-			location: "Central Park"
-		),
-		ActivityData(
-			title: "Monday Recovery",
-			date: makeDate(day: 2, month: 2),
-			distance: "3.50 mi",
-			duration: "0:33",
-			avgPace: "9:30 /mi",
-			delta: "+00:45",
-			deltaColor: .redBoho,
-			location: "Brooklyn"
-		),
-		ActivityData(
-			title: "Wednesday Tempo",
-			date: makeDate(day: 4, month: 2),
-			distance: "6.20 mi",
-			duration: "0:49",
-			avgPace: "7:55 /mi",
-			delta: "-01:20",
-			deltaColor: .fluorescentMint,
-			location: "Queens"
-		),
-		ActivityData(
-			title: "Friday Easy Run",
-			date: makeDate(day: 6, month: 2),
-			distance: "4.00 mi",
-			duration: "0:35",
-			avgPace: "8:45 /mi",
-			delta: "-00:10",
-			deltaColor: .fluorescentMint,
-			location: "Hoboken"
-		),
-		ActivityData(
-			title: "Sunday Long Run",
-			date: makeDate(day: 8, month: 2),
-			distance: "15.00 mi",
-			duration: "2:10",
-			avgPace: "8:40 /mi",
-			delta: "-02:15",
-			deltaColor: .fluorescentMint,
-			location: "Twin Falls"
-		),
-		ActivityData(
-			title: "Tuesday Intervals",
-			date: makeDate(day: 10, month: 2),
-			distance: "5.50 mi",
-			duration: "0:42",
-			avgPace: "7:38 /mi",
-			delta: "-00:30",
-			deltaColor: .fluorescentMint,
-			location: "Chicago"
-		),
-		ActivityData(
-			title: "Thursday Run",
-			date: makeDate(day: 12, month: 2),
-			distance: "8.00 mi",
-			duration: "1:12",
-			avgPace: "9:00 /mi",
-			delta: "+00:25",
-			deltaColor: .redBoho,
-			location: "San Francisco"
-		)
-	]
+	var activities: [ActivityData] = []
+	var isLoading: Bool = false
+
+	private let eventRepository: EventRepositoryProtocol
+	private var completedEventsListener: ListenerRegistrationToken?
+
+	init(eventRepository: EventRepositoryProtocol = FirestoreEventRepository.shared) {
+		self.eventRepository = eventRepository
+	}
+
+	deinit {
+		completedEventsListener?.remove()
+	}
+
+	func startObservingEvents(userId: String) {
+		completedEventsListener?.remove()
+		isLoading = true
+		completedEventsListener = eventRepository.observeCompletedEvents(userId: userId) { [weak self] events in
+			self?.activities = events
+			self?.isLoading = false
+		}
+	}
+
+	func stopObservingEvents() {
+		completedEventsListener?.remove()
+		completedEventsListener = nil
+	}
 	
 	// MARK: - Computed: Filtered Activities
 	
@@ -141,6 +86,7 @@ final class HistoryViewModel {
 				// Parse miles value from strings like "5.00 mi"
 				let milesValue = activity.distance
 					.replacingOccurrences(of: " mi", with: "")
+					.replacingOccurrences(of: " km", with: "")
 					.trimmingCharacters(in: .whitespaces)
 				if let miles = Double(milesValue) {
 					return miles >= filterDistanceMin && miles <= filterDistanceMax

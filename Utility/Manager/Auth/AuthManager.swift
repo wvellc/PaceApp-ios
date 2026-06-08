@@ -67,7 +67,7 @@ final class AuthManager {
                             initial.phoneNumber = user.phoneNumber
                             self.userDetails = initial
                             // Sync it to Firestore
-                            await self.syncUserToFirestore(userId: user.uid)
+                            try? await UserProfileRepository.shared.upsertProfile(initial, userId: user.uid)
                         } else {
                             self.logger.error("Failed to fetch user profile info: \(error.localizedDescription)")
                             var placeholder = UserModel(uuid: user.uid)
@@ -77,7 +77,6 @@ final class AuthManager {
                         }
                     }
                     
-                    await self.syncLocalActivitiesToFirestore(userId: user.uid)
                 } else {
                     self.userDetails = nil
                     AppSession.removeAllData()
@@ -159,8 +158,12 @@ final class AuthManager {
         guard let user = currentUser else { return }
         let db = Firestore.firestore()
         let uid = user.uid
-        let snap = try await db.collection("users").document(uid).collection("activities").getDocuments()
-        for doc in snap.documents { try? await doc.reference.delete() }
+        let events = try await db.collection("events").whereField("userId", isEqualTo: uid).getDocuments()
+        for doc in events.documents { try? await doc.reference.delete() }
+        let favorites = try await db.collection("favorites").whereField("userId", isEqualTo: uid).getDocuments()
+        for doc in favorites.documents { try? await doc.reference.delete() }
+        let legacy = try await db.collection("users").document(uid).collection("activities").getDocuments()
+        for doc in legacy.documents { try? await doc.reference.delete() }
         try? await db.collection("users").document(uid).delete()
         try? await user.delete()
         ConnectIQManager.shared.disconnectFromApp()
@@ -170,17 +173,8 @@ final class AuthManager {
 
     func syncUserToFirestore(userId: String) async {
         guard let model = userDetails else { return }
-        let data: [String: Any] = [
-            "uuid":        userId,
-            "firstName":   model.firstName   ?? "",
-            "lastName":    model.lastName    ?? "",
-            "gender":      model.gender?.rawValue ?? "",
-            "email":       model.email       ?? "",
-            "phoneNumber": model.phoneNumber ?? "",
-            "lastSyncedAt": FieldValue.serverTimestamp()
-        ]
         do {
-            try await Firestore.firestore().collection("users").document(userId).setData(data, merge: true)
+            try await UserProfileRepository.shared.upsertProfile(model, userId: userId)
         } catch {
             logger.error("Firestore user sync failed: \(error.localizedDescription)")
         }
@@ -188,52 +182,9 @@ final class AuthManager {
 
     @discardableResult
     func fetchUserProfileInfo(userId: String) async throws -> UserModel {
-        let snap = try await Firestore.firestore().collection("users").document(userId).getDocument()
-        guard snap.exists, let data = snap.data() else {
-            throw NSError(domain: "AuthManager", code: 404,
-                          userInfo: [NSLocalizedDescriptionKey: "User profile not found."])
-        }
-        var model = userDetails ?? UserModel(uuid: userId)
-        if let v = data["firstName"]   as? String            { model.firstName   = v }
-        if let v = data["lastName"]    as? String            { model.lastName    = v }
-        if let v = data["gender"]      as? String,
-           let g = Gender(rawValue: v)                       { model.gender      = g }
-        if let v = data["email"]       as? String            { model.email       = v }
-        if let v = data["phoneNumber"] as? String            { model.phoneNumber = v }
+        let model = try await UserProfileRepository.shared.fetchProfile(userId: userId)
         self.userDetails = model
         return model
-    }
-
-    // MARK: - Local Activity Sync
-
-    private func syncLocalActivitiesToFirestore(userId: String) async {
-        let db = Firestore.firestore()
-        let active    = UserDefaults.standard.array(forKey: "connectIQ.syncedEvents")           as? [[String: Any]] ?? []
-        let completed = UserDefaults.standard.array(forKey: "connectIQ.syncedCompletedEvents")  as? [[String: Any]] ?? []
-        for payload in active + completed {
-            let id: String
-            if      let v = payload["id"] as? Int    { id = String(v) }
-            else if let v = payload["id"] as? String { id = v }
-            else { continue }
-            do {
-                try await db.collection("users").document(userId)
-                    .collection("activities").document(id)
-                    .setData(cleanPayload(payload), merge: true)
-            } catch {
-                logger.error("Activity sync failed id=\(id): \(error.localizedDescription)")
-            }
-        }
-    }
-
-    private func cleanPayload(_ payload: [String: Any]) -> [String: Any] {
-        payload.mapValues { value -> Any in
-            if let arr = value as? NSArray {
-                return arr.compactMap { ($0 as? [String: Any]).map { cleanPayload($0) } ?? $0 }
-            } else if let dict = value as? [String: Any] {
-                return cleanPayload(dict)
-            }
-            return value
-        }
     }
 }
 

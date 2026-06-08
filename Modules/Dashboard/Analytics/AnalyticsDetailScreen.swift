@@ -16,6 +16,7 @@ struct AnalyticsDetailScreen: View {
     // MARK: - Properties
 
     let metricType: AnalyticsMetricType
+    let viewModel: AnalyticsViewModel
 
     // MARK: - State
 
@@ -24,15 +25,16 @@ struct AnalyticsDetailScreen: View {
 
     // MARK: - Init
 
-    init(metricType: AnalyticsMetricType, initialPeriod: AnalyticsPeriod = .day) {
+    init(metricType: AnalyticsMetricType, initialPeriod: AnalyticsPeriod = .day, viewModel: AnalyticsViewModel) {
         self.metricType = metricType
+        self.viewModel = viewModel
         _selectedPeriod = State(initialValue: initialPeriod)
     }
 
     // MARK: - Computed
 
     private var summaryCards: [AnalyticsSummaryCard] {
-        AnalyticsDummyData.summaryCards(for: metricType, period: selectedPeriod)
+        viewModel.summaryCards[metricType] ?? []
     }
 
     // MARK: - Body
@@ -69,6 +71,13 @@ struct AnalyticsDetailScreen: View {
 					.font(.medium16)
 					.foregroundStyle(.whiteApp)
 			}
+        }
+        .onChange(of: selectedPeriod) { _, newPeriod in
+            viewModel.selectedPeriod = newPeriod
+            Task { await viewModel.periodChanged() }
+        }
+        .onAppear {
+            viewModel.selectedPeriod = selectedPeriod
         }
     }
 
@@ -115,6 +124,10 @@ struct AnalyticsDetailScreen: View {
 
 #Preview {
     NavigationStack {
-        AnalyticsDetailScreen(metricType: .elevation, initialPeriod: .day)
+        AnalyticsDetailScreen(
+			metricType: .elevation,
+			initialPeriod: .day,
+			viewModel: AnalyticsViewModel(userId: "preview")
+		)
     }
 }

@@ -8,7 +8,6 @@
 import Foundation
 import ConnectIQ
 import FirebaseAuth
-import FirebaseFirestore
 import Logging
 
 // MARK: - IQDeviceStatus helpers
@@ -376,6 +375,49 @@ class ConnectIQManager: NSObject {
         ])
     }
 
+    func updateEventMetadata(eventId targetEventId: Int, name: String, location: String) {
+        var updatedPayload: [String: Any]?
+        var isCompleted = false
+
+        if let index = activeEventPayloads.firstIndex(where: { eventId(from: $0) == targetEventId }) {
+            var payload = activeEventPayloads[index]
+            payload["name"] = name
+            payload["location"] = location
+            activeEventPayloads[index] = payload
+            updatedPayload = payload
+            isCompleted = false
+        } else if let index = completedEventPayloads.firstIndex(where: { eventId(from: $0) == targetEventId }) {
+            var payload = completedEventPayloads[index]
+            payload["name"] = name
+            payload["location"] = location
+            completedEventPayloads[index] = payload
+            updatedPayload = payload
+            isCompleted = true
+        }
+
+        persistSyncState()
+
+        if let updatedPayload, let userId = AuthManager.shared.currentUser?.uid {
+            Task {
+                try? await FirestoreEventRepository.shared.upsert(
+                    from: updatedPayload,
+                    isCompleted: isCompleted,
+                    syncStatus: (updatedPayload["syncStatus"] as? String) ?? "synced",
+                    source: "phone",
+                    userId: userId
+                )
+            }
+        }
+
+        if let updatedPayload {
+            sendMessage([
+                "command": "create_event",
+                "source": "phone",
+                "event": updatedPayload
+            ])
+        }
+    }
+
     private static func loadEventPayloads(forKey key: String) -> [[String: Any]] {
         UserDefaults.standard.array(forKey: key) as? [[String: Any]] ?? []
     }
@@ -532,12 +574,16 @@ class ConnectIQManager: NSObject {
         persistSyncState()
 
         if let userId = AuthManager.shared.currentUser?.uid {
-            let db = Firestore.firestore()
-            let docRef = db.collection("users").document(userId).collection("activities").document(String(id))
-            let cleaned = cleanPayloadForFirestore(normalizedPayload)
+            let source = (normalizedPayload["source"] as? String) ?? "phone"
             Task {
                 do {
-                    try await docRef.setData(cleaned, merge: true)
+                    try await FirestoreEventRepository.shared.upsert(
+                        from: normalizedPayload,
+                        isCompleted: isCompleted,
+                        syncStatus: syncStatus,
+                        source: source,
+                        userId: userId
+                    )
                 } catch {
                     logger.error("Failed to sync upserted ConnectIQ event to Firestore", metadata: [
                         "eventId": "\(id)",
@@ -578,11 +624,9 @@ class ConnectIQManager: NSObject {
         rebuildSyncedActivities()
 
         if let userId = AuthManager.shared.currentUser?.uid {
-            let db = Firestore.firestore()
-            let docRef = db.collection("users").document(userId).collection("activities").document(String(id))
             Task {
                 do {
-                    try await docRef.delete()
+                    try await FirestoreEventRepository.shared.softDelete(eventId: id, userId: userId)
                 } catch {
                     logger.error("Failed to sync deleted ConnectIQ event to Firestore", metadata: [
                         "eventId": "\(id)",
@@ -592,25 +636,6 @@ class ConnectIQManager: NSObject {
                 }
             }
         }
-    }
-
-    private func cleanPayloadForFirestore(_ payload: [String: Any]) -> [String: Any] {
-        var cleaned: [String: Any] = [:]
-        for (key, value) in payload {
-            if let nsArray = value as? NSArray {
-                cleaned[key] = nsArray.compactMap { element -> Any? in
-                    if let dict = element as? [String: Any] {
-                        return cleanPayloadForFirestore(dict)
-                    }
-                    return element
-                }
-            } else if let nestedDict = value as? [String: Any] {
-                cleaned[key] = cleanPayloadForFirestore(nestedDict)
-            } else {
-                cleaned[key] = value
-            }
-        }
-        return cleaned
     }
 
     private func pruneActivePayloadsAlreadyCompleted() {

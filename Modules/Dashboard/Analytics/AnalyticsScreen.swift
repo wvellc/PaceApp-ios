@@ -12,6 +12,7 @@ import SwiftUI
 struct AnalyticsScreen: View {
 
     // MARK: - State
+    @State private var viewModel: AnalyticsViewModel?
     @State private var selectedMetric: AnalyticsMetricType? = nil
     @State private var navigateToDetail = false
 
@@ -30,7 +31,7 @@ struct AnalyticsScreen: View {
                         ForEach(AnalyticsMetricType.allCases) { metric in
                             AnalyticsMetricRow(
                                 metricType: metric,
-								dataPoints: AnalyticsDummyData.dataPoints(for: .week, metricType: metric),
+								dataPoints: viewModel?.dataPointsByMetric[metric] ?? [],
                                 onTap: {
                                     selectedMetric = metric
                                     navigateToDetail = true
@@ -45,9 +46,15 @@ struct AnalyticsScreen: View {
                 }
             }
 			.appBackground()
+            .task(id: AuthManager.shared.currentUserID) {
+                guard let userId = AuthManager.shared.currentUserID else { return }
+                let vm = AnalyticsViewModel(userId: userId)
+                viewModel = vm
+                await vm.load()
+            }
             .navigationDestination(isPresented: $navigateToDetail) {
-                if let metric = selectedMetric {
-					AnalyticsDetailScreen(metricType: metric, initialPeriod: .week)
+                if let metric = selectedMetric, let viewModel {
+					AnalyticsDetailScreen(metricType: metric, initialPeriod: .week, viewModel: viewModel)
                 }
             }
         }

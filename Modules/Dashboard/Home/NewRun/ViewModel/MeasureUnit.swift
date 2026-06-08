@@ -8,5 +8,12 @@
 // MARK: -  Measure Unit Enums
 enum MeasureUnit: String, CaseIterable {
     case km = "Kms"
-    case miles = "Miles"
+	case miles = "Miles"
+	
+	var fullName: String {
+		switch self {
+			case .km: return "Kilometers"
+			case .miles: return "Miles"
+		}
+	}
 }

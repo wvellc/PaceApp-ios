@@ -22,7 +22,6 @@ class CreateRunEventViewModel {
 	var router: Router?
 	
 	// MARK: Step 1 – Event Details
-    var id: Int = Int(Date().timeIntervalSince1970)
 	var eventName: String = ""
 	var location: String = ""
 	var eventDate: Date = Date()
@@ -375,14 +374,14 @@ class CreateRunEventViewModel {
 
 	private func connectIQEventPayload() -> [String: Any] {
 		[
-            "id": id,
+            "id": Int(Date().timeIntervalSince1970),
             "syncType": "active",
             "syncStatus": "pending",
 			"name": eventName,
 			"location": location,
 			"date": Self.connectIQDateFormatter.string(from: eventDate),
 			"distance": String(format: "%.2f", distance),
-			"measure": distanceType == .miles ? "Miles" : "Kilometers",
+			"measure": distanceType.fullName,
 			"intervals": "\(lookBackIntervals)",
 			"goal": goalTimeFormatted,
 			"activity": eventType.rawValue,

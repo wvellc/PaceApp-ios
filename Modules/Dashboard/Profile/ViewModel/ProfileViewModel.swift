@@ -95,7 +95,7 @@ final class ProfileViewModel {
 		AuthManager.shared.userDetails = user
 		
 		Task {
-			await AuthManager.shared.syncUserToFirestore(userId: currentUID)
+			try? await UserProfileRepository.shared.upsertProfile(user, userId: currentUID)
 		}
 	}
 }

@@ -99,6 +99,13 @@ struct HomeScreen: View {
 				.zIndex(20)
 			}
 		}
+		.task(id: AuthManager.shared.currentUserID) {
+			guard let userId = AuthManager.shared.currentUserID else { return }
+			viewModel.startObservingEvents(userId: userId)
+		}
+		.onDisappear {
+			viewModel.stopObservingEvents()
+		}
 		.onAppear {
 			// Attempt immediately in case the watch was already connected
 			// before this screen appeared (e.g. restored from cold launch).
@@ -159,7 +166,7 @@ struct HomeScreen: View {
 				.foregroundColor(.whiteApp)
 			
 			VStack(spacing: 16) {
-				ForEach(ciqManager.syncedActivities) { activity in
+				ForEach(viewModel.upcomingEvents) { activity in
 					NavigationLink {
 						EventDetailsScreen(activityData: activity)
 					} label: {

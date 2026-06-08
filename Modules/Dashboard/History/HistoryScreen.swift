@@ -37,7 +37,7 @@ struct HistoryScreen: View {
 				
 				// Activity List
 				Group {
-					if ciqManager.syncedCompletedActivities.isEmpty {
+					if viewModel.filteredActivities.isEmpty && !viewModel.isLoading {
 						Spacer(minLength: 25)
 						NoDataView(
 							icon: .icEmptyHistory,
@@ -55,7 +55,7 @@ struct HistoryScreen: View {
 							.transition(.opacity)
 					}
 				}
-				.animation(.easeInOut(duration: 0.25), value: ciqManager.syncedCompletedActivities.isEmpty)
+				.animation(.easeInOut(duration: 0.25), value: viewModel.filteredActivities.isEmpty)
 			}
 			.appBackground()
 			.sheet(isPresented: $isFilterSheetPresented) {
@@ -77,6 +77,13 @@ struct HistoryScreen: View {
 			}
 			.navigationDestination(item: $selectedActivity) { activity in
 				EventDetailsScreen(activityData: activity)
+			}
+			.task(id: AuthManager.shared.currentUserID) {
+				guard let userId = AuthManager.shared.currentUserID else { return }
+				viewModel.startObservingEvents(userId: userId)
+			}
+			.onDisappear {
+				viewModel.stopObservingEvents()
 			}
 		
 	}
@@ -107,7 +114,7 @@ private extension HistoryScreen {
 	var activityList: some View {
 		// We remove 'selection: $selectedActivity' from List because it causes gesture conflicts
 		List(selection: $selectedActivity) {
-			ForEach(ciqManager.syncedCompletedActivities) { activity in
+			ForEach(viewModel.filteredActivities) { activity in
 				Button {
 					selectedActivity = activity
 				} label: {

@@ -9,58 +9,44 @@ import Observation
 
 @Observable
 final class FavoritesViewModel {
-	
-	// MARK: - Activities Data
-	final var favRuns: [ActivityData] = [
-		ActivityData(
-			title: "Thursday Run",
-			date: makeDate(day: 29, month: 1),
-			distance: "5.00 mi",
-			duration: "0:45",
-			avgPace: "9:00 /mi",
-			delta: "+01:10",
-			deltaColor: .redBoho,
-			location: "New York City"
-		),
-		ActivityData(
-			title: "Saturday Long Run",
-			date: makeDate(day: 31, month: 1),
-			distance: "12.00 mi",
-			duration: "1:48",
-			avgPace: "9:00 /mi",
-			delta: "-00:15",
-			deltaColor: .fluorescentMint,
-			location: "Central Park"
-		),
-		ActivityData(
-			title: "Monday Recovery",
-			date: makeDate(day: 2, month: 2),
-			distance: "3.50 mi",
-			duration: "0:33",
-			avgPace: "9:30 /mi",
-			delta: "+00:45",
-			deltaColor: .redBoho,
-			location: "Brooklyn"
-		),
-		ActivityData(
-			title: "Wednesday Tempo",
-			date: makeDate(day: 4, month: 2),
-			distance: "6.20 mi",
-			duration: "0:49",
-			avgPace: "7:55 /mi",
-			delta: "-01:20",
-			deltaColor: .fluorescentMint,
-			location: "Queens"
-		)
-	]
-	
-	
-	//MARK: Methods
-	// Handle the swipe-to-unfavorite action
-	func unFavorite(run: ActivityData) {
-		if let index = favRuns.firstIndex(where: { $0.id == run.id }) {
-			favRuns.remove(at: index)
+
+	var favRuns: [ActivityData] = []
+	var isLoading: Bool = false
+
+	private let favoritesRepository: FavoritesRepositoryProtocol
+	private let eventRepository: EventRepositoryProtocol
+
+	init(
+		favoritesRepository: FavoritesRepositoryProtocol = FirestoreFavoritesRepository.shared,
+		eventRepository: EventRepositoryProtocol = FirestoreEventRepository.shared
+	) {
+		self.favoritesRepository = favoritesRepository
+		self.eventRepository = eventRepository
+	}
+
+	func loadFavorites(userId: String) async {
+		isLoading = true
+		defer { isLoading = false }
+		do {
+			let favoriteIds = try await favoritesRepository.fetchFavoriteEventIds(userId: userId)
+			let completed = try await eventRepository.fetchCompletedEvents(userId: userId, limit: 100, cursor: nil)
+			let active = try await eventRepository.fetchActiveEvents(userId: userId)
+			let allEvents = active + completed
+			favRuns = allEvents.filter { event in
+				guard let syncId = event.syncId else { return false }
+				return favoriteIds.contains(String(syncId))
+			}
+		} catch {
+			favRuns = []
 		}
 	}
 
+	func unFavorite(run: ActivityData, userId: String) async {
+		guard let syncId = run.syncId else {
+			favRuns.removeAll { $0.id == run.id }
+			return
+		}
+		_ = try? await favoritesRepository.toggleFavorite(userId: userId, eventId: String(syncId))
+		favRuns.removeAll { $0.id == run.id }
+	}
 }
