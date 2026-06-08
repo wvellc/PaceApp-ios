@@ -37,7 +37,7 @@ extension Router {
 				// ----------------------------------------------------------------
 				
 			case .login				: LoginScreen()
-			case .verifyOTP			: OTPVerificationScreen()
+			case .verifyOTP(let phone, let verificationID): OTPVerificationScreen(phoneNumber: phone, verificationID: verificationID)
 			case .accountCreated	: ComplationScreen(screenType: .accountCreation)
 
 				// ----------------------------------------------------------------

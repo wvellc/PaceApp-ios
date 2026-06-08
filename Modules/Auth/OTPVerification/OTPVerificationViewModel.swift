@@ -12,6 +12,10 @@ import FirebaseAuth
 @Observable
 final class OTPVerificationViewModel {
 
+    // MARK: - Properties
+    let phoneNumber: String
+    var verificationID: String
+
     // MARK: - State
     var otp: String = ""
     var isVerifyingOTP: Bool = false
@@ -34,7 +38,9 @@ final class OTPVerificationViewModel {
     var onOTPVerified: (() -> Void)?
 
     // MARK: - Init
-    init(resendCountdownStart: Int = 60, otpLength: Int = 6) {
+    init(phoneNumber: String, verificationID: String, resendCountdownStart: Int = 60, otpLength: Int = 6) {
+        self.phoneNumber = phoneNumber
+        self.verificationID = verificationID
         self.resendCountdownStart = resendCountdownStart
         self.otpLength = otpLength
         self.resendSecondsRemaining = resendCountdownStart
@@ -72,21 +78,20 @@ final class OTPVerificationViewModel {
 
     // MARK: - Resend OTP
     //
-    // Reads the phone number that was saved by LoginViewModel.saveLoginContact()
-    // and re-triggers the Firebase phone verification, updating the stored verificationID.
+    // Re-triggers the Firebase phone verification using the stored phone number.
     func triggerResend() {
         guard isResendAvailable else { return }
 
         Task { @MainActor in
-            guard let phoneNumber = AppSession.userDetails?.phoneNumber,
-                  !phoneNumber.isEmpty else {
+            guard !phoneNumber.isEmpty else {
                 ToastManager.shared.present(.error("Phone number not found. Please go back and try again."))
                 return
             }
 
             do {
-                // Re-send the OTP — AuthManager persists the new verificationID automatically.
-                _ = try await AuthManager.shared.sendOTP(phoneNumber: phoneNumber)
+                // Re-send the OTP — AuthManager returns the new verificationID.
+                let newVerificationID = try await AuthManager.shared.sendOTP(phoneNumber: phoneNumber)
+                self.verificationID = newVerificationID
                 ToastManager.shared.present(.success("A new code has been sent."))
                 startResendTimer()
             } catch {
@@ -105,9 +110,7 @@ final class OTPVerificationViewModel {
         Task { [weak self] in
             guard let self else { return }
 
-            // Read the verificationID that was persisted by AuthManager.sendOTP()
-            guard let verificationID = UserDefaults.standard.string(forKey: Keys.authVerificationID),
-                  !verificationID.isEmpty else {
+            guard !self.verificationID.isEmpty else {
                 await MainActor.run {
                     self.isVerifyingOTP = false
                     ToastManager.shared.present(.error("Session expired. Please go back and request a new code."))
@@ -117,13 +120,10 @@ final class OTPVerificationViewModel {
 
             do {
                 let user = try await AuthManager.shared.verifyOTP(
-                    verificationID: verificationID,
+                    verificationID: self.verificationID,
                     code: self.otp
                 )
                 self.persistUserSession(userId: user.uid, phoneNumber: user.phoneNumber)
-
-                // Clean up the verificationID — it is single-use.
-                UserDefaults.standard.removeObject(forKey: Keys.authVerificationID)
 
                 await MainActor.run {
                     self.isVerifyingOTP = false
@@ -143,11 +143,9 @@ final class OTPVerificationViewModel {
     // MARK: - Session Persistence
 
     private func persistUserSession(userId: String, phoneNumber: String?) {
-        var user = AppSession.userDetails ?? UserModel(uuid: userId)
+        var user = AuthManager.shared.userDetails ?? UserModel(uuid: userId)
         user.uuid = userId
         if let phone = phoneNumber { user.phoneNumber = phone }
-        AppSession.userDetails = user
-        AppSession.userId = userId
-        AppSession.isUserAuthenticated = true
+        AuthManager.shared.userDetails = user
     }
 }

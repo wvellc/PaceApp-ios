@@ -221,8 +221,10 @@ struct LoginScreen: View {
 				// Guard prevents a duplicate push if the onChange fires a second time
 				// while the NavigationStack is mid-animation (reCAPTCHA return race).
 				guard !hasNavigatedToOTP else { return }
-				hasNavigatedToOTP = true
-				router.navigate(to: .verifyOTP)
+				if case .otpSent(let verificationID) = viewModel.state {
+					hasNavigatedToOTP = true
+					router.navigate(to: .verifyOTP(phoneNumber: viewModel.normalizedPhone(), verificationID: verificationID))
+				}
 		}
 	}
 }

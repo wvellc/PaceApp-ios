@@ -70,7 +70,7 @@ final class ProfileViewModel {
 	
 	// MARK: - Session
 	func loadUserInfoFromSession() {
-		let user = AppSession.userDetails
+		let user = AuthManager.shared.userDetails
 		firstName = user?.firstName
 		lastName = user?.lastName
 		gender = user?.gender
@@ -88,9 +88,14 @@ final class ProfileViewModel {
 		self.firstName = trimmedFirstName
 		self.lastName = trimmedLastName
 
-		var user = AppSession.userDetails ?? UserModel(uuid: UUID().uuidString)
+		guard let currentUID = AuthManager.shared.currentUserID else { return }
+		var user = AuthManager.shared.userDetails ?? UserModel(uuid: currentUID)
 		user.firstName = trimmedFirstName
 		user.lastName = trimmedLastName
-		AppSession.userDetails = user
+		AuthManager.shared.userDetails = user
+		
+		Task {
+			await AuthManager.shared.syncUserToFirestore(userId: currentUID)
+		}
 	}
 }

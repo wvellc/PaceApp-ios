@@ -9,11 +9,7 @@
 // String raw value maps exactly to UserDefaults keys.
 // CaseIterable allows us to loop through them in removeAllData().
 enum AppSessionKey: String, CaseIterable {
-    case isUserAuthenticated
-//    case isUserProfileCompleted
-    case userDetails
     case isUserCanViewMetricsPopUp
-    case userId
     case userGait
     case distanceUnit
 

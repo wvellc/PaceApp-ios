@@ -8,6 +8,7 @@ import ConnectIQ
 import FirebaseCore
 import FirebaseAuth
 import Logging
+import FirebaseFirestore
 
 class AppDelegate: NSObject, UIApplicationDelegate {
 	
@@ -20,6 +21,17 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		
 		// Register the global auth-state listener now that Firebase is ready.
 		AuthManager.shared.configure()
+		
+		// Get a reference to Firestore
+		let db = Firestore.firestore()
+		
+		// Configure Firestore settings
+		let settings = db.settings
+		
+		// --- Set your desired cache size using PersistentCacheSettings ---
+		let desiredCacheSize: NSNumber = 500 * 1024 * 1024 as NSNumber // Example: 500 MB in bytes
+		settings.cacheSettings = PersistentCacheSettings(sizeBytes: desiredCacheSize)
+		db.settings = settings
 		
 		// Firebase Phone Auth requires APNs for silent device verification.
 		// Register early so the token is available before the user taps Send OTP.

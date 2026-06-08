@@ -18,7 +18,7 @@ struct PaceApp: App {
     // MARK: - Properties
 
     /// Central router that manages navigation path and destination resolution.
-    @State private var router = Router()
+    @State private var router = Router.shared
     @State private var ciqManager = ConnectIQManager.shared
     private let logger = Logger(label: "net.paceapp")
 
@@ -115,7 +115,15 @@ struct PaceApp: App {
 
     @MainActor
     private func resolveStartupRoot() async {
+        let fetchTask = Task {
+            if let currentUser = AuthManager.shared.currentUser {
+                return try? await AuthManager.shared.fetchUserProfileInfo(userId: currentUser.uid)
+            }
+            return nil
+        }
+        
         try? await Task.sleep(for: .milliseconds(1600))
+        _ = await fetchTask.value
         router.setupRootNavigation()
     }
 

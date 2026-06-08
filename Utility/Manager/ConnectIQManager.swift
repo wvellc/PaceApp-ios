@@ -531,7 +531,7 @@ class ConnectIQManager: NSObject {
 
         persistSyncState()
 
-        if let userId = Auth.auth().currentUser?.uid {
+        if let userId = AuthManager.shared.currentUser?.uid {
             let db = Firestore.firestore()
             let docRef = db.collection("users").document(userId).collection("activities").document(String(id))
             let cleaned = cleanPayloadForFirestore(normalizedPayload)
@@ -577,7 +577,7 @@ class ConnectIQManager: NSObject {
         completedEventPayloads.removeAll { eventId(from: $0) == id }
         rebuildSyncedActivities()
 
-        if let userId = Auth.auth().currentUser?.uid {
+        if let userId = AuthManager.shared.currentUser?.uid {
             let db = Firestore.firestore()
             let docRef = db.collection("users").document(userId).collection("activities").document(String(id))
             Task {

@@ -19,6 +19,10 @@ import UIKit
 @Observable
 @MainActor
 final class Router {
+    // MARK: - Singleton
+
+    static let shared = Router()
+
     // MARK: State
 
     /// The live navigation path — bind directly to `NavigationStack`.
@@ -124,9 +128,9 @@ final class Router {
     /// Returns the root flow for the current persisted session state without
     /// mutating navigation. Use this after splash/launch UI has rendered.
     static func staticRoot() -> RootFlow {
-        guard AppSession.isUserAuthenticated,
-              let user = AppSession.userDetails,
-              !user.uuid.isEmpty else {
+        guard let currentUserID = AuthManager.shared.currentUserID,
+              let user = AuthManager.shared.userDetails,
+              user.uuid == currentUserID else {
             return .auth
         }
 

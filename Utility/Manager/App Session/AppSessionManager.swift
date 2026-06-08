@@ -59,30 +59,6 @@ enum AppSession {
 	
 	// MARK: - Session Operations (Using Clean Computed Properties)
 	
-	// USER AUTHENTICATION
-	static var isUserAuthenticated: Bool {
-		get { defaults.bool(forKey: AppSessionKey.isUserAuthenticated.rawValue) }
-		set { defaults.set(newValue, forKey: AppSessionKey.isUserAuthenticated.rawValue) }
-	}
-	
-	// USER ID
-	static var userId: String? {
-		get { defaults.string(forKey: AppSessionKey.userId.rawValue) }
-		set { defaults.set(newValue, forKey: AppSessionKey.userId.rawValue) }
-	}
-
-	// USER DETAILS (full persisted UserModel)
-	static var userDetails: UserModel? {
-		get { readObject(forKey: .userDetails, as: UserModel.self) }
-		set { saveObject(newValue, forKey: .userDetails) }
-	}
-	
-//	// USER PROFILE STATUS
-//	static var isUserProfileCompleted: Bool {
-//		get { defaults.bool(forKey: AppSessionKey.isUserProfileCompleted.rawValue) }
-//		set { defaults.set(newValue, forKey: AppSessionKey.isUserProfileCompleted.rawValue) }
-//	}
-	
 	// USER CAN SHOW METRICS POPUP
 	static var canShowMetricsOnboarding: Bool {
 		get {

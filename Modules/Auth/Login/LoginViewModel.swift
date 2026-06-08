@@ -65,7 +65,6 @@ final class LoginViewModel {
     func sendOTP() async {
         guard isInputValid, state != .sending else { return }
 
-//        saveLoginContact()
         state = .sending
 
         do {
@@ -100,18 +99,7 @@ final class LoginViewModel {
         return (countryCode.dialingCode ?? "") + digits
     }
 
-    private func saveLoginContact() {
-        var user = AppSession.userDetails ?? UserModel(uuid: UUID().uuidString)
-        switch loginType {
-        case .email:
-            user.email = email.trimmingCharacters(in: .whitespacesAndNewlines)
-            user.phoneNumber = nil
-        case .phoneNumber:
-            user.phoneNumber = normalizedPhone()
-            user.email = nil
-        }
-        AppSession.userDetails = user
-    }
+
 
     func switchTo(_ type: LoginType) {
         loginType = type

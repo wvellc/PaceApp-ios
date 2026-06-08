@@ -13,10 +13,16 @@ struct OTPVerificationScreen: View {
 	@Environment(Router.self) private var router
 	@FocusState private var isOTPFieldFocused: Bool
 
-	@State private var viewModel = OTPVerificationViewModel(
-		resendCountdownStart: 60,
-		otpLength: Constant.Config.OTPLength
-	)
+	@State private var viewModel: OTPVerificationViewModel
+
+	init(phoneNumber: String, verificationID: String) {
+		_viewModel = State(initialValue: OTPVerificationViewModel(
+			phoneNumber: phoneNumber,
+			verificationID: verificationID,
+			resendCountdownStart: 60,
+			otpLength: Constant.Config.OTPLength
+		))
+	}
 
 	var body: some View {
 		VStack {
@@ -116,6 +122,6 @@ struct OTPVerificationScreen: View {
 }
 
 #Preview {
-	OTPVerificationScreen()
+	OTPVerificationScreen(phoneNumber: "+15555555555", verificationID: "mock_verification_id")
 		.environment(Router())
 }

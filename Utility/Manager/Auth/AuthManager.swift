@@ -28,8 +28,10 @@ final class AuthManager {
     /// Held strongly so it isn't released while Firebase awaits reCAPTCHA.
     private var phoneAuthDelegate: PhoneAuthUIDelegate?
 
-    var currentUser: User? { Auth.auth().currentUser }
+    var currentUser: User? = Auth.auth().currentUser
+    var userDetails: UserModel?
     var isUserAuthenticated: Bool { currentUser != nil }
+    var currentUserID: String? { currentUser?.uid }
 
     // MARK: - Lifecycle
 
@@ -38,22 +40,50 @@ final class AuthManager {
     /// Call once from AppDelegate after FirebaseApp.configure().
     func configure() {
         guard authStateListenerHandle == nil else { return }
+        
+        currentUser = Auth.auth().currentUser
+        
         authStateListenerHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             guard let self else { return }
             Task { @MainActor in
+                self.currentUser = user
+                
                 if let user {
-                    AppSession.isUserAuthenticated = true
-                    AppSession.userId = user.uid
-                    var cached = AppSession.userDetails ?? UserModel(uuid: user.uid)
-                    cached.uuid = user.uid
-                    if cached.email == nil      { cached.email       = user.email }
-                    if cached.phoneNumber == nil { cached.phoneNumber = user.phoneNumber }
-                    AppSession.userDetails = cached
-                    await self.syncUserToFirestore(userId: user.uid)
+                    // Try to fetch profile from Firestore first.
+                    do {
+                        _ = try await self.fetchUserProfileInfo(userId: user.uid)
+                        
+                        // If we are currently on .accountCreation and the fetched user profile is completed,
+                        // transition to .dashboard.
+                        if Router.shared.root == .accountCreation && self.userDetails?.isProfileCompleted == true {
+                            Router.shared.setupRootNavigation()
+                        }
+                    } catch {
+                        let nsError = error as NSError
+                        if nsError.domain == "AuthManager" && nsError.code == 404 {
+                            self.logger.info("No Firestore profile found, creating initial userDetails.")
+                            var initial = UserModel(uuid: user.uid)
+                            initial.email = user.email
+                            initial.phoneNumber = user.phoneNumber
+                            self.userDetails = initial
+                            // Sync it to Firestore
+                            await self.syncUserToFirestore(userId: user.uid)
+                        } else {
+                            self.logger.error("Failed to fetch user profile info: \(error.localizedDescription)")
+                            var placeholder = UserModel(uuid: user.uid)
+                            placeholder.email = user.email
+                            placeholder.phoneNumber = user.phoneNumber
+                            self.userDetails = placeholder
+                        }
+                    }
+                    
                     await self.syncLocalActivitiesToFirestore(userId: user.uid)
                 } else {
-                    AppSession.isUserAuthenticated = false
-                    AppSession.userId = nil
+                    self.userDetails = nil
+                    AppSession.removeAllData()
+                    if Router.shared.root == .dashboard || Router.shared.root == .accountCreation {
+                        Router.shared.setRoot(.auth, forward: false)
+                    }
                 }
             }
         }
@@ -67,8 +97,7 @@ final class AuthManager {
 
     // MARK: - Phone Auth (OTP)
 
-    /// Sends an SMS OTP to the given E.164-formatted number.
-    /// Stores the verificationID in UserDefaults for use in `verifyOTP`.
+    /// Sends an SMS OTP to the given E.164-formatted number and returns the verificationID.
     func sendOTP(phoneNumber: String) async throws -> String {
         // Hold delegate strongly on self — it must survive the await suspension
         // while Firebase either sends the silent APNs push or shows reCAPTCHA.
@@ -79,7 +108,6 @@ final class AuthManager {
             .verifyPhoneNumber(phoneNumber, uiDelegate: delegate)
 
         phoneAuthDelegate = nil
-        UserDefaults.standard.set(verificationID, forKey: Keys.authVerificationID)
         return verificationID
     }
 
@@ -125,7 +153,6 @@ final class AuthManager {
     func logout() async throws {
         try Auth.auth().signOut()
         ConnectIQManager.shared.disconnectFromApp()
-        AppSession.removeAllData()
     }
 
     func deleteAccount() async throws {
@@ -137,13 +164,12 @@ final class AuthManager {
         try? await db.collection("users").document(uid).delete()
         try? await user.delete()
         ConnectIQManager.shared.disconnectFromApp()
-        AppSession.removeAllData()
     }
 
     // MARK: - Firestore Sync
 
     func syncUserToFirestore(userId: String) async {
-        guard let model = AppSession.userDetails else { return }
+        guard let model = userDetails else { return }
         let data: [String: Any] = [
             "uuid":        userId,
             "firstName":   model.firstName   ?? "",
@@ -160,20 +186,21 @@ final class AuthManager {
         }
     }
 
+    @discardableResult
     func fetchUserProfileInfo(userId: String) async throws -> UserModel {
         let snap = try await Firestore.firestore().collection("users").document(userId).getDocument()
-        guard let data = snap.data() else {
-            throw NSError(domain: "AuthManager", code: -1,
+        guard snap.exists, let data = snap.data() else {
+            throw NSError(domain: "AuthManager", code: 404,
                           userInfo: [NSLocalizedDescriptionKey: "User profile not found."])
         }
-        var model = AppSession.userDetails ?? UserModel(uuid: userId)
+        var model = userDetails ?? UserModel(uuid: userId)
         if let v = data["firstName"]   as? String            { model.firstName   = v }
         if let v = data["lastName"]    as? String            { model.lastName    = v }
         if let v = data["gender"]      as? String,
            let g = Gender(rawValue: v)                       { model.gender      = g }
         if let v = data["email"]       as? String            { model.email       = v }
         if let v = data["phoneNumber"] as? String            { model.phoneNumber = v }
-        AppSession.userDetails = model
+        self.userDetails = model
         return model
     }
 

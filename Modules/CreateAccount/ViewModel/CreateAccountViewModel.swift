@@ -187,11 +187,15 @@ final class CreateAccountViewModel {
     /// Saves first name, last name, and gender into the persisted UserModel.
     /// Profile is considered complete once both names are non-empty.
     private func saveUserProfile() {
-        // Start from the existing model so we never overwrite the UUID
-        var user = AppSession.userDetails ?? UserModel(uuid: UUID().uuidString)
+        guard let currentUID = AuthManager.shared.currentUserID else { return }
+        var user = AuthManager.shared.userDetails ?? UserModel(uuid: currentUID)
         user.firstName = firstName.trimmingCharacters(in: .whitespaces)
         user.lastName = lastName.trimmingCharacters(in: .whitespaces)
         user.gender = selectedGender
-        AppSession.userDetails = user
+        AuthManager.shared.userDetails = user
+        
+        Task {
+            await AuthManager.shared.syncUserToFirestore(userId: currentUID)
+        }
     }
 }

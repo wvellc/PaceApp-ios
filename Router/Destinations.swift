@@ -11,7 +11,7 @@ enum Destinations: Hashable, Codable {
 
     // MARK: - Auth flow
     case login
-	case verifyOTP
+	case verifyOTP(phoneNumber: String, verificationID: String)
 	
 	// MARK: - Account creation
 	case accountCreated
