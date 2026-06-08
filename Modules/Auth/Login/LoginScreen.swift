@@ -19,6 +19,9 @@ struct LoginScreen: View {
 	@State private var viewModel = LoginViewModel()
 	@State private var showSafari = false
 	@State private var legalURL: URL? = nil
+	/// Prevents duplicate navigation pushes when reCAPTCHA completes and
+	/// the onChange fires while the NavigationStack is still animating.
+	@State private var hasNavigatedToOTP = false
 	
 	//Focus state
 	@FocusState private var focus : LoginType?
@@ -156,10 +159,14 @@ struct LoginScreen: View {
 		// Handles ALL navigation — ViewModel just fires events
 		.onChange(of: viewModel.navigationEvent) { _, event in
 			guard let event else { return }
+			// Clear the event FIRST — before any async work — so a second
+			// onChange firing (e.g. reCAPTCHA return path) doesn't double-navigate.
+			viewModel.navigationEvent = nil
 			handleNavigation(event)
-			viewModel.navigationEvent = nil   // reset after handling
 		}
 		.onChange(of: viewModel.loginType) { oldValue, newValue in
+			// Reset the OTP navigation guard when the user switches login type.
+			hasNavigatedToOTP = false
 			focus = newValue
 		}
 		.sheet(isPresented: $showPicker) {
@@ -184,9 +191,20 @@ struct LoginScreen: View {
 			.foregroundStyle(.blackApp)
 		}
 		.onAppear {
+			// Reset navigation guard each time this screen becomes visible
+			// (e.g. user pops back from OTP or reCAPTCHA returns mid-flow).
+			hasNavigatedToOTP = false
+			viewModel.navigationEvent = nil
 			DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
 				focus =  viewModel.loginType
 			}
+			
+			
+			#if kDebug
+			viewModel.phoneNumber = "9898989898"
+			viewModel.email = "wvedeveloper@gmail.com"
+			#endif
+			
 		}
 		.onDisappear {
 			focus = nil
@@ -197,9 +215,14 @@ struct LoginScreen: View {
 	// MARK: - Navigation handler (all in one place, easy to read)
 	private func handleNavigation(_ event: LoginViewModel.NavigationEvent) {
 		switch event {
-			case .privacyPolicy		:	router.navigate(to: .privacyPolicy)
-			case .tearmsOfService	:	router.navigate(to: .termsOfService)
-			case .sendOTP			: 	router.navigate(to: .verifyOTP)
+			case .privacyPolicy    : router.navigate(to: .privacyPolicy)
+			case .tearmsOfService  : router.navigate(to: .termsOfService)
+			case .sendOTP:
+				// Guard prevents a duplicate push if the onChange fires a second time
+				// while the NavigationStack is mid-animation (reCAPTCHA return race).
+				guard !hasNavigatedToOTP else { return }
+				hasNavigatedToOTP = true
+				router.navigate(to: .verifyOTP)
 		}
 	}
 }

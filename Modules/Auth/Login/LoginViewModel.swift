@@ -73,13 +73,18 @@ final class LoginViewModel {
                 let formattedNumber = normalizedPhone()
                 // sendOTP already persists verificationID to Keys.authVerificationID
                 let verificationID = try await AuthManager.shared.sendOTP(phoneNumber: formattedNumber)
+                // Assign both state and navigationEvent synchronously on MainActor —
+                // no intermediate suspend point prevents the reCAPTCHA-return race
+                // where the navigation event could fire in the wrong order.
                 state = .otpSent(verificationID: verificationID)
-                await navigateToVerification()
+                navigationEvent = .sendOTP
             } else {
                 let cleanEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
                 // sendEmailLink persists the email to Keys.emailForSignIn
                 try await AuthManager.shared.sendEmailLink(email: cleanEmail)
                 state = .success
+				email = ""
+				
                 ToastManager.shared.present(.success("Login link sent! Please check your email inbox."))
             }
         } catch {
@@ -116,8 +121,4 @@ final class LoginViewModel {
 
     func openTermsOfService() { navigationEvent = .tearmsOfService }
     func openPrivacyPolicy()  { navigationEvent = .privacyPolicy }
-
-    func navigateToVerification() async {
-        navigationEvent = .sendOTP
-    }
 }
