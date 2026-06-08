@@ -75,21 +75,22 @@ struct PaceApp: App {
                     return
                 }
 
+                let savedEmail = UserDefaults.standard.string(forKey: Keys.emailForSignIn) ?? ""
+
+                guard !savedEmail.isEmpty else {
+                    // Link opened on a different device: the email is unknown.
+                    // Navigate back to Login so the user can re-enter it.
+                    ToastManager.shared.present(
+                        .error("Please open this link on the device where you requested it, or request a new login link.")
+                    )
+                    router.setRoot(.auth, forward: false)
+                    return
+                }
+
+                // Show loading while authenticating...
+                router.setRoot(.authenticating, forward: true)
+
                 Task { @MainActor in
-                    // Retrieve the email that was saved when the link was sent.
-                    // This MUST be the same device — Firebase email links are device-bound.
-                    let savedEmail = UserDefaults.standard.string(forKey: Keys.emailForSignIn) ?? ""
-
-                    guard !savedEmail.isEmpty else {
-                        // Link opened on a different device: the email is unknown.
-                        // Navigate back to Login so the user can re-enter it.
-                        ToastManager.shared.present(
-                            .error("Please open this link on the device where you requested it, or request a new login link.")
-                        )
-                        router.setRoot(.auth, forward: false)
-                        return
-                    }
-
                     do {
                         let user = try await AuthManager.shared.signInWithEmailLink(
                             email: savedEmail,
@@ -98,9 +99,31 @@ struct PaceApp: App {
                         logger.info("Email link sign-in succeeded", metadata: [
                             "userId": "\(user.uid)"
                         ])
+
+                        // Fetch/Sync user details before we route so router resolves roots correctly
+                        do {
+                            _ = try await AuthManager.shared.fetchUserProfileInfo(userId: user.uid)
+                        } catch {
+                            let nsError = error as NSError
+                            if nsError.domain == "AuthManager" && nsError.code == 404 {
+                                logger.info("Email link: No Firestore profile found, creating initial userDetails.")
+                                var initial = UserModel(uuid: user.uid)
+                                initial.email = user.email
+                                AuthManager.shared.userDetails = initial
+                                await AuthManager.shared.syncUserToFirestore(userId: user.uid)
+                            } else {
+                                logger.error("Email link: Failed to fetch user profile info: \(error.localizedDescription)")
+                                var placeholder = UserModel(uuid: user.uid)
+                                placeholder.email = user.email
+                                AuthManager.shared.userDetails = placeholder
+                            }
+                        }
+
                         router.setupRootNavigation()
                     } catch {
+                        logger.error("Email link sign-in failed: \(error.localizedDescription)")
                         ToastManager.shared.present(.error(error.localizedDescription))
+                        router.setRoot(.auth, forward: false)
                     }
                 }
             }

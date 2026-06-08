@@ -20,6 +20,7 @@ extension Router {
 			case .splash: SplashScreen()
 			case .welcome: WelcomeScreen()
 			case .auth:       LoginScreen()
+			case .authenticating: AuthenticatingScreen()
 			case .dashboard:  TabBarScreen()   //tab-bar
 			case .accountCreation: CreateAccountScreen()
 		}

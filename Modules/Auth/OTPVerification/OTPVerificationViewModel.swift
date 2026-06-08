@@ -123,6 +123,10 @@ final class OTPVerificationViewModel {
                     verificationID: self.verificationID,
                     code: self.otp
                 )
+                
+                // Fetch the user profile from Firestore so userDetails is ready before we route.
+                _ = try? await AuthManager.shared.fetchUserProfileInfo(userId: user.uid)
+                
                 self.persistUserSession(userId: user.uid, phoneNumber: user.phoneNumber)
 
                 await MainActor.run {

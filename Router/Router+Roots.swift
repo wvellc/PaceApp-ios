@@ -17,6 +17,8 @@ extension Router {
         case welcome
         /// Standard auth screens (login / sign-up).
         case auth
+        /// Email link verification loading screen.
+        case authenticating
 		/// Account setup (Connect watch, strava and user info).
         case accountCreation
 		
