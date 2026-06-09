@@ -10,7 +10,7 @@ import Foundation
 
 // MARK: - UserModel
 
-/// Persisted user profile data stored in AppSession.
+/// Persisted user profile data stored in Firestore and cached in AuthManager.
 struct UserModel: Codable, Equatable {
 
     // MARK: - Core Identity
@@ -35,6 +35,22 @@ struct UserModel: Codable, Equatable {
     /// Phone number used to authenticate, including the country dialing code.
     var phoneNumber: String?
 
+    // MARK: - Settings (Firestore-backed)
+
+    /// Gait step-length data for walking and running. Stored under `gait` map in Firestore.
+    var gait: GaitUserData?
+
+    /// Whether interval haptic vibration is enabled. Firestore key: `intervalVibrate`. Default: false.
+    var intervalVibrate: Bool?
+
+    /// Whether interval audio beep is enabled. Firestore key: `intervalBeep`. Default: false.
+    var intervalBeep: Bool?
+
+    /// Preferred distance unit. Firestore key: `distanceUnit`. Default: .miles.
+    var distanceUnit: MeasureUnit?
+
+    // MARK: - Computed Helpers
+
     var contactInfo: String? {
         if let email = email?.trimmingCharacters(in: .whitespacesAndNewlines),
            !email.isEmpty {
@@ -48,8 +64,6 @@ struct UserModel: Codable, Equatable {
 
         return nil
     }
-
-    // MARK: - Computed Helpers
 
     /// `true` when both first and last name have been filled in.
     var isProfileCompleted: Bool {

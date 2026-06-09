@@ -33,85 +33,70 @@ import Foundation
 
 // MARK: App Session Manager
 enum AppSession {
-	// Standard iOS storage reference
-	private static let defaults = UserDefaults.standard
-	
-	// Ignore keys while clearing session
-	private static let ignoreKeyList: [AppSessionKey] = [.isUserCanViewMetricsPopUp]
-	
-	// MARK: - Generic Storage Add-ons
-	// These generic helpers eliminate repetitive JSON encoding/decoding boilerplate
-	
-	private static func saveObject<T: Encodable>(_ object: T?, forKey key: AppSessionKey) {
-		guard let object = object else {
-			defaults.removeObject(forKey: key.rawValue)
-			return
-		}
-		if let encodedData = try? JSONEncoder().encode(object) {
-			defaults.set(encodedData, forKey: key.rawValue)
-		}
-	}
-	
-	private static func readObject<T: Decodable>(forKey key: AppSessionKey, as type: T.Type) -> T? {
-		guard let savedData = defaults.data(forKey: key.rawValue) else { return nil }
-		return try? JSONDecoder().decode(T.self, from: savedData)
-	}
-	
-	// MARK: - Session Operations (Using Clean Computed Properties)
-	
-	// USER CAN SHOW METRICS POPUP
-	static var canShowMetricsOnboarding: Bool {
-		get {
-			defaults.object(forKey: AppSessionKey.isUserCanViewMetricsPopUp.rawValue) as? Bool ?? true
-		}
-		set {
-			defaults.set(newValue, forKey: AppSessionKey.isUserCanViewMetricsPopUp.rawValue)
-		}
-	}
-	// USER DISTANCE TYPE
-	static var userDistanceUnit: MeasureUnit {
-		get {
-			MeasureUnit(
-				rawValue: defaults.string(forKey: AppSessionKey.distanceUnit.rawValue) ?? MeasureUnit.miles.rawValue
-			) ?? MeasureUnit.miles
-		}
-		set { defaults.set(newValue.rawValue, forKey: AppSessionKey.distanceUnit.rawValue) }
-	}
-	
-	// USER GAIT DATA (Utilizing the Generic Object Handlers)
-	static var userGaitData: GaitUserData? {
-		get { readObject(forKey: .userGait, as: GaitUserData.self) }
-		set { saveObject(newValue, forKey: .userGait) }
-	}
-	
-	// MARK: - Watch Persistence
-	
-	// PAIRED WATCH UUID
-	// Quick sentinel: non-nil means the user has paired at least once.
-	static var pairedWatchUUID: String? {
-		get { defaults.string(forKey: AppSessionKey.pairedWatchUUID.rawValue) }
-		set { defaults.set(newValue, forKey: AppSessionKey.pairedWatchUUID.rawValue) }
-	}
-	
-	// PAIRED DEVICES (full identity snapshot: UUID + modelName + friendlyName)
-	static var pairedDevices: [PersistedDevice] {
-		get { readObject(forKey: .pairedDevices, as: [PersistedDevice].self) ?? [] }
-		set { saveObject(newValue, forKey: .pairedDevices) }
-	}
-	
-	// MARK: - Management Methods
-	
-	/// Remove stored session using key
-	static func removeSession(for key: AppSessionKey) {
-		defaults.removeObject(forKey: key.rawValue)
-	}
-	
-	/// Clear all session data honoring ignored keys
-	static func removeAllData() {
-		for key in AppSessionKey.allCases {
-			if !ignoreKeyList.contains(key) {
-				defaults.removeObject(forKey: key.rawValue)
-			}
-		}
-	}
+    // Standard iOS storage reference
+    private static let defaults = UserDefaults.standard
+
+    // Ignore keys while clearing session
+    private static let ignoreKeyList: [AppSessionKey] = [.isUserCanViewMetricsPopUp]
+
+    // MARK: - Generic Storage Add-ons
+    // These generic helpers eliminate repetitive JSON encoding/decoding boilerplate
+
+    private static func saveObject<T: Encodable>(_ object: T?, forKey key: AppSessionKey) {
+        guard let object = object else {
+            defaults.removeObject(forKey: key.rawValue)
+            return
+        }
+        if let encodedData = try? JSONEncoder().encode(object) {
+            defaults.set(encodedData, forKey: key.rawValue)
+        }
+    }
+
+    private static func readObject<T: Decodable>(forKey key: AppSessionKey, as type: T.Type) -> T? {
+        guard let savedData = defaults.data(forKey: key.rawValue) else { return nil }
+        return try? JSONDecoder().decode(T.self, from: savedData)
+    }
+
+    // MARK: - Session Operations (Using Clean Computed Properties)
+
+    // USER CAN SHOW METRICS POPUP
+    static var canShowMetricsOnboarding: Bool {
+        get {
+            defaults.object(forKey: AppSessionKey.isUserCanViewMetricsPopUp.rawValue) as? Bool ?? true
+        }
+        set {
+            defaults.set(newValue, forKey: AppSessionKey.isUserCanViewMetricsPopUp.rawValue)
+        }
+    }
+
+    // MARK: - Watch Persistence
+
+    // PAIRED WATCH UUID
+    // Quick sentinel: non-nil means the user has paired at least once.
+    static var pairedWatchUUID: String? {
+        get { defaults.string(forKey: AppSessionKey.pairedWatchUUID.rawValue) }
+        set { defaults.set(newValue, forKey: AppSessionKey.pairedWatchUUID.rawValue) }
+    }
+
+    // PAIRED DEVICES (full identity snapshot: UUID + modelName + friendlyName)
+    static var pairedDevices: [PersistedDevice] {
+        get { readObject(forKey: .pairedDevices, as: [PersistedDevice].self) ?? [] }
+        set { saveObject(newValue, forKey: .pairedDevices) }
+    }
+
+    // MARK: - Management Methods
+
+    /// Remove stored session using key
+    static func removeSession(for key: AppSessionKey) {
+        defaults.removeObject(forKey: key.rawValue)
+    }
+
+    /// Clear all session data honoring ignored keys
+    static func removeAllData() {
+        for key in AppSessionKey.allCases {
+            if !ignoreKeyList.contains(key) {
+                defaults.removeObject(forKey: key.rawValue)
+            }
+        }
+    }
 }

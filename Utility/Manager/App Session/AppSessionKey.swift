@@ -10,8 +10,6 @@
 // CaseIterable allows us to loop through them in removeAllData().
 enum AppSessionKey: String, CaseIterable {
     case isUserCanViewMetricsPopUp
-    case userGait
-    case distanceUnit
 
     // Primary UUID of the last successfully paired Garmin watch.
     // Used as a quick "has the user ever paired?" check on cold launch.
