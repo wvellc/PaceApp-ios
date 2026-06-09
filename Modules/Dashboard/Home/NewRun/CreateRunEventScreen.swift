@@ -53,10 +53,9 @@ struct CreateRunEventScreen: View {
 					
 					//For duplicate event — generate new ID, save & sync, then dismiss
 					if type == .duplicate && viewModel.validateEventDetails() {
-						// Assign a fresh unique ID so the duplicate is its own event
-						viewModel.id = Int(Date().timeIntervalSince1970)
 						// Submit saves locally + sends create_event to watch
 						viewModel.submitDuplicate()
+						
 						dismiss()
 						
 						ToastManager.shared.present(.success("Successfully created."))

@@ -56,21 +56,25 @@ struct PaceApp: App {
             .installToast(position: .top)
             .installAppAlert()
 
-            // MARK: Universal Link / Deep Link handler
+            // MARK: URL / Deep Link handler
             //
-            // Firebase email-link sign-in flow:
-            //  1. User taps "Send Login Link" → AuthManager.sendEmailLink() sends the email.
-            //  2. User taps the link in their email client.
-            //  3. iOS matches the link domain against the `applinks:` entitlement entry
-            //     (thepaceapp.firebaseapp.com) and calls this handler instead of Safari.
-            //  4. We verify it is a sign-in link, retrieve the saved email, and sign in.
+            // All URL types arrive here in SwiftUI. We must handle them in priority order:
+            //  1. Firebase reCAPTCHA callback  — reversed-client-ID custom scheme
+            //  2. Firebase email sign-in link  — universal link (thepaceapp.firebaseapp.com)
+            //  3. ConnectIQ                    — everything else
             .onOpenURL { url in
-                logger.debug("Received app URL", metadata: [
-                    "url": "\(url.absoluteString)"
-                ])
+                logger.debug("Received app URL: \(url.absoluteString)")
 
+                // Priority 1 — Firebase reCAPTCHA / phone-auth callback.
+                // Must be checked BEFORE email-link check because canHandle()
+                // matches the reversed-client-ID scheme used by reCAPTCHA.
+                if Auth.auth().canHandle(url) {
+                    return
+                }
+
+                // Priority 2 — Firebase email sign-in link.
                 guard AuthManager.shared.isSignIn(withEmailLink: url.absoluteString) else {
-                    // Not a Firebase email link — forward to ConnectIQ.
+                    // Priority 3 — ConnectIQ or other custom schemes.
                     ciqManager.handleOpenURL(url)
                     return
                 }
@@ -78,8 +82,6 @@ struct PaceApp: App {
                 let savedEmail = UserDefaults.standard.string(forKey: Keys.emailForSignIn) ?? ""
 
                 guard !savedEmail.isEmpty else {
-                    // Link opened on a different device: the email is unknown.
-                    // Navigate back to Login so the user can re-enter it.
                     ToastManager.shared.present(
                         .error("Please open this link on the device where you requested it, or request a new login link.")
                     )
@@ -87,7 +89,6 @@ struct PaceApp: App {
                     return
                 }
 
-                // Show loading while authenticating...
                 router.setRoot(.authenticating, forward: true)
 
                 Task { @MainActor in
@@ -96,29 +97,24 @@ struct PaceApp: App {
                             email: savedEmail,
                             link: url.absoluteString
                         )
-                        logger.info("Email link sign-in succeeded", metadata: [
-                            "userId": "\(user.uid)"
-                        ])
-
-                        // Fetch/Sync user details before we route so router resolves roots correctly
+                        logger.info("Email link sign-in succeeded: \(user.uid)")
+                        // waitForUserDetails is handled by the auth state listener path;
+                        // here we explicitly fetch before routing for determinism.
                         do {
                             _ = try await AuthManager.shared.fetchUserProfileInfo(userId: user.uid)
                         } catch {
                             let nsError = error as NSError
                             if nsError.domain == "AuthManager" && nsError.code == 404 {
-                                logger.info("Email link: No Firestore profile found, creating initial userDetails.")
                                 var initial = UserModel(uuid: user.uid)
                                 initial.email = user.email
                                 AuthManager.shared.userDetails = initial
                                 await AuthManager.shared.syncUserToFirestore(userId: user.uid)
                             } else {
-                                logger.error("Email link: Failed to fetch user profile info: \(error.localizedDescription)")
                                 var placeholder = UserModel(uuid: user.uid)
                                 placeholder.email = user.email
                                 AuthManager.shared.userDetails = placeholder
                             }
                         }
-
                         router.setupRootNavigation()
                     } catch {
                         logger.error("Email link sign-in failed: \(error.localizedDescription)")

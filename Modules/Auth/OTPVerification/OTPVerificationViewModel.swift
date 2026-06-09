@@ -19,6 +19,7 @@ final class OTPVerificationViewModel {
     // MARK: - State
     var otp: String = ""
     var isVerifyingOTP: Bool = false
+    var isResending: Bool = false
     var resendSecondsRemaining: Int
     var isResendAvailable: Bool = false
 
@@ -80,7 +81,7 @@ final class OTPVerificationViewModel {
     //
     // Re-triggers the Firebase phone verification using the stored phone number.
     func triggerResend() {
-        guard isResendAvailable else { return }
+        guard isResendAvailable, !isResending else { return }
 
         Task { @MainActor in
             guard !phoneNumber.isEmpty else {
@@ -88,8 +89,8 @@ final class OTPVerificationViewModel {
                 return
             }
 
+            isResending = true
             do {
-                // Re-send the OTP — AuthManager returns the new verificationID.
                 let newVerificationID = try await AuthManager.shared.sendOTP(phoneNumber: phoneNumber)
                 self.verificationID = newVerificationID
                 ToastManager.shared.present(.success("A new code has been sent."))
@@ -97,6 +98,7 @@ final class OTPVerificationViewModel {
             } catch {
                 ToastManager.shared.present(.error(error.localizedDescription))
             }
+            isResending = false
         }
     }
 
@@ -111,10 +113,8 @@ final class OTPVerificationViewModel {
             guard let self else { return }
 
             guard !self.verificationID.isEmpty else {
-                await MainActor.run {
-                    self.isVerifyingOTP = false
-                    ToastManager.shared.present(.error("Session expired. Please go back and request a new code."))
-                }
+                self.isVerifyingOTP = false
+                ToastManager.shared.present(.error("Session expired. Please go back and request a new code."))
                 return
             }
 
@@ -123,33 +123,47 @@ final class OTPVerificationViewModel {
                     verificationID: self.verificationID,
                     code: self.otp
                 )
-                
-                // Fetch the user profile from Firestore so userDetails is ready before we route.
-                _ = try? await AuthManager.shared.fetchUserProfileInfo(userId: user.uid)
-                
-                self.persistUserSession(userId: user.uid, phoneNumber: user.phoneNumber)
 
-                await MainActor.run {
-                    self.isVerifyingOTP = false
-                    self.onOTPVerified?()
-                }
+                // The auth state listener in AuthManager fires immediately after
+                // signIn and begins fetching the Firestore profile asynchronously.
+                // We must wait for that fetch to complete before calling
+                // setupRootNavigation() — otherwise userDetails is nil,
+                // staticRoot() returns .auth, and the user sees LoginScreen flash.
+                //
+                // Wait up to 5 seconds for userDetails to be populated.
+                // For a new user the listener creates a placeholder synchronously
+                // (on 404), so this resolves almost instantly in practice.
+                await self.waitForUserDetails(uid: user.uid)
+
+                self.isVerifyingOTP = false
+                self.onOTPVerified?()
+
             } catch {
-                await MainActor.run {
-                    self.isVerifyingOTP = false
-                    // Clear the entered code so the user can retry cleanly.
-                    self.otp = ""
-                    ToastManager.shared.present(.error(error.localizedDescription))
-                }
+                self.isVerifyingOTP = false
+                self.otp = ""
+                ToastManager.shared.present(.error(error.localizedDescription))
             }
         }
     }
 
-    // MARK: - Session Persistence
-
-    private func persistUserSession(userId: String, phoneNumber: String?) {
-        var user = AuthManager.shared.userDetails ?? UserModel(uuid: userId)
-        user.uuid = userId
-        if let phone = phoneNumber { user.phoneNumber = phone }
-        AuthManager.shared.userDetails = user
+    /// Polls AuthManager.shared.userDetails until it is set for the given uid,
+    /// or until the timeout expires. Prevents routing before the auth listener
+    /// has finished its Firestore profile fetch.
+    private func waitForUserDetails(uid: String, timeoutSeconds: Double = 5) async {
+        let deadline = Date().addingTimeInterval(timeoutSeconds)
+        while Date() < deadline {
+            if AuthManager.shared.userDetails?.uuid == uid {
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        // Timeout — ensure at minimum a placeholder exists so routing works.
+        if AuthManager.shared.userDetails == nil {
+            var placeholder = UserModel(uuid: uid)
+            if let phone = Auth.auth().currentUser?.phoneNumber {
+                placeholder.phoneNumber = phone
+            }
+            AuthManager.shared.userDetails = placeholder
+        }
     }
 }

@@ -49,32 +49,36 @@ final class AuthManager {
                 self.currentUser = user
                 
                 if let user {
-                    // Try to fetch profile from Firestore first.
+                    // Silently refresh profile in the background.
+                    // IMPORTANT: Do NOT call setupRootNavigation() here.
+                    // Navigation after OTP sign-in is driven exclusively by
+                    // OTPVerificationViewModel.onOTPVerified, which waits for
+                    // this fetch to complete before routing. Calling
+                    // setupRootNavigation() here races with that callback and
+                    // can route to .auth before userDetails is populated.
                     do {
                         _ = try await self.fetchUserProfileInfo(userId: user.uid)
-                        
-                        // If we are currently on .accountCreation and the fetched user profile is completed,
-                        // transition to .dashboard.
-                        if Router.shared.root == .accountCreation && self.userDetails?.isProfileCompleted == true {
-                            Router.shared.setupRootNavigation()
-                        }
                     } catch {
                         let nsError = error as NSError
                         if nsError.domain == "AuthManager" && nsError.code == 404 {
-                            self.logger.info("No Firestore profile found, creating initial userDetails.")
                             var initial = UserModel(uuid: user.uid)
                             initial.email = user.email
                             initial.phoneNumber = user.phoneNumber
                             self.userDetails = initial
-                            // Sync it to Firestore
                             try? await UserProfileRepository.shared.upsertProfile(initial, userId: user.uid)
                         } else {
-                            self.logger.error("Failed to fetch user profile info: \(error.localizedDescription)")
+                            self.logger.error("Failed to fetch profile: \(error.localizedDescription)")
                             var placeholder = UserModel(uuid: user.uid)
                             placeholder.email = user.email
                             placeholder.phoneNumber = user.phoneNumber
                             self.userDetails = placeholder
                         }
+                    }
+                    
+                    // Only navigate if already on dashboard/accountCreation and
+                    // the profile completion status changed (e.g. user updated profile).
+                    if Router.shared.root == .accountCreation && self.userDetails?.isProfileCompleted == true {
+                        Router.shared.setupRootNavigation()
                     }
                     
                 } else {

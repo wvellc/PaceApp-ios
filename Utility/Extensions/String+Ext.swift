@@ -105,10 +105,3 @@ extension String {
 		return trimmingCharacters(in: .whitespaces).count >= 3
 	}
 }
-
-private extension String {
-	var nilIfEmpty: String? {
-		let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
-		return trimmed.isEmpty ? nil : trimmed
-	}
-}

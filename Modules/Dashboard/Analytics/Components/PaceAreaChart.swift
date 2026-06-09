@@ -98,7 +98,7 @@ struct PaceAreaChart: View {
 			}
 		}
 		// 3. Enable edge-to-edge and touch tracking
-		.chartXScale(domain: 0...(dataPoints.count - 1))
+		.chartXScale(domain: 0...((dataPoints.count - 1) > 0 ? dataPoints.count - 1 : 0))
 		.chartYScale(domain: 0...maxValue)
 		.chartXSelection(value: $selectedIndex) // Tracks the drag/tap index
 		.onChange(of: selectedIndex, {

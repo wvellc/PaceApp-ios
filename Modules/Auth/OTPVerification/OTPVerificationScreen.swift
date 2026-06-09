@@ -42,19 +42,58 @@ struct OTPVerificationScreen: View {
 				Spacer()
 			}
 
+			// OTP field — dimmed and non-interactive while verifying
 			OTPFieldView(numberOfFields: Constant.Config.OTPLength, otp: $viewModel.otp)
 				.focused($isOTPFieldFocused)
-				.onChange(of: viewModel.otp) { oldOtp, newOtp in
+				.disabled(viewModel.isVerifyingOTP)
+				.opacity(viewModel.isVerifyingOTP ? 0.4 : 1)
+				.onChange(of: viewModel.otp) { _, newOtp in
 					if newOtp.count >= Constant.Config.OTPLength {
 						isOTPFieldFocused = false
 						viewModel.verifyOTPIfNeeded()
 					}
 				}
 
-			VSpace(height: 24)
+			VSpace(height: 20)
 
+			// Verifying indicator — sits right below the OTP field
+			// so the user knows their code is being checked
+			if viewModel.isVerifyingOTP {
+				HStack(spacing: 8) {
+					Spacer()
+					
+					ProgressView()
+						.progressViewStyle(.circular)
+						.tint(.whiteApp)
+						.scaleEffect(0.85)
+					Text(.verifying)
+						.font(.medium14)
+						.foregroundStyle(.whiteApp.opacity(0.8))
+					
+					Spacer()
+				}
+				.transition(.opacity.combined(with: .scale(scale: 0.9)))
+			} else {
+				Color.clear.frame(height: 20) // stable height placeholder
+			}
+
+			VSpace(height: 16)
+
+			// Resend area
 			Group {
-				if viewModel.isResendAvailable {
+				if viewModel.isResending {
+					// Sending state
+					HStack(spacing: 8) {
+						ProgressView()
+							.progressViewStyle(.circular)
+							.tint(.neonAquaBlue)
+							.scaleEffect(0.85)
+						Text(.sendingNewCode)
+							.font(.semiBold14)
+							.foregroundStyle(.neonAquaBlue.opacity(0.8))
+					}
+				} else if viewModel.isResendAvailable {
+					// Resend button
 					Button {
 						viewModel.triggerResend()
 					} label: {
@@ -62,53 +101,40 @@ struct OTPVerificationScreen: View {
 							.foregroundStyle(.neonAquaBlue)
 							.font(.semiBold14)
 					}
+					.disabled(viewModel.isVerifyingOTP)
+					
 				} else {
+					// Countdown
 					Text("\(String(localized: .didntReceiveOtpResendOtpIn)) \(Text(formattedTime(viewModel.resendSecondsRemaining)).foregroundStyle(.whiteApp).font(.semiBold16))")
 						.foregroundStyle(.whiteApp.opacity(0.8))
 						.font(.semiBold14)
-
 				}
 			}
+			.animation(.easeInOut(duration: 0.2), value: viewModel.isResending)
+			.animation(.easeInOut(duration: 0.2), value: viewModel.isResendAvailable)
 
 			VSpace(height: 34)
-
-//			AppButton(.next) {
-//				viewModel.verifyOTPIfNeeded()
-//			}
-//			.setDisabled(!(viewModel.isOTPComplete) || viewModel.isVerifyingOTP)
-//			.ignoresSafeArea(.keyboard, edges: .bottom)
 
 			Spacer(minLength: Constant.UI.defaultPadding)
 		}
 		.safeAreaPadding(Constant.UI.defaultPadding)
 		.appBackground()
+		.animation(.easeInOut(duration: 0.25), value: viewModel.isVerifyingOTP)
 		.onAppear {
 			Task { @MainActor in
-				try? await Task.sleep(seconds: 0.1) // 0.1s
+				try? await Task.sleep(seconds: 0.1)
 				isOTPFieldFocused = true
 			}
-			
-			viewModel.onOTPVerified = { [weak router] in
-				// 1. Create a transaction
-				var transaction = Transaction()
-				
-				// 2. Attach the completion handler — use setupRootNavigation() so that
-				//    returning users go to dashboard and brand-new users go to accountCreation.
-				transaction.addAnimationCompletion {
-					router?.setupRootNavigation()
-				}
-				
-				// 3. Execute the state change within that transaction
-				withTransaction(transaction) {
-					isOTPFieldFocused = false
-				}
+
+			viewModel.onOTPVerified = {
+				isOTPFieldFocused = false
+				Router.shared.setupRootNavigation()
 			}
-			
+
 			viewModel.onAppear()
 		}
 		.onDisappear {
 			isOTPFieldFocused = false
-			
 			viewModel.onDisappear()
 		}
 	}

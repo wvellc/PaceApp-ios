@@ -113,18 +113,19 @@ struct LoginScreen: View {
 						}
 					}
 					
-					// Send OTP Button
+					// Send OTP / Send Link Button
+					// Disabled and dimmed while a request is in-flight to prevent double-taps.
 					AppButton(
-						viewModel.state == .sending ? LocalizedStringResource("Sending...") : (
-							viewModel.loginType == .email ? LocalizedStringResource("Send Login Link") : LocalizedStringResource("Send OTP")
+						viewModel.state == .sending ? .sending : (
+							viewModel.loginType == .email ? .sendLoginLink : .sendOtp
 						)
 					) {
 						Task { await viewModel.sendOTP() }
 					}
-					.disabled(!viewModel.isInputValid)
-					.opacity(viewModel.isInputValid ? 1 : 0.5)
+					.disabled(!viewModel.isInputValid || viewModel.state == .sending)
+					.opacity(viewModel.isInputValid && viewModel.state != .sending ? 1 : 0.5)
 					
-										
+								
 					// Terms & Privacy
 					VStack(spacing: 6) {
 						Text(.byContinuingYouAgreeToOur)
@@ -195,10 +196,10 @@ struct LoginScreen: View {
 			// (e.g. user pops back from OTP or reCAPTCHA returns mid-flow).
 			hasNavigatedToOTP = false
 			viewModel.navigationEvent = nil
+			viewModel.state = .idle
 			DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-				focus =  viewModel.loginType
+				focus = viewModel.loginType
 			}
-			
 			
 			#if kDebug
 			viewModel.phoneNumber = "9898989898"
@@ -234,4 +235,3 @@ struct LoginScreen: View {
 		.environment(Router())
 	
 }
-
