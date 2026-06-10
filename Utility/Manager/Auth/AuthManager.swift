@@ -40,14 +40,14 @@ final class AuthManager {
     /// Call once from AppDelegate after FirebaseApp.configure().
     func configure() {
         guard authStateListenerHandle == nil else { return }
-        
+
         currentUser = Auth.auth().currentUser
-        
+
         authStateListenerHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             guard let self else { return }
             Task { @MainActor in
                 self.currentUser = user
-                
+
                 if let user {
                     // Silently refresh profile in the background.
                     // IMPORTANT: Do NOT call setupRootNavigation() here.
@@ -61,26 +61,36 @@ final class AuthManager {
                     } catch {
                         let nsError = error as NSError
                         if nsError.domain == "AuthManager" && nsError.code == 404 {
+                            // Brand-new user — no Firestore document exists yet.
+                            // Seed a minimal model from the Firebase Auth record.
+                            self.logger.info("No Firestore profile found for \(user.uid) — seeding new user document.")
                             var initial = UserModel(uuid: user.uid)
                             initial.email = user.email
                             initial.phoneNumber = user.phoneNumber
                             self.userDetails = initial
-                            try? await UserProfileRepository.shared.upsertProfile(initial, userId: user.uid)
+                            do {
+                                try await UserProfileRepository.shared.upsertProfile(initial, userId: user.uid)
+                            } catch {
+                                self.logger.error("Failed to create initial profile for \(user.uid): \(error.localizedDescription)")
+                            }
                         } else {
-                            self.logger.error("Failed to fetch profile: \(error.localizedDescription)")
+                            // Network or permissions failure — fall back to a
+                            // placeholder so the app can still route correctly.
+                            self.logger.error("Profile fetch failed for \(user.uid): \(error.localizedDescription)")
                             var placeholder = UserModel(uuid: user.uid)
                             placeholder.email = user.email
                             placeholder.phoneNumber = user.phoneNumber
                             self.userDetails = placeholder
+                            self.logger.warning("Running with placeholder profile — settings (gait, vibrate, beep, distanceUnit) will use defaults until next successful fetch.")
                         }
                     }
-                    
+
                     // Only navigate if already on dashboard/accountCreation and
                     // the profile completion status changed (e.g. user updated profile).
                     if Router.shared.root == .accountCreation && self.userDetails?.isProfileCompleted == true {
                         Router.shared.setupRootNavigation()
                     }
-                    
+
                 } else {
                     self.userDetails = nil
                     AppSession.removeAllData()
@@ -160,14 +170,14 @@ final class AuthManager {
 
     func deleteAccount() async throws {
         guard let user = currentUser else { return }
-        let db = Firestore.firestore()
+        let db  = Firestore.firestore()
         let uid = user.uid
-        let events = try await db.collection("events").whereField("userId", isEqualTo: uid).getDocuments()
-        for doc in events.documents { try? await doc.reference.delete() }
+        let events    = try await db.collection("events").whereField("userId", isEqualTo: uid).getDocuments()
+        for doc in events.documents    { try? await doc.reference.delete() }
         let favorites = try await db.collection("favorites").whereField("userId", isEqualTo: uid).getDocuments()
         for doc in favorites.documents { try? await doc.reference.delete() }
-        let legacy = try await db.collection("users").document(uid).collection("activities").getDocuments()
-        for doc in legacy.documents { try? await doc.reference.delete() }
+        let legacy    = try await db.collection("users").document(uid).collection("activities").getDocuments()
+        for doc in legacy.documents    { try? await doc.reference.delete() }
         try? await db.collection("users").document(uid).delete()
         try? await user.delete()
         ConnectIQManager.shared.disconnectFromApp()
@@ -176,19 +186,65 @@ final class AuthManager {
     // MARK: - Firestore Sync
 
     func syncUserToFirestore(userId: String) async {
-        guard let model = userDetails else { return }
+        guard let model = userDetails else {
+            logger.warning("syncUserToFirestore called but userDetails is nil — skipping.")
+            return
+        }
         do {
             try await UserProfileRepository.shared.upsertProfile(model, userId: userId)
         } catch {
-            logger.error("Firestore user sync failed: \(error.localizedDescription)")
+            logger.error("Firestore user sync failed for \(userId): \(error.localizedDescription)")
         }
     }
 
+    // MARK: - Fetch Profile
+
+    /// Fetches the full user profile from Firestore — including gait, vibrate,
+    /// beep, and distance unit settings — and caches it in `userDetails`.
+    /// Called on every authenticated app launch via the auth state listener.
     @discardableResult
     func fetchUserProfileInfo(userId: String) async throws -> UserModel {
-        let model = try await UserProfileRepository.shared.fetchProfile(userId: userId)
-        self.userDetails = model
-        return model
+        logger.info("Fetching profile and settings for user \(userId)...")
+        do {
+            let model = try await UserProfileRepository.shared.fetchProfile(userId: userId)
+            self.userDetails = model
+            logFetchedSettings(model, userId: userId)
+            return model
+        } catch {
+            logger.error("Failed to fetch profile for \(userId): \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    // MARK: - Private Helpers
+
+    /// Logs which settings were successfully loaded vs missing (will use defaults).
+    private func logFetchedSettings(_ model: UserModel, userId: String) {
+        logger.info("Profile loaded for \(userId).")
+
+        if model.gait != nil {
+            logger.info("[Settings] gait — loaded ✓")
+        } else {
+            logger.warning("[Settings] gait — not set, will use gender default.")
+        }
+
+        if let vibrate = model.intervalVibrate {
+            logger.info("[Settings] intervalVibrate — loaded: \(vibrate) ✓")
+        } else {
+            logger.warning("[Settings] intervalVibrate — not set, defaulting to false.")
+        }
+
+        if let beep = model.intervalBeep {
+            logger.info("[Settings] intervalBeep — loaded: \(beep) ✓")
+        } else {
+            logger.warning("[Settings] intervalBeep — not set, defaulting to false.")
+        }
+
+        if let unit = model.distanceUnit {
+            logger.info("[Settings] distanceUnit — loaded: \(unit.rawValue) ✓")
+        } else {
+            logger.warning("[Settings] distanceUnit — not set, defaulting to Miles.")
+        }
     }
 }
 
@@ -219,7 +275,7 @@ private final class PhoneAuthUIDelegate: NSObject, AuthUIDelegate {
     private func top(_ vc: UIViewController) -> UIViewController {
         if let p = vc.presentedViewController { return top(p) }
         if let n = vc as? UINavigationController, let t = n.topViewController { return top(t) }
-        if let t = vc as? UITabBarController, let s = t.selectedViewController { return top(s) }
+        if let t = vc as? UITabBarController,    let s = t.selectedViewController { return top(s) }
         return vc
     }
 }

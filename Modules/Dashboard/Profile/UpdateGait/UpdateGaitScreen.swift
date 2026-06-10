@@ -32,7 +32,7 @@ struct UpdateGaitScreen: View {
             }
             .scrollBounceBehavior(.basedOnSize)
 
-            AppButton(.close) {
+			AppButton(.save) {
                 viewModel.save()
                 dismiss()
             }

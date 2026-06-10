@@ -7,27 +7,18 @@
 
 import Foundation
 
-
-// MARK: - Data Models
+// MARK: - GaitUserData
 
 /// Top-level container holding gait data for both walking and running.
-struct GaitUserData: Identifiable, Codable {
-	var id = UUID()
+struct GaitUserData: Codable, Equatable {
 	var walkingData: GaitData
 	var runningData: GaitData
-	
-	enum CodingKeys: String, CodingKey {
-		case id, walkingData, runningData
-	}
 }
 
-/// Stores the step length and unit for a single gait type.
-struct GaitData: Identifiable, Codable {
-	var id = UUID()
+// MARK: - GaitData
+
+/// Stores the step length and unit for a single gait type (e.g. Walking / Running).
+struct GaitData: Codable, Equatable {
 	var stepLength: Double
-	var unit: String  // e.g. "Meters" or "Feet"
-	
-	enum CodingKeys: String, CodingKey {
-		case id, stepLength, unit
-	}
+	var unit: String  // "Meters" or "Feet"
 }

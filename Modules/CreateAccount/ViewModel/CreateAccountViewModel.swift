@@ -22,9 +22,6 @@ final class CreateAccountViewModel {
     // MARK: - Watch
 
     /// Injected after init via configure(ciqManager:) from the View's .onAppear.
-    /// Because ConnectIQManager is @Observable, any View reading
-    /// ciqManager.devices will automatically re-render when devices arrive —
-    /// no manual Combine subscription is needed.
     private(set) var ciqManager: ConnectIQManager?
 
     // MARK: - Step state
@@ -50,6 +47,10 @@ final class CreateAccountViewModel {
 
     var selectedGait: GaitType = .walking
 
+    /// Live gait data being built during onboarding.
+    /// Seeded from gender defaults; updated as the user interacts with SetGaitStepView.
+    var gaitData: GaitUserData = Gender.male.defaultGaitData
+
     // MARK: - Step 6 — Connect Strava
 
     var stravaProfileURL: String = "strava.com/athletes/12345678"
@@ -73,8 +74,6 @@ final class CreateAccountViewModel {
     // MARK: - Injection
 
     /// Call from the View's .onAppear.
-    /// The View must read ciqManager.devices directly so @Observable
-    /// re-renders the list automatically when devices arrive from Garmin Connect.
     func configure(ciqManager: ConnectIQManager) {
         guard self.ciqManager == nil else { return }
         self.ciqManager = ciqManager
@@ -82,28 +81,32 @@ final class CreateAccountViewModel {
     }
 
     /// Re-evaluate selectedWatch against the current device list.
-    /// Call from ChooseDevicesStepView.onAppear / onChange(of: ciqManager.devices).
     func syncSelectedWatch() {
-		guard let devices = ciqManager?.devices else {
-			return
-		}
+        guard let devices = ciqManager?.devices else { return }
 
-		if let current = selectedWatch, devices.contains(where: { $0.uuid == current.uuid }) {
+        if let current = selectedWatch, devices.contains(where: { $0.uuid == current.uuid }) {
             return // still valid
         }
-		
-		if let firstDevice = devices.first {
-			selectedWatch = firstDevice
-//			currentStep = .chooseYourModel
 
-		} else {
-			if currentStep == .chooseYourModel {
-				currentStep = .pairWatch
-				ToastManager.shared.present(.error("No watch connected. Pair again."))
-			}
-			selectedWatch = nil
+        if let firstDevice = devices.first {
+            selectedWatch = firstDevice
+        } else {
+            if currentStep == .chooseYourModel {
+                currentStep = .pairWatch
+                ToastManager.shared.present(.error("No watch connected. Pair again."))
+            }
+            selectedWatch = nil
+        }
+    }
 
-		}
+    // MARK: - Gait callbacks (forwarded from SetGaitStepView)
+
+    func onRunningGaitChange(_ data: GaitData) {
+        gaitData.runningData = data
+    }
+
+    func onWalkingGaitChange(_ data: GaitData) {
+        gaitData.walkingData = data
     }
 
     // MARK: - Actions
@@ -126,6 +129,8 @@ final class CreateAccountViewModel {
             slideDirection = .forward
             withAnimation(.easeInOut(duration: 0.3)) { currentStep = next }
         } else {
+            // Last step — persist gait before finishing
+            saveGait()
             navigationEvent = .finish
         }
     }
@@ -147,16 +152,17 @@ final class CreateAccountViewModel {
             slideDirection = .forward
             withAnimation(.easeInOut(duration: 0.3)) { currentStep = .setGait }
         default:
-            // Skipping final steps — still persist the profile info collected so far
+            // Skipping final steps — persist whatever has been collected so far
             saveUserProfile()
+            saveGait()
             navigationEvent = .skip
         }
     }
 
-    // MARK: - Gait defaults
+    // MARK: - Gait defaults (no more AppSession)
 
     private func applyDefaultGaitLengths(for gender: Gender) {
-        AppSession.userGaitData = gender.defaultGaitData
+        gaitData = gender.defaultGaitData
     }
 
     // MARK: - Validation
@@ -164,7 +170,7 @@ final class CreateAccountViewModel {
     @discardableResult
     private func validateProfile() -> Bool {
         let trimmedFirstName = firstName.trimmingCharacters(in: .whitespaces)
-        let trimmedLastName = lastName.trimmingCharacters(in: .whitespaces)
+        let trimmedLastName  = lastName.trimmingCharacters(in: .whitespaces)
 
         guard !trimmedFirstName.isEmpty,
               ValidationProvider.isValid(text: trimmedFirstName, type: .name) else {
@@ -182,20 +188,29 @@ final class CreateAccountViewModel {
         return true
     }
 
-    // MARK: - Session Persistence
+    // MARK: - Firestore Persistence
 
-    /// Saves first name, last name, and gender into the persisted UserModel.
-    /// Profile is considered complete once both names are non-empty.
+    /// Saves first name, last name, and gender into Firestore via AuthManager sync.
     private func saveUserProfile() {
         guard let currentUID = AuthManager.shared.currentUserID else { return }
         var user = AuthManager.shared.userDetails ?? UserModel(uuid: currentUID)
         user.firstName = firstName.trimmingCharacters(in: .whitespaces)
-        user.lastName = lastName.trimmingCharacters(in: .whitespaces)
-        user.gender = selectedGender
+        user.lastName  = lastName.trimmingCharacters(in: .whitespaces)
+        user.gender    = selectedGender
         AuthManager.shared.userDetails = user
-        
+
         Task {
             await AuthManager.shared.syncUserToFirestore(userId: currentUID)
+        }
+    }
+
+    /// Writes the current gait data to Firestore and keeps the in-memory model in sync.
+    private func saveGait() {
+        guard let currentUID = AuthManager.shared.currentUserID else { return }
+        let snapshot = gaitData
+        AuthManager.shared.userDetails?.gait = snapshot
+        Task {
+            try? await UserProfileRepository.shared.updateGait(snapshot, userId: currentUID)
         }
     }
 }

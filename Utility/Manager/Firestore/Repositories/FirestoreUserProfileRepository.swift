@@ -12,7 +12,7 @@ final class FirestoreUserProfileRepository: UserProfileRepositoryProtocol {
     static let shared = FirestoreUserProfileRepository()
 
     private let db = Firestore.firestore()
-    private let logger = Logger(label: "net.paceapp.firestore.profile")
+    private let logger = Logger(label: "firestore.profile")
 
     private init() {}
 
@@ -81,7 +81,7 @@ final class FirestoreUserProfileRepository: UserProfileRepositoryProtocol {
     /// Writes `distanceUnit` as a single merge-safe update.
     func updateDistanceUnit(_ unit: MeasureUnit, userId: String) async throws {
         try await db.collection("users").document(userId).setData(
-            ["distanceUnit": unit.rawValue],
+			["distanceUnit": unit.fullName],
             merge: true
         )
     }

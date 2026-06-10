@@ -82,7 +82,7 @@ class CreateRunEventViewModel {
 			location = "NY City"
 		#endif
 		
-		distanceType = AppSession.userDistanceUnit
+		distanceType = AuthManager.shared.userDetails?.distanceUnit ?? .miles
 		
 		self.type = type
 	}

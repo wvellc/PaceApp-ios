@@ -2,15 +2,15 @@
 //  Gender.swift
 //  PaceApp
 //
-//  Created by Codex on 5/8/26.
+//  Created by FURKAN VIJAPURA on 5/8/26.
 //
 
 // MARK: - Gender
 
-enum Gender: String, CaseIterable, Identifiable, Codable {
-	case male = "Male"
+enum Gender: String, CaseIterable, Identifiable, Codable, Equatable {
+	case male   = "Male"
 	case female = "Female"
-	case other = "Other"
+	case other  = "Other"
 	
 	var id: String { rawValue }
 	
