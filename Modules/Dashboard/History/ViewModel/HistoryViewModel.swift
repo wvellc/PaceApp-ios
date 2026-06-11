@@ -39,18 +39,18 @@ final class HistoryViewModel {
 	
 	var activities: [ActivityData] = []
 	var isLoading: Bool = false
-
+	
 	private let eventRepository: EventRepositoryProtocol
 	private var completedEventsListener: ListenerRegistrationToken?
-
+	
 	init(eventRepository: EventRepositoryProtocol = FirestoreEventRepository.shared) {
 		self.eventRepository = eventRepository
 	}
-
+	
 	deinit {
 		completedEventsListener?.remove()
 	}
-
+	
 	func startObservingEvents(userId: String) {
 		completedEventsListener?.remove()
 		isLoading = true
@@ -59,7 +59,7 @@ final class HistoryViewModel {
 			self?.isLoading = false
 		}
 	}
-
+	
 	func stopObservingEvents() {
 		completedEventsListener?.remove()
 		completedEventsListener = nil
@@ -139,5 +139,5 @@ final class HistoryViewModel {
 			activities.remove(at: index)
 		}
 	}
-
+	
 }

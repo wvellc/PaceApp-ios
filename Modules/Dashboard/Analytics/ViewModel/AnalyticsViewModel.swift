@@ -23,7 +23,7 @@ final class AnalyticsViewModel {
 	private(set) var summaryCards: [AnalyticsMetricType: [AnalyticsSummaryCard]] = [:]
 
 	private let repository: AnalyticsRepository
-	private let userId: String
+	private(set) var userId: String
 
 	init(userId: String, repository: AnalyticsRepository = .shared) {
 		self.userId = userId

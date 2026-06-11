@@ -2,32 +2,41 @@
 //  HomeViewModel.swift
 //  PaceApp
 //
-//  Created by OpenAI on 8/30/25.
-//
 
 import SwiftUI
 import Combine
 
-///Home View Model
+// MARK: - Home View Model
+
+@MainActor
 @Observable
 final class HomeViewModel {
 	
-	//MARK: Variables
+	// MARK: - Metrics
 	
-	//Metrics
 	var metrics: [HomeMetric]
-	private var timer: Timer?
 	var isHighPerformance: Bool = false
 	var showMetricPopup: Bool = false
 	var selectedMetricIndex: Int = 0
-
+	
+	// MARK: - Events
+	
 	var upcomingEvents: [ActivityData] = []
 	var isLoadingEvents: Bool = false
-
+	
+	// MARK: - Private
+	
+	/// Timer is held as a Task so it runs on MainActor — no cross-thread state mutation.
+	private var tickTask: Task<Void, Never>?
+	
 	private let eventRepository: EventRepositoryProtocol
-	private var activeEventsListener: ListenerRegistrationToken?
-
-	//MARK: Intializer
+	nonisolated(unsafe) private var activeEventsListener: ListenerRegistrationToken?
+	
+	/// Guards against redundant re-attaches when .task(id:) re-fires with the same userId.
+	private var activeListenerUserId: String?
+	
+	// MARK: - Init
+	
 	init(eventRepository: EventRepositoryProtocol = FirestoreEventRepository.shared) {
 		self.eventRepository = eventRepository
 		self.metrics = [
@@ -68,91 +77,101 @@ final class HomeViewModel {
 			)
 		]
 		
-		// Start a timer to update values every second for prototyping
-		timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
-			self?.tick()
+		startTickLoop()
+	}
+	
+	// MARK: - Deinit
+	
+	deinit {
+		activeEventsListener?.remove()
+	}
+	
+	// MARK: - Listener Lifecycle
+	
+	func startObservingEvents(userId: String) {
+		// Skip re-attach if already listening for this exact userId.
+		guard activeListenerUserId != userId else { return }
+		
+		activeEventsListener?.remove()
+		activeListenerUserId = userId
+		isLoadingEvents = true
+		
+		activeEventsListener = eventRepository.observeActiveEvents(userId: userId) { [weak self] events in
+			guard let self else { return }
+			self.upcomingEvents = events
+			self.isLoadingEvents = false
 		}
 	}
 	
-	//MARK: DeIntializer
-	deinit {
-		activeEventsListener?.remove()
-		timer?.invalidate()
-	}
-
-	func startObservingEvents(userId: String) {
-		activeEventsListener?.remove()
-		isLoadingEvents = true
-		activeEventsListener = eventRepository.observeActiveEvents(userId: userId) { [weak self] events in
-			self?.upcomingEvents = events
-			self?.isLoadingEvents = false
-		}
-	}
-
 	func stopObservingEvents() {
 		activeEventsListener?.remove()
 		activeEventsListener = nil
+		activeListenerUserId = nil
 	}
 	
-	//MARK: Methods
-	private func tick() {
-		func twoDigits(_ n: Int) -> String { String(format: "%02d", n) }
-		isHighPerformance.toggle()
-		
-		metrics = metrics.enumerated().map {
-			index,
-			metric in
-			// Choose symbol by common flag (no swapping)
-			
-			switch index {
-				case 0: // bpm
-					let bpm = Int.random(in: 55...110)
-					return HomeMetric(symbol: metric.symbol, value: "\(bpm)", unit: "bpm",
-									title: metric.title,
-									description: metric.description
-					)
-				case 1: // hrs
-					let hrs = Int.random(in: 6...16)
-					return HomeMetric(symbol: metric.symbol, value: "\(hrs)", unit: "hrs",
-									  title: metric.title,
-									  description: metric.description
-					)
-				case 2: // goal time (signed mm:ss)
-					let negative = Bool.random()
-					let m = Int.random(in: 0...1)
-					let s = Int.random(in: 0...59)
-					let sign = negative ? "-" : ""
-					return HomeMetric(symbol: metric.symbol, value: "\(sign)\(twoDigits(m)):\(twoDigits(s))", unit: "m /sec",
-									  title: metric.title,
-									  description: metric.description
-					)
-				case 3: // remaining (mm:ss)
-					let m = Int.random(in: 0...12)
-					let s = Int.random(in: 0...59)
-					return HomeMetric(symbol: metric.symbol, value: "\(m):\(twoDigits(s))", unit: "m /sec",
-									  title: metric.title,
-									  description: metric.description
-					)
-				case 4: // pace (min/mile)
-					let m = Int.random(in: 7...12)
-					let s = Int.random(in: 0...59)
-					return HomeMetric(symbol: metric.symbol, value: "\(m):\(twoDigits(s))", unit: "min/mile",
-									  title: metric.title,
-									  description: metric.description
-					)
-				default:
-					return HomeMetric(symbol: metric.symbol, value: metric.value, unit: metric.unit,
-									  title: metric.title,
-									  description: metric.description
-					)
-			}
-		}
-	}
+	// MARK: - Metric Tap
 	
 	func didTapMetric(_ metric: HomeMetric) {
 		guard let index = metrics.firstIndex(where: { $0.id == metric.id }) else { return }
 		selectedMetricIndex = index
 		showMetricPopup = true
 	}
-
+	
+	// MARK: - Tick Loop (MainActor-safe)
+	
+	/// Runs the prototype metric update loop entirely on MainActor
+	/// so all @Observable state mutations are on the correct thread.
+	private func startTickLoop() {
+		tickTask?.cancel()
+		tickTask = Task { [weak self] in
+			while !Task.isCancelled {
+				try? await Task.sleep(for: .seconds(3))
+				guard !Task.isCancelled, let self else { break }
+				self.tick()
+			}
+		}
+	}
+	
+	private func tick() {
+		func twoDigits(_ n: Int) -> String { String(format: "%02d", n) }
+		isHighPerformance.toggle()
+		
+		metrics = metrics.enumerated().map { index, metric in
+			switch index {
+				case 0: // bpm
+					let bpm = Int.random(in: 55...110)
+					return HomeMetric(symbol: metric.symbol, value: "\(bpm)", unit: "bpm",
+									  title: metric.title, description: metric.description)
+					
+				case 1: // hrs
+					let hrs = Int.random(in: 6...16)
+					return HomeMetric(symbol: metric.symbol, value: "\(hrs)", unit: "hrs",
+									  title: metric.title, description: metric.description)
+					
+				case 2: // goal time (signed mm:ss)
+					let negative = Bool.random()
+					let m = Int.random(in: 0...1)
+					let s = Int.random(in: 0...59)
+					let sign = negative ? "-" : ""
+					return HomeMetric(symbol: metric.symbol, value: "\(sign)\(twoDigits(m)):\(twoDigits(s))", unit: "m /sec",
+									  title: metric.title, description: metric.description)
+					
+				case 3: // remaining (mm:ss)
+					let m = Int.random(in: 0...12)
+					let s = Int.random(in: 0...59)
+					return HomeMetric(symbol: metric.symbol, value: "\(m):\(twoDigits(s))", unit: "m /sec",
+									  title: metric.title, description: metric.description)
+					
+				case 4: // pace (min/mile)
+					let m = Int.random(in: 7...12)
+					let s = Int.random(in: 0...59)
+					return HomeMetric(symbol: metric.symbol, value: "\(m):\(twoDigits(s))", unit: "min/mile",
+									  title: metric.title, description: metric.description)
+					
+				default:
+					return HomeMetric(symbol: metric.symbol, value: metric.value, unit: metric.unit,
+									  title: metric.title, description: metric.description)
+			}
+		}
+	}
 }

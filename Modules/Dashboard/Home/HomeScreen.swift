@@ -9,12 +9,13 @@ import SwiftUI
 import ConnectIQ
 
 // MARK: - HomeScreen
+
 struct HomeScreen: View {
 	
 	// MARK: - State
 	
-	@State private var viewModel        = HomeViewModel()
-    @State private var recentActivities = []//ActivityData.samples
+	@State private var viewModel = HomeViewModel()
+	@State private var recentActivities = []//ActivityData.samples
 	
 	let runActions: [RunAction] = [
 		RunAction(title: .newRun,      symbol: "icNewRun",      rout: .createRunEvent),
@@ -99,12 +100,10 @@ struct HomeScreen: View {
 				.zIndex(20)
 			}
 		}
+		// Start listener once per userId — HomeViewModel guards against redundant re-attaches.
 		.task(id: AuthManager.shared.currentUserID) {
 			guard let userId = AuthManager.shared.currentUserID else { return }
 			viewModel.startObservingEvents(userId: userId)
-		}
-		.onDisappear {
-			viewModel.stopObservingEvents()
 		}
 		.onAppear {
 			// Attempt immediately in case the watch was already connected
@@ -189,7 +188,7 @@ struct HomeScreen: View {
 		}
 	}
 	
-	// MARK: - Metrics popup gate
+	// MARK: - Metrics Popup Gate
 	
 	/// Shows the one-time metrics onboarding popup when:
 	/// 1. A watch is currently connected.
@@ -218,4 +217,3 @@ struct HomeScreen: View {
 			.environment(Router())
 	}
 }
-

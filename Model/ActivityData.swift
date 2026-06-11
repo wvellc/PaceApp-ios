@@ -13,18 +13,25 @@ import SwiftUI
 // All fields map to the ConnectIQ event payload keys.
 
 struct ActivityData: Identifiable, Hashable {
-    let id = UUID()
+	
+	// MARK: - Identity
+	//
+	// Uses the stable Firestore / ConnectIQ integer event ID so that SwiftUI
+	// ForEach can diff snapshots correctly. A random UUID would cause every
+	// list row to be destroyed and recreated on every snapshot delivery.
+	let id: Int
+	
 	let syncId: Int?
-    var title: String
-    let date: Date
-    let distance: String        // e.g. "5.00 mi" or "10.00 km"
-    let duration: String        // goal time for active, actual time for completed (HH:MM:SS)
-    let avgPace: String
-    let delta: String           // time delta display string (e.g. "+01:10")
+	var title: String
+	let date: Date
+	let distance: String        // e.g. "5.00 mi" or "10.00 km"
+	let duration: String        // goal time for active, actual time for completed (HH:MM:SS)
+	let avgPace: String
+	let delta: String           // time delta display string (e.g. "+01:10")
 	let deltaColor: Color
 	var location: String
 	let gaitType: GaitType?
-
+	
 	// --- Extended fields from ConnectIQ payload ---
 	let goal: String             // goal time as HH:MM:SS
 	let measure: String          // "Miles" or "Kilometers"
@@ -36,10 +43,12 @@ struct ActivityData: Identifiable, Hashable {
 	let timeVar: String          // completed: time variance string
 	let avgHeartRate: Int        // completed: average heart rate (0 if unavailable)
 	let paces: [[String: Any]]             // completed: per-interval pace data
-
+	
 	// MARK: - Full Initializer
-
+	
 	init(
+		id: Int = 0,
+		syncId: Int? = nil,
 		title: String,
 		date: Date,
 		distance: String,
@@ -49,7 +58,6 @@ struct ActivityData: Identifiable, Hashable {
 		deltaColor: Color,
 		location: String,
 		gaitType: GaitType = .running,
-		syncId: Int? = nil,
 		goal: String = "00:00:00",
 		measure: String = "Miles",
 		intervals: String = "1",
@@ -61,6 +69,7 @@ struct ActivityData: Identifiable, Hashable {
 		avgHeartRate: Int = 0,
 		paces: [[String: Any]] = []
 	) {
+		self.id = id
 		self.syncId = syncId
 		self.title = title
 		self.date = date
@@ -82,12 +91,12 @@ struct ActivityData: Identifiable, Hashable {
 		self.avgHeartRate = avgHeartRate
 		self.paces = paces
 	}
-
+	
 	// MARK: - ConnectIQ Payload Initializer
 	//
 	// Parses a raw dictionary from the watch/sync into an ActivityData.
 	// Maps all known keys including completed-event fields.
-
+	
 	init?(connectIQPayload payload: [String: Any]) {
 		guard
 			let title = payload["name"] as? String,
@@ -95,7 +104,7 @@ struct ActivityData: Identifiable, Hashable {
 		else {
 			return nil
 		}
-
+		
 		// --- Distance formatting ---
 		let measureStr = (payload["measure"] as? String) ?? "Miles"
 		let unit = measureStr == "Miles" ? "mi" : "km"
@@ -107,17 +116,17 @@ struct ActivityData: Identifiable, Hashable {
 		} else {
 			distanceText = "0.00 \(unit)"
 		}
-
+		
 		// --- Goal & actual time ---
 		let goalStr = (payload["goal"] as? String) ?? "00:00:00"
 		let actualTimeStr = (payload["actualTime"] as? String) ?? ""
 		// Duration: use actualTime for completed events, goal for active
 		let durationStr = actualTimeStr.isEmpty ? goalStr : actualTimeStr
-
+		
 		// --- Time variance / delta ---
 		let timeVarStr = (payload["timeVar"] as? String) ?? ""
 		let deltaColor: Color = timeVarStr.hasPrefix("-") ? .fluorescentMint : .redBoho
-
+		
 		// --- Actual distance (completed events) ---
 		let actualDistStr: String
 		if let ad = payload["actualDist"] as? String {
@@ -127,7 +136,7 @@ struct ActivityData: Identifiable, Hashable {
 		} else {
 			actualDistStr = ""
 		}
-
+		
 		// --- Heart rate ---
 		let heartRate: Int
 		if let hr = payload["avgHeartRate"] as? Int {
@@ -137,7 +146,7 @@ struct ActivityData: Identifiable, Hashable {
 		} else {
 			heartRate = 0
 		}
-
+		
 		// --- Segments ---
 		let segArray = Self.arrayOfDicts(from: payload["segments"])
 		let completedSegArray = Self.arrayOfDicts(from: payload["completedSegments"])
@@ -149,8 +158,13 @@ struct ActivityData: Identifiable, Hashable {
 		} else {
 			segCount = segArray.count
 		}
-
+		
+		// --- Stable ID from payload ---
+		let stableId = Self.connectIQId(from: payload["id"]) ?? 0
+		
 		self.init(
+			id: stableId,
+			syncId: stableId == 0 ? nil : stableId,
 			title: title,
 			date: Self.parseConnectIQDate(dateText) ?? Date(),
 			distance: distanceText,
@@ -160,7 +174,6 @@ struct ActivityData: Identifiable, Hashable {
 			deltaColor: deltaColor,
 			location: (payload["location"] as? String) ?? "",
 			gaitType: Self.gaitType(from: payload["activity"] as? String),
-			syncId: Self.connectIQId(from: payload["id"]),
 			goal: goalStr,
 			measure: measureStr,
 			intervals: (payload["intervals"] as? String) ?? "1",
@@ -173,7 +186,7 @@ struct ActivityData: Identifiable, Hashable {
 			paces: Self.arrayOfDicts(from: payload["paces"])
 		)
 	}
-
+	
 	var displayDate: String {
 		Self.displayDateFormatter.string(from: date)
 	}
@@ -205,16 +218,17 @@ struct ActivityData: Identifiable, Hashable {
     ]
 
 	// MARK: - Hashable
-	// Only hash by syncId + title + date so Hashable works with non-Hashable dict fields
-
+	
 	func hash(into hasher: inout Hasher) {
 		hasher.combine(id)
 	}
-
+	
 	static func == (lhs: ActivityData, rhs: ActivityData) -> Bool {
 		lhs.id == rhs.id
 	}
 }
+
+// MARK: - Private Helpers
 
 private extension ActivityData {
 	
@@ -224,7 +238,7 @@ private extension ActivityData {
 		formatter.locale = Locale(identifier: "en_US_POSIX")
 		return formatter
 	}()
-
+	
 	static func makeDate(day: Int, month: Int, year: Int = 2026) -> Date {
 		let calendar = Calendar(identifier: .gregorian)
 		let components = DateComponents(year: year, month: month, day: day)
@@ -233,19 +247,24 @@ private extension ActivityData {
 		}
 		return date
 	}
-
+	
+	// Shared formatter — DateFormatter is expensive to allocate, cache it.
+	static let connectIQDateFormatter: DateFormatter = {
+		let f = DateFormatter()
+		f.locale = Locale(identifier: "en_US_POSIX")
+		return f
+	}()
+	
 	static func parseConnectIQDate(_ value: String) -> Date? {
-		let formatter = DateFormatter()
-		formatter.locale = Locale(identifier: "en_US_POSIX")
 		for format in ["MMM/d/yyyy", "MMM/dd/yyyy", "yyyy-MM-dd"] {
-			formatter.dateFormat = format
-			if let date = formatter.date(from: value) {
+			connectIQDateFormatter.dateFormat = format
+			if let date = connectIQDateFormatter.date(from: value) {
 				return date
 			}
 		}
 		return nil
 	}
-
+	
 	static func gaitType(from activity: String?) -> GaitType {
 		switch activity {
 			case "Walk", "Walking":
@@ -254,20 +273,14 @@ private extension ActivityData {
 				return .running
 		}
 	}
-
+	
 	static func connectIQId(from value: Any?) -> Int? {
-		if let value = value as? Int {
-			return value
-		}
-		if let value = value as? NSNumber {
-			return value.intValue
-		}
-		if let value = value as? String {
-			return Int(value)
-		}
+		if let value = value as? Int { return value }
+		if let value = value as? NSNumber { return value.intValue }
+		if let value = value as? String { return Int(value) }
 		return nil
 	}
-
+	
 	/// Safely converts a value to an array of dictionaries.
 	/// Handles NSArray from ConnectIQ which isn't directly castable to [[String: Any]].
 	static func arrayOfDicts(from value: Any?) -> [[String: Any]] {

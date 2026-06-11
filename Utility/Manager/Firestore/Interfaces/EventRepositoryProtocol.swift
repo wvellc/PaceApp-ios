@@ -18,8 +18,13 @@ protocol EventRepositoryProtocol: AnyObject {
 /// Opaque handle for removing a Firestore listener.
 final class ListenerRegistrationToken {
 	private let removeHandler: () -> Void
-	init(removeHandler: @escaping () -> Void) { self.removeHandler = removeHandler }
+	init(removeHandler: @escaping () -> Void) {
+		self.removeHandler = removeHandler
+	}
+	
+	
 	func remove() { removeHandler() }
+	
 	deinit { removeHandler() }
 }
 

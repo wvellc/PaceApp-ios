@@ -29,20 +29,18 @@ struct EventDetailsScreen: View {
 		_viewModel = State(initialValue: EventDetailsViewModel(activityData: activityData))
 	}
 	
-	// MARK: View Builder
+	// MARK: Body
 	var body: some View {
 		VStack(spacing: 0) {
 			scrollContent
 		}
 		.padding(.top, 6)
 		.appBackground()
-//		.navigationBarTitle(
-//			"\(activityData?.gaitType?.label ?? "")\(activityData?.gaitType?.label != nil ? " " : "")Details",
-//			displayMode: .inline
-//		)
-		.navigationDestination(item: $viewModel.showEditScreen, destination: { activity in
+		// navigationDestination must live on the root container, never inside
+		// a ScrollView or List — SwiftUI warns and will ignore it in future releases.
+		.navigationDestination(item: $viewModel.showEditScreen) { _ in
 			EditEventScreen(eventData: $viewModel.activityData)
-		})
+		}
 	}
 	
 	// MARK: - Scroll Content
@@ -55,7 +53,7 @@ struct EventDetailsScreen: View {
 				if viewModel.hasRouteData {
 					NavigationLink {
 						MapViewFullScreen(
-							coordinates: viewModel.routeCoordinates,
+							coordinates: viewModel.routeCoordinates
 						)
 						.navigationBarTitle(
 							"\(activityData?.gaitType?.label ?? "")\(activityData?.gaitType?.label != nil ? " " : "")Details",
@@ -63,24 +61,23 @@ struct EventDetailsScreen: View {
 						)
 					} label: {
 						MapViewRunDetail(
-							coordinates: viewModel.routeCoordinates,
+							coordinates: viewModel.routeCoordinates
 						)
 					}
 					.frame(height: 220)
 				}
-								
+				
 				// MARK: Detail Card (Basic details, Analysis, Intervals, Segments)
 				RunDetailCardView(viewModel: viewModel)
 				
 				// MARK: Bottom Actions
 				bottomActions
-				
 			}
 			.padding(.horizontal, Constant.UI.defaultPadding)
 			.padding(.top, 12)
 		}
 		.toolbar {
-			//Favorite or UnFavorite action button
+			// Favorite or UnFavorite action button
 			ToolbarItem(placement: .topBarTrailing) {
 				Button {
 					viewModel.toggleFavorite()
@@ -90,7 +87,6 @@ struct EventDetailsScreen: View {
 						.resizable()
 						.frame(width: 24, height: 24)
 						.foregroundStyle(viewModel.isFavorite ? .fluorescentMint : .grayHint)
-
 				}
 			}
 			
@@ -107,9 +103,8 @@ struct EventDetailsScreen: View {
 	private var bottomActions: some View {
 		FooterActions(
 			onDelete: {
-				// Actually delete the event from ConnectIQManager and sync to watch
 				if let syncId = activityData?.syncId {
-					let syncType = viewModel.isCompletedEvent ? "completed" : "active"
+					let _ = viewModel.isCompletedEvent ? "completed" : "active"
 					ciqManager.deleteSyncedEvent(id: syncId)
 				}
 				dismiss()

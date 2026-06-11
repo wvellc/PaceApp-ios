@@ -12,174 +12,173 @@ import Logging
 @main
 struct PaceApp: App {
 
-    // SwiftUI to use your AppDelegate
-    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+		// SwiftUI to use your AppDelegate
+		@UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
 
-    // MARK: - Properties
+		// MARK: - Properties
 
-    /// Central router that manages navigation path and destination resolution.
-    @State private var router = Router.shared
-    @State private var ciqManager = ConnectIQManager.shared
-    private let logger = Logger(label: "net.paceapp")
+		/// Central router that manages navigation path and destination resolution.
+		@State private var router = Router.shared
+		@State private var ciqManager = ConnectIQManager.shared
+		private let logger = Logger(label: "net.paceapp")
 
-    // MARK: - Initialization
+		// MARK: - Initialization
 
-    /// Configure global UI appearance for navigation components on app launch.
-    init() {
-        setNavigationAppearance()
-        configureSegmentedAppearance()
-        // AuthManager.configure() is called in AppDelegate after FirebaseApp.configure().
-    }
+		/// Configure global UI appearance for navigation components on app launch.
+		init() {
+				setNavigationAppearance()
+				configureSegmentedAppearance()
+				// AuthManager.configure() is called in AppDelegate after FirebaseApp.configure().
+		}
 
-    // MARK: - Scene
+		// MARK: - Scene
 
-    var body: some Scene {
-        WindowGroup {
-            NavigationStack(path: $router.path) {
-                router.rootView()
-                    .navigationDestination(for: Destinations.self) { dest in
-                        router.destination(for: dest)
-                            .onDisappear {
-                                UIApplication.shared.sendAction(
-                                    #selector(UIResponder.resignFirstResponder),
-                                    to: nil, from: nil, for: nil
-                                )
-                            }
-                    }
-                    .dismissKeyboardOnTap()
-            }
-            .tint(.radiantBlue)
-            .preferredColorScheme(.light)
-            .environment(router)
-            .appBackground()
-            .environment(ciqManager)
-            .installToast(position: .top)
-            .installAppAlert()
+		var body: some Scene {
+				WindowGroup {
+						NavigationStack(path: $router.path) {
+								router.rootView()
+										.navigationDestination(for: Destinations.self) { dest in
+												router.destination(for: dest)
+														.onDisappear {
+																UIApplication.shared.sendAction(
+																		#selector(UIResponder.resignFirstResponder),
+																		to: nil, from: nil, for: nil
+																)
+														}
+										}
+										.dismissKeyboardOnTap()
+						}
+						.tint(.radiantBlue)
+						.preferredColorScheme(.light)
+						.environment(router)
+						.appBackground()
+						.environment(ciqManager)
+						.installToast(position: .top)
+						.installAppAlert()
 
-            // MARK: URL / Deep Link handler
-            //
-            // All URL types arrive here in SwiftUI. We must handle them in priority order:
-            //  1. Firebase reCAPTCHA callback  — reversed-client-ID custom scheme
-            //  2. Firebase email sign-in link  — universal link (thepaceapp.firebaseapp.com)
-            //  3. ConnectIQ                    — everything else
-            .onOpenURL { url in
-                logger.debug("Received app URL: \(url.absoluteString)")
+						// MARK: URL / Deep Link handler
+						//
+						// All URL types arrive here in SwiftUI. We must handle them in priority order:
+						//  1. Firebase reCAPTCHA callback  — reversed-client-ID custom scheme
+						//  2. Firebase email sign-in link  — universal link (thepaceapp.firebaseapp.com)
+						//  3. ConnectIQ                    — everything else
+						.onOpenURL { url in
+								logger.debug("Received app URL: \(url.absoluteString)")
 
-                // Priority 1 — Firebase reCAPTCHA / phone-auth callback.
-                // Must be checked BEFORE email-link check because canHandle()
-                // matches the reversed-client-ID scheme used by reCAPTCHA.
-                if Auth.auth().canHandle(url) {
-                    return
-                }
+								// Priority 1 — Firebase reCAPTCHA / phone-auth callback.
+								// Must be checked BEFORE email-link check because canHandle()
+								// matches the reversed-client-ID scheme used by reCAPTCHA.
+								if Auth.auth().canHandle(url) {
+										return
+								}
 
-                // Priority 2 — Firebase email sign-in link.
-                guard AuthManager.shared.isSignIn(withEmailLink: url.absoluteString) else {
-                    // Priority 3 — ConnectIQ or other custom schemes.
-                    ciqManager.handleOpenURL(url)
-                    return
-                }
+								// Priority 2 — Firebase email sign-in link.
+								guard AuthManager.shared.isSignIn(withEmailLink: url.absoluteString) else {
+										// Priority 3 — ConnectIQ or other custom schemes.
+										ciqManager.handleOpenURL(url)
+										return
+								}
 
-                let savedEmail = UserDefaults.standard.string(forKey: Keys.emailForSignIn) ?? ""
+								let savedEmail = UserDefaults.standard.string(forKey: Keys.emailForSignIn) ?? ""
 
-                guard !savedEmail.isEmpty else {
-                    ToastManager.shared.present(
-                        .error("Please open this link on the device where you requested it, or request a new login link.")
-                    )
-                    router.setRoot(.auth, forward: false)
-                    return
-                }
+								guard !savedEmail.isEmpty else {
+										ToastManager.shared.present(
+												.error("Please open this link on the device where you requested it, or request a new login link.")
+										)
+										router.setRoot(.auth, forward: false)
+										return
+								}
 
-                router.setRoot(.authenticating, forward: true)
+								router.setRoot(.authenticating, forward: true)
 
-                Task { @MainActor in
-                    do {
-                        let user = try await AuthManager.shared.signInWithEmailLink(
-                            email: savedEmail,
-                            link: url.absoluteString
-                        )
-                        logger.info("Email link sign-in succeeded: \(user.uid)")
-                        // waitForUserDetails is handled by the auth state listener path;
-                        // here we explicitly fetch before routing for determinism.
-                        do {
-                            _ = try await AuthManager.shared.fetchUserProfileInfo(userId: user.uid)
-                        } catch {
-                            let nsError = error as NSError
-                            if nsError.domain == "AuthManager" && nsError.code == 404 {
-                                var initial = UserModel(uuid: user.uid)
-                                initial.email = user.email
-                                AuthManager.shared.userDetails = initial
-                                await AuthManager.shared.syncUserToFirestore(userId: user.uid)
-                            } else {
-                                var placeholder = UserModel(uuid: user.uid)
-                                placeholder.email = user.email
-                                AuthManager.shared.userDetails = placeholder
-                            }
-                        }
-                        router.setupRootNavigation()
-                    } catch {
-                        logger.error("Email link sign-in failed: \(error.localizedDescription)")
-                        ToastManager.shared.present(.error(error.localizedDescription))
-                        router.setRoot(.auth, forward: false)
-                    }
-                }
-            }
-            // Cold-launch watch restoration
-            .task { ciqManager.restoreSessionIfNeeded() }
-            // Session-based root navigation after splash
-            .task { await resolveStartupRoot() }
-        }
-    }
+								Task { @MainActor in
+										do {
+												let user = try await AuthManager.shared.signInWithEmailLink(
+														email: savedEmail,
+														link: url.absoluteString
+												)
+												logger.info("Email link sign-in succeeded: \(user.uid)")
+												// waitForUserDetails is handled by the auth state listener path;
+												// here we explicitly fetch before routing for determinism.
+												do {
+														_ = try await AuthManager.shared.fetchUserProfileInfo(userId: user.uid)
+												} catch {
+														let nsError = error as NSError
+														if nsError.domain == "AuthManager" && nsError.code == 404 {
+																var initial = UserModel(uuid: user.uid)
+																initial.email = user.email
+																AuthManager.shared.userDetails = initial
+																await AuthManager.shared.syncUserToFirestore(userId: user.uid)
+														} else {
+																var placeholder = UserModel(uuid: user.uid)
+																placeholder.email = user.email
+																AuthManager.shared.userDetails = placeholder
+														}
+												}
+												router.setupRootNavigation()
+										} catch {
+												logger.error("Email link sign-in failed: \(error.localizedDescription)")
+												ToastManager.shared.present(.error(error.localizedDescription))
+												router.setRoot(.auth, forward: false)
+										}
+								}
+						}
+						// Cold-launch watch restoration
+						.task { ciqManager.restoreSessionIfNeeded() }
+						// Session-based root navigation after splash.
+						// AuthManager.configure() (called in AppDelegate) registers the auth state
+						// listener which fetches the user profile. We only need to wait for that
+						// fetch to complete before routing — no second fetch needed here.
+						.task { await resolveStartupRoot() }
+				}
+		}
 
-    // MARK: - Startup Root Resolution
+		// MARK: - Startup Root Resolution
 
-    @MainActor
-    private func resolveStartupRoot() async {
-        let fetchTask = Task {
-            if let currentUser = AuthManager.shared.currentUser {
-                return try? await AuthManager.shared.fetchUserProfileInfo(userId: currentUser.uid)
-            }
-            return nil
-        }
-        
-        try? await Task.sleep(for: .milliseconds(1600))
-        _ = await fetchTask.value
-        router.setupRootNavigation()
-    }
+		@MainActor
+		private func resolveStartupRoot() async {
+				// Give the auth state listener (registered in AppDelegate) time to fire
+				// and complete its Firestore profile fetch before we resolve the root.
+				// We do NOT fetch the profile here — AuthManager.configure() already does it,
+				// and a second concurrent fetch causes the double-log seen in console.
+				try? await Task.sleep(for: .milliseconds(1600))
+				router.setupRootNavigation()
+		}
 
-    // MARK: - Appearance Configuration
+		// MARK: - Appearance Configuration
 
-    fileprivate func setNavigationAppearance() {
-        let appearance = UINavigationBarAppearance()
-        appearance.configureWithTransparentBackground()
-        appearance.backgroundColor = .clear
-        appearance.shadowColor = .clear
+		fileprivate func setNavigationAppearance() {
+				let appearance = UINavigationBarAppearance()
+				appearance.configureWithTransparentBackground()
+				appearance.backgroundColor = .clear
+				appearance.shadowColor = .clear
 
-        let titleFont      = UIFont.systemFont(ofSize: 16, weight: .medium)
-        let largeTitleFont = UIFont.systemFont(ofSize: 34, weight: .semibold)
+				let titleFont      = UIFont.systemFont(ofSize: 16, weight: .medium)
+				let largeTitleFont = UIFont.systemFont(ofSize: 34, weight: .semibold)
 
-        appearance.titleTextAttributes = [
-            .foregroundColor: UIColor.whiteApp,
-            .font: titleFont
-        ]
-        appearance.largeTitleTextAttributes = [
-            .foregroundColor: UIColor.whiteApp,
-            .font: largeTitleFont
-        ]
+				appearance.titleTextAttributes = [
+						.foregroundColor: UIColor.whiteApp,
+						.font: titleFont
+				]
+				appearance.largeTitleTextAttributes = [
+						.foregroundColor: UIColor.whiteApp,
+						.font: largeTitleFont
+				]
 
-        let navBarProxy = UINavigationBar.appearance()
-        navBarProxy.standardAppearance   = appearance
-        navBarProxy.scrollEdgeAppearance = appearance
-        navBarProxy.compactAppearance    = appearance
-        navBarProxy.tintColor = .whiteApp
+				let navBarProxy = UINavigationBar.appearance()
+				navBarProxy.standardAppearance   = appearance
+				navBarProxy.scrollEdgeAppearance = appearance
+				navBarProxy.compactAppearance    = appearance
+				navBarProxy.tintColor = .whiteApp
 
-        UITextField.appearance().keyboardAppearance = .dark
-    }
+				UITextField.appearance().keyboardAppearance = .dark
+		}
 
-    fileprivate func configureSegmentedAppearance() {
-        let appearance = UISegmentedControl.appearance()
-        appearance.backgroundColor = .grayHint
-        appearance.selectedSegmentTintColor = .neonAquaBlue
-        appearance.setTitleTextAttributes([.foregroundColor: UIColor.whiteApp],     for: .selected)
-        appearance.setTitleTextAttributes([.foregroundColor: UIColor.darkCharcoal], for: .normal)
-    }
+		fileprivate func configureSegmentedAppearance() {
+				let appearance = UISegmentedControl.appearance()
+				appearance.backgroundColor = .grayHint
+				appearance.selectedSegmentTintColor = .neonAquaBlue
+				appearance.setTitleTextAttributes([.foregroundColor: UIColor.whiteApp],     for: .selected)
+				appearance.setTitleTextAttributes([.foregroundColor: UIColor.darkCharcoal], for: .normal)
+		}
 }
