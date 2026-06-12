@@ -13,5 +13,5 @@ struct EventSegmentDocument: Codable, Identifiable {
 	var completedAt: Timestamp?
 	var actualTimeSeconds: Int?
 
-	var id: String { documentId ?? String(index) }
+	var id: String { String(index) }
 }
