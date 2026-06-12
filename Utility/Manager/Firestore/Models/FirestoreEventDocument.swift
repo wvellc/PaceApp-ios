@@ -17,7 +17,6 @@ enum EventStatus: String, Codable, CaseIterable {
 // MARK: - Firestore Event Document
 
 struct FirestoreEventDocument: Codable, Identifiable {
-	@DocumentID var documentId: String?
 	var id: Int
 	var userId: String
 	var status: String
@@ -45,7 +44,8 @@ struct FirestoreEventDocument: Codable, Identifiable {
 	var updatedAt: Timestamp
 	var deletedAt: Timestamp?
 
-	var firestoreDocumentId: String { documentId ?? String(id) }
+	// Document ID is always derived from the integer event id.
+	var firestoreDocumentId: String { String(id) }
 	var eventStatus: EventStatus { EventStatus(rawValue: status) ?? .active }
 }
 
@@ -59,9 +59,9 @@ enum FirestoreFlexibleValue: Codable {
 	init(from decoder: Decoder) throws {
 		let container = try decoder.singleValueContainer()
 		if let v = try? container.decode(String.self) { self = .string(v); return }
-		if let v = try? container.decode(Int.self) { self = .int(v); return }
+		if let v = try? container.decode(Int.self)    { self = .int(v);    return }
 		if let v = try? container.decode(Double.self) { self = .double(v); return }
-		if let v = try? container.decode(Bool.self) { self = .bool(v); return }
+		if let v = try? container.decode(Bool.self)   { self = .bool(v);   return }
 		self = .string("")
 	}
 
@@ -69,9 +69,9 @@ enum FirestoreFlexibleValue: Codable {
 		var container = encoder.singleValueContainer()
 		switch self {
 		case .string(let v): try container.encode(v)
-		case .int(let v): try container.encode(v)
+		case .int(let v):    try container.encode(v)
 		case .double(let v): try container.encode(v)
-		case .bool(let v): try container.encode(v)
+		case .bool(let v):   try container.encode(v)
 		}
 	}
 }

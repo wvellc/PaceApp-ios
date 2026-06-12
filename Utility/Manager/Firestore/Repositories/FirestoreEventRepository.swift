@@ -136,14 +136,14 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 		let ref = eventRef(eventId: document.id)
 		try batch.setData(from: document, forDocument: ref, merge: merge)
 
+		// Write segments directly by index as document ID — no prior read needed.
+		// Skipping getDocuments() avoids a subcollection read before the parent
+		// event exists, which was causing the "Missing or insufficient permissions"
+		// error on new event creation (parent not yet committed when rule evaluated).
 		let segmentsRef = ref.collection("segments")
-		let existing = try await segmentsRef.getDocuments()
-		for doc in existing.documents {
-			batch.deleteDocument(doc.reference)
-		}
 		for segment in segments {
 			let segmentRef = segmentsRef.document(String(segment.index))
-			try batch.setData(from: segment, forDocument: segmentRef, merge: true)
+			try batch.setData(from: segment, forDocument: segmentRef, merge: false)
 		}
 		try await batch.commit()
 	}

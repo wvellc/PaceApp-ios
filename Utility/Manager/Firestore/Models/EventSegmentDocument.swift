@@ -7,7 +7,6 @@ import Foundation
 import FirebaseFirestore
 
 struct EventSegmentDocument: Codable, Identifiable {
-	@DocumentID var documentId: String?
 	var index: Int
 	var distance: Double
 	var goalTimeSeconds: Int
