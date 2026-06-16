@@ -11,77 +11,89 @@ import SwiftUI
 
 struct HistoryScreen: View {
 	
-	// MARK: Properties
+	// MARK: - Properties
+	
 	@State private var viewModel = HistoryViewModel()
 	@FocusState var focusedField: Bool?
 	@State private var isFilterSheetPresented = false
 	
-	// Tracks which item is currently being navigated to
+	/// Tracks which activity is currently being navigated to
 	@State private var selectedActivity: ActivityData?
-		
-	// MARK: Environment
+	
+	// MARK: - Environment
+	
 	@Environment(Router.self) private var router
 	@Environment(ConnectIQManager.self) private var ciqManager
 	
-	// MARK: Body
+	// MARK: - Body
+	
 	var body: some View {
-		VStack(spacing: 0) {
-			
-			// Navigation Bar
-			AppNavigation()
-			
-			// Search Bar
-			searchBar
-				.padding(.horizontal, 16)
-				.padding(.top, 16)
-				.padding(.bottom, 8)
-			
-			// Activity List
-			Group {
-				if viewModel.filteredActivities.isEmpty && !viewModel.isLoading {
-					Spacer(minLength: 25)
-					NoDataView(
-						icon: .icEmptyHistory,
-						title: .letsGetAfterItPrsAwait,
-						onIconTap: {
-							router.navigate(to: .createRunEvent)
-						}
-					)
-					.transition(.opacity)
-					Spacer(minLength: 25)
-					Spacer()
-				} else {
-					activityList
+		// NavigationStack must wrap the entire screen so that navigationDestination
+		// is registered at the stack level — not inside a lazy container (List).
+		// Placing it on a VStack inside a tab without a NavigationStack triggers the
+		// "misplaced navigationDestination" warning and will be silently ignored in
+		// future SwiftUI releases.
+		NavigationStack {
+			VStack(spacing: 0) {
+				
+				// Navigation Bar
+				AppNavigation()
+				
+				// Search Bar
+				searchBar
+					.padding(.horizontal, 16)
+					.padding(.top, 16)
+					.padding(.bottom, 8)
+				
+				// Activity List
+				Group {
+					if viewModel.filteredActivities.isEmpty && !viewModel.isLoading {
+						Spacer(minLength: 25)
+						NoDataView(
+							icon: .icEmptyHistory,
+							title: .letsGetAfterItPrsAwait,
+							onIconTap: {
+								router.navigate(to: .createRunEvent)
+							}
+						)
 						.transition(.opacity)
+						Spacer(minLength: 25)
+						Spacer()
+					} else {
+						activityList
+							.transition(.opacity)
+					}
 				}
+				.animation(.easeInOut(duration: 0.25), value: viewModel.filteredActivities.isEmpty)
 			}
-			.animation(.easeInOut(duration: 0.25), value: viewModel.filteredActivities.isEmpty)
-		}
-		.appBackground()
-		.sheet(isPresented: $isFilterSheetPresented) {
-			FilterSheetView(
-				distanceMin:    $viewModel.filterDistanceMin,
-				distanceMax:    $viewModel.filterDistanceMax,
-				filterDate:     $viewModel.filterDate,
-				filterLocation: $viewModel.filterLocation,
-				onApply: { viewModel.applyFilter() },
-				onClear: {
-					viewModel.clearFilter()
-					isFilterSheetPresented = false
-				},
-				onDismiss: { isFilterSheetPresented = false }
-			)
-			.applySheetSizing(height: 580)
-			.presentationBackground(.whiteApp)
-			.scrollDismissesKeyboard(.immediately)
-		}
-		.navigationDestination(item: $selectedActivity) { activity in
-			EventDetailsScreen(activityData: activity)
-		}
-		// Capture userId once — see AnalyticsScreen for full explanation.
-		.onAppear {
-			guard let userId = AuthManager.shared.currentUserID else { return }
-			viewModel.startObservingEvents(userId: userId)
+			.appBackground()
+			.sheet(isPresented: $isFilterSheetPresented) {
+				FilterSheetView(
+					distanceMin:    $viewModel.filterDistanceMin,
+					distanceMax:    $viewModel.filterDistanceMax,
+					filterDate:     $viewModel.filterDate,
+					filterLocation: $viewModel.filterLocation,
+					onApply: { viewModel.applyFilter() },
+					onClear: {
+						viewModel.clearFilter()
+						isFilterSheetPresented = false
+					},
+					onDismiss: { isFilterSheetPresented = false }
+				)
+				.applySheetSizing(height: 580)
+				.presentationBackground(.whiteApp)
+				.scrollDismissesKeyboard(.immediately)
+			}
+			// navigationDestination is on the NavigationStack content root — outside
+			// the lazy List — so the stack can always see the destination.
+			.navigationDestination(item: $selectedActivity) { activity in
+				EventDetailsScreen(activityData: activity)
+			}
+			// Capture userId once on first appear and start observing events.
+			.onAppear {
+				guard let userId = AuthManager.shared.currentUserID else { return }
+				viewModel.startObservingEvents(userId: userId)
+			}
 		}
 	}
 }

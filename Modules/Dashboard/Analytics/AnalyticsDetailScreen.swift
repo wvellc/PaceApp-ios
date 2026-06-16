@@ -5,12 +5,10 @@
 //
 //  Created by FURKAN VIJAPURA on 5/8/26.
 //
-//  Detail screen for a specific analytics metric.
-//  Shows full-height PaceAreaCharts with axes, a summary value,
-//  and a period segmented control.
 
 import SwiftUI
 
+// Detail screen for a specific analytics metric.
 struct AnalyticsDetailScreen: View {
 
     // MARK: - Properties

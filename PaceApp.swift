@@ -20,7 +20,6 @@ struct PaceApp: App {
 	/// Central router that manages navigation path and destination resolution.
 	@State private var router = Router.shared
 	@State private var ciqManager = ConnectIQManager.shared
-	private let logger = Logger(label: "net.paceapp")
 	
 	// MARK: - Initialization
 	
