@@ -87,7 +87,9 @@ struct EventDetailsScreen: View {
 						.resizable()
 						.frame(width: 24, height: 24)
 						.foregroundStyle(viewModel.isFavorite ? .fluorescentMint : .grayHint)
+						.opacity(viewModel.isLoadingFavorite ? 0.6 : 1.0)
 				}
+				.disabled(viewModel.isLoadingFavorite)
 			}
 			
 			ToolbarItem(placement: .principal) {

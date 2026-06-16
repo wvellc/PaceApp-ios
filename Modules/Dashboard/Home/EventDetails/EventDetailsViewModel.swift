@@ -8,6 +8,7 @@
 import SwiftUI
 import CoreLocation
 import MapKit
+import Logging
 
 // MARK: - EventDetailsViewModel
 //
@@ -18,21 +19,29 @@ import MapKit
 @Observable
 final class EventDetailsViewModel {
 	
-	// MARK: Input
+	// MARK: - Input
 	var activityData: ActivityData?
 	
-	// MARK: Section Expansion
+	// MARK: - Section Expansion
 	var isAnalysisExpanded: Bool  = true
 	var isIntervalsExpanded: Bool = false
 	var isSegmentsExpanded: Bool  = false
 	
-	// MARK: Toggle States
+	// MARK: - Toggle States
 	var isFavorite: Bool = false
-	var showEditScreen: Bool?
+	var isLoadingFavorite: Bool = false
+	var showEditScreen: ActivityData?   // Matches navigationDestination binding
 	
-	// MARK: Init
-	init(activityData: ActivityData? = nil) {
+	private let favoritesRepository: FavoritesRepositoryProtocol
+	
+	// MARK: - Init
+	init(
+		activityData: ActivityData? = nil,
+		favoritesRepository: FavoritesRepositoryProtocol = FirestoreFavoritesRepository.shared
+	) {
 		self.activityData = activityData
+		self.favoritesRepository = favoritesRepository
+		Task { await fetchInitialFavoriteStatus() }
 	}
 	
 	// MARK: - Computed: Whether this is a completed event
@@ -44,12 +53,8 @@ final class EventDetailsViewModel {
 	}
 	
 	// MARK: - Computed: Time Delta
+	// ... (all your existing computed properties unchanged - timeDeltaSeconds, completionPercent, etc.)
 	
-	// TODO: Sample hardcoded values for reference — uncomment when needed for testing
-	// var timeDeltaSeconds: Int { -70 }
-	// var completionPercent: Int { 97 }
-	
-	/// Parses the time variance string (e.g. "-01:10", "+00:30") into seconds.
 	var timeDeltaSeconds: Int {
 		guard let data = activityData else { return 0 }
 		let raw = data.timeVar.trimmingCharacters(in: .whitespaces)
@@ -61,12 +66,9 @@ final class EventDetailsViewModel {
 	
 	var timeDeltaFormatted: String {
 		guard let data = activityData, !data.timeVar.isEmpty else { return "--:--" }
-		// If the payload already has a formatted string, use it directly
 		return data.timeVar
 	}
 	
-	/// Completion percentage: (goal - variance) / goal * 100
-	/// For active events with no actual data, shows 0%.
 	var completionPercent: Int {
 		guard isCompletedEvent else { return 0 }
 		let goalSecs = Self.parseTimeString(activityData?.goal ?? "00:00:00")
@@ -81,65 +83,47 @@ final class EventDetailsViewModel {
 	}
 	
 	// MARK: - Computed: Analysis
+	// ... (eventDistance, completedDistance, finishTimeGoal, etc. - unchanged)
 	
-	// TODO: Sample hardcoded values for reference — uncomment when needed for testing
-	// var eventDistance: String     { "1.00 mi" }
-	// var completedDistance: String { "1.3 mi" }
-	// var finishTimeGoal: String    { "00:06:00" }
-	// var totalTimeTaken: String    { "00:03:51" }
-	// var timeVariance: String      { "-00:02:09" }
-	// var lookBackIntervals: String { "1" }
-	// var segmentsCount: String     { "\(segments.count)" }
-	// var averageHeartRate: String  { "157 bpm" }
-	
-	/// Event distance — the planned distance from the event setup
 	var eventDistance: String {
 		activityData?.distance ?? "—"
 	}
 	
-	/// Completed distance — actual distance covered (only for completed events)
 	var completedDistance: String {
 		guard let data = activityData, !data.actualDist.isEmpty else { return "—" }
 		let unit = data.measure == "Miles" ? "mi" : "km"
-		// actualDist might already include unit, or just be a number
 		if data.actualDist.contains("mi") || data.actualDist.contains("km") {
 			return data.actualDist
 		}
 		return "\(data.actualDist) \(unit)"
 	}
 	
-	/// Finish time goal — from the event setup
 	var finishTimeGoal: String {
 		activityData?.goal ?? "—"
 	}
 	
-	/// Total time taken — actual time for completed, goal for active
 	var totalTimeTaken: String {
 		guard let data = activityData else { return "—" }
 		if isCompletedEvent {
-			return data.duration // duration = actualTime for completed events
+			return data.duration
 		}
-		return data.goal // For active, show goal as planned
+		return data.goal
 	}
 	
-	/// Time variance — how much ahead/behind goal
 	var timeVariance: String {
 		guard let data = activityData, !data.timeVar.isEmpty else { return "—" }
 		return data.timeVar
 	}
 	
-	/// Look-back intervals count
 	var lookBackIntervals: String {
 		activityData?.intervals ?? "—"
 	}
 	
-	/// Number of segments
 	var segmentsCount: String {
 		guard let data = activityData else { return "0" }
 		return "\(data.segmentCount)"
 	}
 	
-	/// Average heart rate (completed events only)
 	var averageHeartRate: String {
 		guard let data = activityData, data.avgHeartRate > 0 else { return "—" }
 		return "\(data.avgHeartRate) bpm"
@@ -290,14 +274,53 @@ final class EventDetailsViewModel {
 	var hasRouteData: Bool {
 		!routeCoordinates.isEmpty
 	}
-
 	
-	// MARK: - Actions
-	func toggleFavorite() {
-		withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-			isFavorite.toggle()
+	// MARK: - Favorites
+	
+	private func fetchInitialFavoriteStatus() async {
+		guard let userId = AuthManager.shared.currentUserID,
+			  let eventId = effectiveEventId else { return }
+		
+		isLoadingFavorite = true
+		defer { isLoadingFavorite = false }
+		
+		do {
+			isFavorite = try await favoritesRepository.isFavorited(
+				userId: userId,
+				eventId: String(eventId)
+			)
+		} catch {
+			logger.error("Failed to fetch favorite status for event \(eventId): \(error)")
+			isFavorite = false
 		}
 	}
+	
+	func toggleFavorite() {
+		guard let userId = AuthManager.shared.currentUserID,
+			  let eventId = effectiveEventId else { return }
+		
+		let previousState = isFavorite
+		isFavorite.toggle() // Optimistic UI update
+		
+		Task {
+			do {
+				let newState = try await favoritesRepository.toggleFavorite(
+					userId: userId,
+					eventId: String(eventId)
+				)
+				isFavorite = newState // Sync with server result
+			} catch {
+				logger.error("Failed to toggle favorite: \(error)")
+				isFavorite = previousState // Rollback
+			}
+		}
+	}
+	
+	private var effectiveEventId: Int? {
+		activityData?.syncId ?? activityData?.id   // Prefer syncId if available (Garmin)
+	}
+	
+	// MARK: - Actions
 	
 	func toggleAnalysis() {
 		withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
@@ -316,16 +339,14 @@ final class EventDetailsViewModel {
 			isSegmentsExpanded.toggle()
 		}
 	}
-
-	//TODO: Dublicate event
+	
 	func editEvent() {
-		showEditScreen = !(showEditScreen ?? false)
+		showEditScreen = activityData
 	}
 	
 	// MARK: - Private Helpers
 	
 	/// Parses a time string like "01:30:00", "-00:01:10", "+00:02:09" into total seconds.
-	/// Handles HH:MM:SS, MM:SS, and optional leading +/- sign.
 	private static func parseTimeString(_ value: String) -> Int {
 		var str = value.trimmingCharacters(in: .whitespaces)
 		guard !str.isEmpty else { return 0 }

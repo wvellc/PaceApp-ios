@@ -8,7 +8,6 @@ import FirebaseFirestore
 import Logging
 
 final class FirestoreEventRepository: EventRepositoryProtocol {
-
 	static let shared = FirestoreEventRepository()
 
 	private let db = Firestore.firestore()
@@ -69,7 +68,7 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 		return await mapDocuments(snapshot.documents)
 	}
 
-	func fetchCompletedEvents(userId: String, limit: Int = 50, cursor: Date? = nil) async throws -> [ActivityData] {
+	func fetchCompletedEvents(userId: String, limit: Int = 150, cursor: Date? = nil) async throws -> [ActivityData] {
 		var query: Query = eventsQuery(userId: userId)
 			.whereField("status", isEqualTo: EventStatus.completed.rawValue)
 			.order(by: "completedAt", descending: true)
@@ -160,4 +159,32 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 		}
 		return results
 	}
+	
+	// MARK: - Fetch Favorites / By IDs
+	/// Fetches specific events by their document/sync IDs.
+	/// Batched because Firestore 'in' queries are limited to 30 values.
+	func fetchEvents(byIds ids: [String]) async throws -> [ActivityData] {
+		guard !ids.isEmpty else { return [] }
+		
+		var allResults: [ActivityData] = []
+		
+		// Batch in groups of 30 (Firestore 'in' limit)
+		for batchIds in ids.chunked(into: 30) {
+			let snapshot = try await db.collection("events") // Note: userId filter removed here
+				.whereField(FieldPath.documentID(), in: batchIds)
+				.getDocuments()
+			
+			let batchActivities = await mapDocuments(snapshot.documents)
+			allResults.append(contentsOf: batchActivities)
+		}
+		
+//		// Sort newest first (consistent with History tab)
+//		allResults.sort {
+//			($0.completedAt ?? $0.scheduledAt ?? Date.distantPast) >
+//			($1.completedAt ?? $1.scheduledAt ?? Date.distantPast)
+//		}
+		
+		return allResults
+	}
+
 }

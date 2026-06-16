@@ -22,8 +22,11 @@ final class AuthManager {
 	
 	// MARK: - Properties
 	
-	nonisolated(unsafe) private var authStateListenerHandle: AuthStateDidChangeListenerHandle?
-	private let logger = Logger(label: "net.paceapp.auth")
+	@ObservationIgnored
+	private var _authStateListenerHandle: AuthStateDidChangeListenerHandle?
+	
+	@ObservationIgnored
+	private let logger = Logger(label: "AUTH")
 	
 	/// Held strongly so it isn't released while Firebase awaits reCAPTCHA.
 	private var phoneAuthDelegate: PhoneAuthUIDelegate?
@@ -39,11 +42,11 @@ final class AuthManager {
 	
 	/// Call once from AppDelegate after FirebaseApp.configure().
 	func configure() {
-		guard authStateListenerHandle == nil else { return }
+		guard _authStateListenerHandle == nil else { return }
 		
 		currentUser = Auth.auth().currentUser
 		
-		authStateListenerHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
+		_authStateListenerHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
 			guard let self else {
 				
 				return
@@ -73,15 +76,15 @@ final class AuthManager {
 						}
 					}
 					
-
+					
 					//Set the root navigation
 					Router.shared.setupRootNavigation()
-
+					
 				} else {
 					self.userDetails = nil
 					
 					try? await AuthManager.shared.logout()
-
+					
 					Router.shared.setRoot(.auth)
 				}
 			}
@@ -89,7 +92,7 @@ final class AuthManager {
 	}
 	
 	deinit {
-		if let handle = authStateListenerHandle {
+		if let handle = _authStateListenerHandle {
 			Auth.auth().removeStateDidChangeListener(handle)
 		}
 	}

@@ -37,6 +37,7 @@
 		E659B8D82FA895BF0012AC29 /* AppAlertView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E659B8D72FA895BF0012AC29 /* AppAlertView.swift */; };
 		E659B8DA2FA895C70012AC29 /* InstallAppAlert.swift in Sources */ = {isa = PBXBuildFile; fileRef = E659B8D92FA895C70012AC29 /* InstallAppAlert.swift */; };
 		E65D34072FAC5CC4001FB9F4 /* MKCoordinateRegion+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E65D34062FAC5CC4001FB9F4 /* MKCoordinateRegion+Ext.swift */; };
+		E66090822FE15D5C00565440 /* Array+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E66090812FE15D5C00565440 /* Array+Ext.swift */; };
 		E662BE592FA9EA08004B812D /* Color+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E662BE582FA9EA08004B812D /* Color+Ext.swift */; };
 		E67C5C142FB73C7D00228877 /* ButtonGlassStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = E67C5C132FB73C7100228877 /* ButtonGlassStyle.swift */; };
 		E684F1E72F769CDF0059C38F /* ProfilePhotoShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = E684F1E62F769CDF0059C38F /* ProfilePhotoShape.swift */; };
@@ -98,6 +99,7 @@
 		E659B8D72FA895BF0012AC29 /* AppAlertView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAlertView.swift; sourceTree = "<group>"; };
 		E659B8D92FA895C70012AC29 /* InstallAppAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstallAppAlert.swift; sourceTree = "<group>"; };
 		E65D34062FAC5CC4001FB9F4 /* MKCoordinateRegion+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MKCoordinateRegion+Ext.swift"; sourceTree = "<group>"; };
+		E66090812FE15D5C00565440 /* Array+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Array+Ext.swift"; sourceTree = "<group>"; };
 		E662BE582FA9EA08004B812D /* Color+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Ext.swift"; sourceTree = "<group>"; };
 		E67C5C132FB73C7100228877 /* ButtonGlassStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonGlassStyle.swift; sourceTree = "<group>"; };
 		E684F1E62F769CDF0059C38F /* ProfilePhotoShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePhotoShape.swift; sourceTree = "<group>"; };
@@ -288,6 +290,7 @@
 		E6C4BEFC2F618C5200C17C69 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
+				E66090812FE15D5C00565440 /* Array+Ext.swift */,
 				E629AD762FB44F1600ABF3CD /* Task+Ext.swift */,
 				E65D34062FAC5CC4001FB9F4 /* MKCoordinateRegion+Ext.swift */,
 				E662BE582FA9EA08004B812D /* Color+Ext.swift */,
@@ -502,6 +505,7 @@
 				E6AE33272F7D4875009189CD /* AppNavigation.swift in Sources */,
 				E64DD7C02F92193B001233EA /* ToolBar+Ext.swift in Sources */,
 				E6C4BEDF2F613E1300C17C69 /* AppGradients.swift in Sources */,
+				E66090822FE15D5C00565440 /* Array+Ext.swift in Sources */,
 				E659B8DA2FA895C70012AC29 /* InstallAppAlert.swift in Sources */,
 				E659B8D42FA895A30012AC29 /* AppAlertModel.swift in Sources */,
 				E67C5C142FB73C7D00228877 /* ButtonGlassStyle.swift in Sources */,

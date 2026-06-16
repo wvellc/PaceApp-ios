@@ -35,13 +35,15 @@ struct PaceRunActivityCard: View {
 
                 Spacer(minLength: 8)
 
-                Text(activity.delta)
-					.font(.semiBold11)
-					.foregroundStyle(activity.deltaColor == .fluorescentMint ? .blackApp : .whiteApp)
-					.multilineTextAlignment(.center)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 6)
-                    .background(activity.deltaColor, in: Capsule())
+				if activity.delta != nil && activity.delta != "" {
+					Text(activity.delta ?? "")
+						.font(.semiBold11)
+						.foregroundStyle(activity.deltaColor == .fluorescentMint ? .blackApp : .whiteApp)
+						.multilineTextAlignment(.center)
+						.padding(.horizontal, 8)
+						.padding(.vertical, 6)
+						.background(activity.deltaColor, in: Capsule())
+				}
             }
 
             // Bottom metrics keep the three activity stats evenly distributed.
@@ -54,7 +56,7 @@ struct PaceRunActivityCard: View {
 
                 Spacer(minLength: 12)
 
-				activityMetric(title: .avgPace, value: activity.avgPace)
+				activityMetric(title: .avgPace, value: activity.avgPace ?? "--:--")
             }
         }
         .padding(.horizontal, 14)

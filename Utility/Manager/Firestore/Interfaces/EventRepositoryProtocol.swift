@@ -13,6 +13,7 @@ protocol EventRepositoryProtocol: AnyObject {
 	func upsert(from payload: [String: Any], isCompleted: Bool, syncStatus: String, source: String, userId: String) async throws
 	func updateMetadata(eventId: Int, userId: String, name: String, location: String) async throws
 	func softDelete(eventId: Int, userId: String) async throws
+	func fetchEvents(byIds ids: [String]) async throws -> [ActivityData]
 }
 
 /// Opaque handle for removing a Firestore listener.

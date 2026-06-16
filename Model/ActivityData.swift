@@ -15,10 +15,6 @@ import SwiftUI
 struct ActivityData: Identifiable, Hashable {
 	
 	// MARK: - Identity
-	//
-	// Uses the stable Firestore / ConnectIQ integer event ID so that SwiftUI
-	// ForEach can diff snapshots correctly. A random UUID would cause every
-	// list row to be destroyed and recreated on every snapshot delivery.
 	let id: Int
 	
 	let syncId: Int?
@@ -26,8 +22,8 @@ struct ActivityData: Identifiable, Hashable {
 	let date: Date
 	let distance: String        // e.g. "5.00 mi" or "10.00 km"
 	let duration: String        // goal time for active, actual time for completed (HH:MM:SS)
-	let avgPace: String
-	let delta: String           // time delta display string (e.g. "+01:10")
+	let avgPace: String?
+	let delta: String?           // time delta display string (e.g. "+01:10")
 	let deltaColor: Color
 	var location: String
 	let gaitType: GaitType?

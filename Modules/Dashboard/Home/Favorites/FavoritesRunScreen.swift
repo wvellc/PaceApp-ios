@@ -7,40 +7,57 @@
 
 import SwiftUI
 
-///Show your favoraite runs
+/// Show your favorite runs
 struct FavoritesRunScreen: View {
 	
-	// MARK: Properties
+	// MARK: - Properties
 	@State private var viewModel = FavoritesViewModel()
 	
 	// This tracks which item is currently being navigated to
 	@State private var selectedActivity: ActivityData?
 	
 	var body: some View {
-		// Activity List
-		VStack(alignment: .center) {
-			if viewModel.favRuns.isEmpty {
-				Spacer(minLength: 25)
-				//No Data
+		VStack {
+			if viewModel.isLoading {
+				// MARK: Loading State - Centered Spinner + Message
+				Spacer()
+				VStack(spacing: 20) {
+					ProgressView()
+						.scaleEffect(1.5)
+						.tint(.whiteApp)
+					
+					Text("Fetching Favorites...")
+						.font(.semiBold20)
+						.foregroundStyle(.whiteApp)
+
+					
+					Text("This won't take long")
+						.font(.medium16)
+						.foregroundStyle(.whiteApp.opacity(0.9))
+				}
+				.frame(maxWidth: .infinity)
+				Spacer()
+			} else if viewModel.favRuns.isEmpty {
+				// MARK: Empty State
+				Spacer(minLength: 40)
 				HStack {
 					Spacer()
-					
 					NoDataView(
 						icon: .icFavoritesPlaceholder,
 						title: "No Favorites Yet",
-						description: "Add some favorites to see them here!"
+						description: "Tap the heart on any run to add it here!"
 					)
-					.transition(.opacity)
-					
+					.transition(.opacity.combined(with: .scale(scale: 0.95)))
 					Spacer()
 				}
-				Spacer(minLength: 25)
 				Spacer()
 			} else {
+				// MARK: Content - Favorite Runs List
 				activityList
 					.transition(.opacity)
 			}
 		}
+		.animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)
 		.animation(.easeInOut(duration: 0.25), value: viewModel.favRuns.isEmpty)
 		.navigationAppTitle(title: .favorites)
 		.appBackground()
@@ -53,10 +70,9 @@ struct FavoritesRunScreen: View {
 		}
 	}
 	
-	
-	// MARK: Activity List
+	// MARK: - Activity List
 	@ViewBuilder
-	var activityList: some View {
+	private var activityList: some View {
 		List {
 			ForEach(viewModel.favRuns) { activity in
 				Button {
@@ -70,13 +86,11 @@ struct FavoritesRunScreen: View {
 				.listRowInsets(EdgeInsets(top: 8,
 										  leading: Constant.UI.defaultPadding,
 										  bottom: 8,
-										  trailing: Constant.UI.defaultPadding)
-				)
+										  trailing: Constant.UI.defaultPadding))
 				.listRowBackground(Color.clear)
 				.listRowSeparator(.hidden)
 				
-				
-				//Swipe to Delete (Matches the second image)
+				// Swipe to Unfavorite
 				.swipeActions(edge: .trailing, allowsFullSwipe: true) {
 					Button(role: .destructive) {
 						guard let userId = AuthManager.shared.currentUserID else { return }
