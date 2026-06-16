@@ -187,7 +187,14 @@ final class EventDetailsViewModel {
 		
 		guard !segSource.isEmpty else { return [] }
 		
-		return segSource.enumerated().map { index, seg in
+		return segSource.enumerated()
+			.compactMap({ segmentData in
+				let etc = segmentData.element["eta"]
+				let elapsed = segmentData.element["elapsed_time"]
+				
+				return etc != nil && elapsed != nil ? segmentData : nil
+			})
+			.map { index, seg in
 			// Distance
 			let dist: Float
 			if let d = seg["distance"] as? Float {

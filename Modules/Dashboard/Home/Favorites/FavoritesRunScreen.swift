@@ -26,12 +26,12 @@ struct FavoritesRunScreen: View {
 						.scaleEffect(1.5)
 						.tint(.whiteApp)
 					
-					Text("Fetching Favorites...")
+					Text(.fetchingFavorites)
 						.font(.semiBold20)
 						.foregroundStyle(.whiteApp)
 
 					
-					Text("This won't take long")
+					Text(.thisWontTakeLong)
 						.font(.medium16)
 						.foregroundStyle(.whiteApp.opacity(0.9))
 				}
@@ -44,8 +44,8 @@ struct FavoritesRunScreen: View {
 					Spacer()
 					NoDataView(
 						icon: .icFavoritesPlaceholder,
-						title: "No Favorites Yet",
-						description: "Tap the heart on any run to add it here!"
+						title: .noFavoritesYet,
+						description: .tapTheHeartOnAnyRunToAddItHere
 					)
 					.transition(.opacity.combined(with: .scale(scale: 0.95)))
 					Spacer()

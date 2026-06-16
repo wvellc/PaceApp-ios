@@ -70,19 +70,23 @@ struct RunDetailCardView: View {
             )
 
 			// Intervals section
-            RunIntervalsSectionView(
-                intervals: viewModel.intervals,
-                isExpanded: viewModel.isIntervalsExpanded,
-                onToggle: viewModel.toggleIntervals
-            )
+			if !viewModel.intervals.isEmpty  {
+            	RunIntervalsSectionView(
+					intervals: viewModel.intervals,
+					isExpanded: viewModel.isIntervalsExpanded,
+					onToggle: viewModel.toggleIntervals
+				)
+            }
 
 			// Segments section
-            RunSegmentsSectionView(
-                segments: viewModel.segments,
-                isExpanded: viewModel.isSegmentsExpanded,
-                onToggle: viewModel.toggleSegments,
-                distanceUnit: (viewModel.activityData?.measure ?? "Miles") == "Miles" ? "mi" : "km"
-            )
+			if !viewModel.segments.isEmpty {
+				RunSegmentsSectionView(
+					segments: viewModel.segments,
+					isExpanded: viewModel.isSegmentsExpanded,
+					onToggle: viewModel.toggleSegments,
+					distanceUnit: (viewModel.activityData?.measure ?? "Miles") == "Miles" ? "mi" : "km"
+				)
+			}
         }
 		.padding(Constant.UI.defaultPadding)
 		.cardBackground()
