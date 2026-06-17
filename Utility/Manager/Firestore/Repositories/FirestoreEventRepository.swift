@@ -187,4 +187,30 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 		return allResults
 	}
 
+	// MARK: - ConnectIQ seeding
+	// One query → client-side partition by status. 1 read vs 3, no composite index needed.
+	func fetchAllEventPayloads(userId: String) async throws -> ConnectIQEventSnapshot {
+		let snapshot = try await eventsQuery(userId: userId).getDocuments()
+
+		var active: [[String: Any]] = []
+		var completed: [[String: Any]] = []
+		var deletedIds: [Int] = []
+
+		for doc in snapshot.documents {
+			guard let event = try? doc.data(as: FirestoreEventDocument.self) else { continue }
+			let payload = EventDocumentMapper.connectIQPayload(from: event)
+			switch event.eventStatus {
+			case .active:    active.append(payload)
+			case .completed: completed.append(payload)
+			case .deleted:   deletedIds.append(event.id) // payload not needed — just block re-insertion
+			}
+		}
+
+		return ConnectIQEventSnapshot(
+			activePayloads: active,
+			completedPayloads: completed,
+			deletedIds: deletedIds
+		)
+	}
+
 }

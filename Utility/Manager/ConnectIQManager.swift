@@ -103,26 +103,53 @@ class ConnectIQManager: NSObject {
     private var activeEventPayloads: [[String: Any]] = []
     private var completedEventPayloads: [[String: Any]] = []
     private var deletedEventIds: [Int] = []
-    private static let syncedEventsStorageKey = "connectIQ.syncedEvents"
-    private static let syncedCompletedEventsStorageKey = "connectIQ.syncedCompletedEvents"
-    private static let deletedEventsStorageKey = "connectIQ.deletedEventIds"
+    // NOTE: syncedEvents, syncedCompletedEvents, and deletedEventIds are no longer
+    // persisted in UserDefaults — Firestore is the sole persistence layer for events.
+    // Watch settings remain in UserDefaults via settingsStorageKey (offline-only, intentional).
     private static let settingsStorageKey = "connectIQ.settings"
     
     // MARK: - Lifecycle
     
     private override init() {
         super.init()
-        activeEventPayloads = Self.loadEventPayloads(forKey: Self.syncedEventsStorageKey)
-        completedEventPayloads = Self.loadEventPayloads(forKey: Self.syncedCompletedEventsStorageKey)
-        deletedEventIds = Self.loadDeletedEventIds()
-        pruneActivePayloadsAlreadyCompleted()
-        syncedActivities = Self.activities(from: activeEventPayloads)
-        syncedCompletedActivities = Self.activities(from: completedEventPayloads)
+        // Event arrays start empty — Firestore (with built-in offline cache)
+        // seeds them asynchronously in loadPersistedStateFromFirestore().
+        // This avoids the synchronous UserDefaults blocking the main thread at launch.
         connectIQ?.initialize(
             withUrlScheme: urlScheme,
             uiOverrideDelegate: self,
             stateRestorationIdentifier: urlScheme
         )
+        Task { await loadPersistedStateFromFirestore() }
+    }
+
+    // MARK: - Firestore cold-launch state restoration
+
+    // Seeds the in-memory event arrays from Firestore (offline cache = near-instant, no network needed).
+    // Called from init() and restoreSessionIfNeeded() — safe to call multiple times.
+    @MainActor
+    private func loadPersistedStateFromFirestore() async {
+        guard let userId = AuthManager.shared.currentUser?.uid else {
+            logger.debug("Skipped Firestore event load — no authenticated user")
+            return
+        }
+
+        do {
+            // Single query → client partitions by status. e.g. active: [2], completed: [1], deletedIds: [3]
+            let snapshot = try await FirestoreEventRepository.shared.fetchAllEventPayloads(userId: userId)
+            activeEventPayloads    = snapshot.activePayloads
+            completedEventPayloads = snapshot.completedPayloads
+            deletedEventIds        = snapshot.deletedIds
+            pruneActivePayloadsAlreadyCompleted()
+            rebuildSyncedActivities()
+            logger.info("Loaded event state from Firestore", metadata: [
+                "active": "\(activeEventPayloads.count)",
+                "completed": "\(completedEventPayloads.count)",
+                "deleted": "\(deletedEventIds.count)"
+            ])
+        } catch {
+            logger.error("Firestore event load failed", metadata: ["error": "\(error.localizedDescription)"])
+        }
     }
     
     // MARK: - Core: register + immediate status poll
@@ -199,7 +226,11 @@ class ConnectIQManager: NSObject {
             return
         }
         isWatchPreviouslyPaired = true
-        
+
+        // Re-trigger Firestore event load here in case auth was not ready during init().
+        // Safe to call multiple times — loadPersistedStateFromFirestore guards on userId.
+        Task { await loadPersistedStateFromFirestore() }
+
         logger.info("Restoring persisted ConnectIQ devices", metadata: [
             "deviceCount": "\(persisted.count)"
         ])
@@ -302,6 +333,8 @@ class ConnectIQManager: NSObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
 //            self?.requestFullSync()
             self?.forceResync()
+            // Forward any events that failed to sync while the watch was out of range
+            Task { await self?.resyncPendingEvents() }
         }
     }
     
@@ -418,20 +451,10 @@ class ConnectIQManager: NSObject {
         }
     }
 
-    private static func loadEventPayloads(forKey key: String) -> [[String: Any]] {
-        UserDefaults.standard.array(forKey: key) as? [[String: Any]] ?? []
-    }
+    // NOTE: loadEventPayloads(forKey:) and loadDeletedEventIds() have been removed.
+    // Event arrays are now seeded from Firestore in loadPersistedStateFromFirestore().
 
-    private static func loadDeletedEventIds() -> [Int] {
-        let values = UserDefaults.standard.array(forKey: deletedEventsStorageKey) ?? []
-        return values.compactMap { value in
-            if let intValue = value as? Int { return intValue }
-            if let numberValue = value as? NSNumber { return numberValue.intValue }
-            if let stringValue = value as? String { return Int(stringValue) }
-            return nil
-        }
-    }
-
+    @MainActor
     private static func activities(from payloads: [[String: Any]]) -> [ActivityData] {
         return payloads.compactMap(ActivityData.init(connectIQPayload:))
     }
@@ -648,30 +671,47 @@ class ConnectIQManager: NSObject {
         }
     }
 
-    /// Persists all sync state to UserDefaults.
-    /// Also prunes stale data before saving.
-    private func persistSyncState() {
-        pruneActivePayloadsAlreadyCompleted()
-        pruneDeletedEventIds()
-        rebuildSyncedActivities()
-        UserDefaults.standard.set(activeEventPayloads, forKey: Self.syncedEventsStorageKey)
-        UserDefaults.standard.set(completedEventPayloads, forKey: Self.syncedCompletedEventsStorageKey)
-        UserDefaults.standard.set(deletedEventIds, forKey: Self.deletedEventsStorageKey)
-    }
-
-    /// Removes deleted event IDs that no longer exist in any event list.
-    /// Prevents the deletedEventIds array from growing unbounded.
-    private func pruneDeletedEventIds() {
-        let activeIds = Set(activeEventPayloads.compactMap { eventId(from: $0) })
-        let completedIds = Set(completedEventPayloads.compactMap { eventId(from: $0) })
-        deletedEventIds.removeAll { id in
-            !activeIds.contains(id) && !completedIds.contains(id)
-        }
-    }
-
+    /// Performs in-memory housekeeping after any event mutation.
+    ///
+    /// Firestore is the persistence layer — individual writes happen inside
+    /// `upsertEventPayload` and `applyDeletedEventId` via `FirestoreEventRepository`.
+    /// This method maintains the in-memory arrays only; no UserDefaults writes are needed.
+    @MainActor
     private func rebuildSyncedActivities() {
         syncedActivities = Self.activities(from: activeEventPayloads)
         syncedCompletedActivities = Self.activities(from: completedEventPayloads)
+    }
+
+    // MARK: - Pending event resync
+
+    // Sends create_event/finish_event for any in-memory payload still marked syncStatus == "pending".
+    // e.g. payload written offline → watch unreachable → retried here on reconnect or app launch.
+    func resyncPendingEvents() async {
+        let pendingActive = activeEventPayloads.filter { ($0["syncStatus"] as? String) == "pending" }
+        let pendingCompleted = completedEventPayloads.filter { ($0["syncStatus"] as? String) == "pending" }
+
+        guard !pendingActive.isEmpty || !pendingCompleted.isEmpty else { return }
+
+        logger.info("Resyncing pending ConnectIQ events", metadata: [
+            "pendingActive":    "\(pendingActive.count)",
+            "pendingCompleted": "\(pendingCompleted.count)"
+        ])
+
+        for payload in pendingActive {
+            sendMessage([
+                "command": "create_event",
+                "source": "phone",
+                "event": payload
+            ])
+        }
+
+        for payload in pendingCompleted {
+            sendMessage([
+                "command": "finish_event",
+                "source": "phone",
+                "event": payload
+            ])
+        }
     }
 
     private func eventPayloads(from value: Any?) -> [[String: Any]] {
@@ -855,3 +895,4 @@ extension ConnectIQManager {
         return nil
     }
 }
+

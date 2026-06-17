@@ -14,6 +14,15 @@ enum EventStatus: String, Codable, CaseIterable {
 	case deleted
 }
 
+// MARK: - ConnectIQ Event Snapshot
+// Result of a single fetchAllEventPayloads call — partitioned client-side by status.
+// e.g. snapshot.activePayloads → [["id": 1, "name": "Run", ...], ...]
+struct ConnectIQEventSnapshot {
+	let activePayloads: [[String: Any]]    // status == "active"
+	let completedPayloads: [[String: Any]] // status == "completed"
+	let deletedIds: [Int]                  // status == "deleted" — blocks re-insertion
+}
+
 // MARK: - Firestore Event Document
 
 struct FirestoreEventDocument: Codable, Identifiable {

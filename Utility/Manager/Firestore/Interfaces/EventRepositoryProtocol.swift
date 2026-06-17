@@ -14,6 +14,10 @@ protocol EventRepositoryProtocol: AnyObject {
 	func updateMetadata(eventId: Int, userId: String, name: String, location: String) async throws
 	func softDelete(eventId: Int, userId: String) async throws
 	func fetchEvents(byIds ids: [String]) async throws -> [ActivityData]
+
+	// MARK: - ConnectIQ seeding
+	// One query fetches all user events; client partitions by status. e.g. → ConnectIQEventSnapshot(activePayloads: [...], deletedIds: [3, 7])
+	func fetchAllEventPayloads(userId: String) async throws -> ConnectIQEventSnapshot
 }
 
 /// Opaque handle for removing a Firestore listener.

@@ -143,7 +143,48 @@ enum EventDocumentMapper {
 		copy.updatedAt = Timestamp(date: Date())
 		return copy
 	}
-	
+
+	// MARK: - FirestoreEventDocument → ConnectIQ wire-format payload
+	// Inverse of document(from:...) — rebuilds the [String: Any] dict the watch expects.
+	// e.g. document(id:1, name:"Run") → ["id": 1, "name": "Run", "date": "Jun/1/2026", ...]
+	static func connectIQPayload(from document: FirestoreEventDocument) -> [String: Any] {
+		var payload: [String: Any] = [
+			"id":          document.id,
+			"name":        document.name,
+			"location":    document.location,
+			"date":        connectIQDateString(from: document.scheduledAt.dateValue()),
+			"distance":    document.distanceValue,
+			"measure":     document.measure,
+			"goal":        formatTime(document.goalTimeSeconds),
+			"intervals":   document.lookBackIntervals,
+			"activity":    reverseMapActivityType(document.activityType),
+			"syncStatus":  document.syncStatus,
+			"source":      document.source
+		]
+
+		// Completed-event fields — only present when the event has been finished
+		if let actualTimeSeconds = document.actualTimeSeconds {
+			payload["actualTime"] = formatTime(actualTimeSeconds)
+		}
+		if let actualDistance = document.actualDistance {
+			payload["actualDist"] = actualDistance
+		}
+		if let timeVarianceSeconds = document.timeVarianceSeconds {
+			payload["timeVar"] = formatSignedVariance(timeVarianceSeconds)
+		}
+		if let avgHeartRate = document.avgHeartRate, avgHeartRate > 0 {
+			payload["avgHeartRate"] = avgHeartRate
+		}
+		if let paces = document.paces, !paces.isEmpty {
+			payload["paces"] = genericDictsToAny(paces)
+		}
+		if let completedSegments = document.completedSegments, !completedSegments.isEmpty {
+			payload["completedSegments"] = genericDictsToAny(completedSegments)
+		}
+
+		return payload
+	}
+
 	// MARK: - Analytics record
 	
 	static func analyticsRecord(from document: FirestoreEventDocument) -> EventAnalyticsRecord? {
@@ -250,6 +291,15 @@ enum EventDocumentMapper {
 			case "Walk", "Walking":    return "walking"
 			case "Cycling", "Cycle":   return "cycling"
 			default:                   return "running"
+		}
+	}
+
+	// Inverse of mapActivityType — e.g. "walking" → "Walk", "running" → "Run"
+	static func reverseMapActivityType(_ value: String) -> String {
+		switch value {
+			case "walking": return "Walk"
+			case "cycling": return "Cycling"
+			default:        return "Run"
 		}
 	}
 	

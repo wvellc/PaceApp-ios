@@ -122,8 +122,14 @@ struct PaceApp: App {
 					}
 				}
 			}
-			// Cold-launch watch restoration
-			.task { ciqManager.restoreSessionIfNeeded() }
+            // Cold-launch watch restoration + pending event resync.
+            // restoreSessionIfNeeded() rebuilds device registrations and triggers
+            // loadPersistedStateFromFirestore(). resyncPendingEvents() then forwards
+            // any events that were marked pending in a previous session.
+            .task {
+                ciqManager.restoreSessionIfNeeded()
+                await ciqManager.resyncPendingEvents()
+            }
 		}
 	}
 	
