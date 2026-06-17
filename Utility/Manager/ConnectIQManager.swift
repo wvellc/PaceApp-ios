@@ -428,7 +428,7 @@ class ConnectIQManager: NSObject {
             isCompleted = true
         }
 
-        persistSyncState()
+        refreshState()
 
         if let updatedPayload, let userId = AuthManager.shared.currentUser?.uid {
             Task {
@@ -451,10 +451,7 @@ class ConnectIQManager: NSObject {
         }
     }
 
-    // NOTE: loadEventPayloads(forKey:) and loadDeletedEventIds() have been removed.
-    // Event arrays are now seeded from Firestore in loadPersistedStateFromFirestore().
 
-    @MainActor
     private static func activities(from payloads: [[String: Any]]) -> [ActivityData] {
         return payloads.compactMap(ActivityData.init(connectIQPayload:))
     }
@@ -492,7 +489,7 @@ class ConnectIQManager: NSObject {
             if let remoteSettings = dict["settings"] as? [String: Any] {
                 applyRemoteSettings(remoteSettings)
             }
-            persistSyncState()
+            refreshState()
             // Respond with our full data so the watch gets our events too
             sendFullSync(command: "sync_all", isForceUpdate: isForce)
             return true
@@ -512,14 +509,14 @@ class ConnectIQManager: NSObject {
             if let remoteSettings = dict["settings"] as? [String: Any] {
                 applyRemoteSettings(remoteSettings)
             }
-            persistSyncState()
+            refreshState()
             return true
 
         // --- DELETE EVENT: Watch deleted a specific event ---
         case "delete_event":
             if let id = eventId(from: dict) {
                 applyDeletedEventId(id)
-                persistSyncState()
+                refreshState()
             }
             return true
 
@@ -587,14 +584,11 @@ class ConnectIQManager: NSObject {
             activeEventPayloads.removeAll { eventId(from: $0) == id }
             upsertPayload(normalizedPayload, in: &completedEventPayloads)
         } else {
-            guard !completedEventPayloads.contains(where: { eventId(from: $0) == id }) else {
-                persistSyncState()
-                return
-            }
+            guard !completedEventPayloads.contains(where: { eventId(from: $0) == id }) else { return }
             upsertPayload(normalizedPayload, in: &activeEventPayloads)
         }
 
-        persistSyncState()
+        refreshState()
 
         if let userId = AuthManager.shared.currentUser?.uid {
             let source = (normalizedPayload["source"] as? String) ?? "phone"
@@ -671,14 +665,22 @@ class ConnectIQManager: NSObject {
         }
     }
 
-    /// Performs in-memory housekeeping after any event mutation.
-    ///
-    /// Firestore is the persistence layer — individual writes happen inside
-    /// `upsertEventPayload` and `applyDeletedEventId` via `FirestoreEventRepository`.
-    /// This method maintains the in-memory arrays only; no UserDefaults writes are needed.
-    @MainActor
+    // Cleans up in-memory arrays after any event mutation — prune stale data, then rebuild UI-facing lists.
+    private func refreshState() {
+        pruneActivePayloadsAlreadyCompleted()
+        pruneDeletedEventIds()
+        rebuildSyncedActivities()
+    }
+
+    // Removes deleted IDs no longer referenced by any event — prevents unbounded growth.
+    private func pruneDeletedEventIds() {
+        let activeIds    = Set(activeEventPayloads.compactMap { eventId(from: $0) })
+        let completedIds = Set(completedEventPayloads.compactMap { eventId(from: $0) })
+        deletedEventIds.removeAll { !activeIds.contains($0) && !completedIds.contains($0) }
+    }
+
     private func rebuildSyncedActivities() {
-        syncedActivities = Self.activities(from: activeEventPayloads)
+        syncedActivities          = Self.activities(from: activeEventPayloads)
         syncedCompletedActivities = Self.activities(from: completedEventPayloads)
     }
 

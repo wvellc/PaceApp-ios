@@ -18,7 +18,7 @@ struct FavoritesRunScreen: View {
 	
 	var body: some View {
 		VStack {
-			if viewModel.isLoading {
+			if viewModel.isLoading && viewModel.favRuns.isEmpty {
 				// MARK: Loading State - Centered Spinner + Message
 				Spacer()
 				VStack(spacing: 20) {
