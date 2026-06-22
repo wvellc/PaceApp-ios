@@ -28,11 +28,6 @@ struct HistoryScreen: View {
 	// MARK: - Body
 	
 	var body: some View {
-		// NavigationStack must wrap the entire screen so that navigationDestination
-		// is registered at the stack level — not inside a lazy container (List).
-		// Placing it on a VStack inside a tab without a NavigationStack triggers the
-		// "misplaced navigationDestination" warning and will be silently ignored in
-		// future SwiftUI releases.
 		NavigationStack {
 			VStack(spacing: 0) {
 				
@@ -47,7 +42,7 @@ struct HistoryScreen: View {
 				
 				// Activity List
 				Group {
-					if viewModel.filteredActivities.isEmpty && !viewModel.isLoading {
+					if viewModel.activities.isEmpty && !viewModel.isLoading {
 						Spacer(minLength: 25)
 						NoDataView(
 							icon: .icEmptyHistory,

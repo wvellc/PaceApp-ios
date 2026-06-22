@@ -82,6 +82,86 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 		return await mapDocuments(snapshot.documents)
 	}
 
+	// MARK: - Filtered + Paginated Fetch (History screen)
+
+	/// Firestore-side filters: distance range, exact date window, location equality.
+	/// Cursor pagination on `completedAt` descending. Page size = pageSize.
+	///
+	/// Composite index required:
+	///   Collection: events
+	///   Fields: userId ASC, status ASC, completedAt DESC
+	///   (Add distanceValue ASC when distance filter is active — Firestore requires
+	///    any range-filtered field to precede the orderBy field in the index.)
+	func fetchFilteredCompletedEvents(
+		userId: String,
+		pageSize: Int,
+		cursor: Date?,
+		distanceMin: Double?,
+		distanceMax: Double?,
+		date: Date?,
+		location: String?
+	) async throws -> [ActivityData] {
+
+		var query: Query = eventsQuery(userId: userId)
+			.whereField("status", isEqualTo: EventStatus.completed.rawValue)
+
+		// ── Distance range ─────────────────────────────────────────────────────
+		// distanceValue is stored in miles in Firestore (same unit as the slider).
+		let defaultMin: Double = 0
+		let defaultMax: Double = 150
+
+		let effectiveMin = distanceMin ?? defaultMin
+		let effectiveMax = distanceMax ?? defaultMax
+
+		// Only add the range clause when it is non-trivial — avoids requiring a
+		// composite index on distanceValue for unfiltered loads.
+		let isDistanceFiltered = effectiveMin > defaultMin || effectiveMax < defaultMax
+		if isDistanceFiltered {
+			query = query
+				.whereField("distanceValue", isGreaterThanOrEqualTo: effectiveMin)
+				.whereField("distanceValue", isLessThanOrEqualTo: effectiveMax)
+				// When a range filter is present Firestore requires orderBy on
+				// that same field before any other orderBy.
+				.order(by: "distanceValue", descending: false)
+		}
+
+		// ── Date window ────────────────────────────────────────────────────────
+		// Convert the calendar day into a [start, end) Timestamp window so the
+		// query can use an inequality on `completedAt` without a separate index.
+		if let date {
+			let calendar = Calendar.current
+			let start = calendar.startOfDay(for: date)
+			let end   = calendar.date(byAdding: .day, value: 1, to: start) ?? start
+			query = query
+				.whereField("completedAt", isGreaterThanOrEqualTo: Timestamp(date: start))
+				.whereField("completedAt", isLessThan: Timestamp(date: end))
+		}
+
+		// ── Location exact match ────────────────────────────────────────────────
+		// Firestore equality does not require an extra index field.
+		if let location, !location.trimmingCharacters(in: .whitespaces).isEmpty {
+			query = query.whereField("location", isEqualTo: location.trimmingCharacters(in: .whitespaces))
+		}
+
+		// ── Order + pagination ─────────────────────────────────────────────────
+		// Only add the completedAt order when no distance range is active (to
+		// avoid a multi-field range conflict). When distance IS filtered the
+		// client receives at most pageSize rows sorted by distanceValue — which
+		// is acceptable UX for a filtered page.
+		if !isDistanceFiltered {
+			query = query.order(by: "completedAt", descending: true)
+		}
+
+		query = query.limit(to: pageSize)
+
+		if let cursor, !isDistanceFiltered {
+			query = query.start(after: [Timestamp(date: cursor)])
+		}
+
+		let snapshot = try await query.getDocuments()
+		return await mapDocuments(snapshot.documents)
+	}
+
 	// MARK: - Write
 
 	func upsert(
@@ -159,35 +239,31 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 		}
 		return results
 	}
-	
+
 	// MARK: - Fetch Favorites / By IDs
+
 	/// Fetches specific events by their document/sync IDs.
 	/// Batched because Firestore 'in' queries are limited to 30 values.
 	func fetchEvents(byIds ids: [String]) async throws -> [ActivityData] {
 		guard !ids.isEmpty else { return [] }
-		
+
 		var allResults: [ActivityData] = []
-		
+
 		// Batch in groups of 30 (Firestore 'in' limit)
 		for batchIds in ids.chunked(into: 30) {
-			let snapshot = try await db.collection("events") // Note: userId filter removed here
+			let snapshot = try await db.collection("events")
 				.whereField(FieldPath.documentID(), in: batchIds)
 				.getDocuments()
-			
+
 			let batchActivities = await mapDocuments(snapshot.documents)
 			allResults.append(contentsOf: batchActivities)
 		}
-		
-//		// Sort newest first (consistent with History tab)
-//		allResults.sort {
-//			($0.completedAt ?? $0.scheduledAt ?? Date.distantPast) >
-//			($1.completedAt ?? $1.scheduledAt ?? Date.distantPast)
-//		}
-		
+
 		return allResults
 	}
 
 	// MARK: - ConnectIQ seeding
+
 	// One query → client-side partition by status. 1 read vs 3, no composite index needed.
 	func fetchAllEventPayloads(userId: String) async throws -> ConnectIQEventSnapshot {
 		let snapshot = try await eventsQuery(userId: userId).getDocuments()
@@ -202,7 +278,7 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 			switch event.eventStatus {
 			case .active:    active.append(payload)
 			case .completed: completed.append(payload)
-			case .deleted:   deletedIds.append(event.id) // payload not needed — just block re-insertion
+			case .deleted:   deletedIds.append(event.id)
 			}
 		}
 
