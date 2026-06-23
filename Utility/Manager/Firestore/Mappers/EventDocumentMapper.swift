@@ -197,7 +197,7 @@ enum EventDocumentMapper {
 			avgHeartRate: document.avgHeartRate ?? 0,
 			elevationGain: document.elevationGain ?? 0,
 			effortPercentage: document.effortPercentage ?? 0,
-			distanceValue: document.actualDistance ?? document.distanceValue,
+			distanceValue:document.distanceValue,
 			measure: document.measure
 		)
 	}

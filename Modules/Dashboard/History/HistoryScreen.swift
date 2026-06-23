@@ -42,7 +42,7 @@ struct HistoryScreen: View {
 				
 				// Activity List
 				Group {
-					if viewModel.activities.isEmpty && !viewModel.isLoading {
+					if viewModel.filteredActivities.isEmpty && !viewModel.isLoading {
 						Spacer(minLength: 25)
 						NoDataView(
 							icon: .icEmptyHistory,
@@ -54,12 +54,18 @@ struct HistoryScreen: View {
 						.transition(.opacity)
 						Spacer(minLength: 25)
 						Spacer()
+					} else if viewModel.isLoading {
+						Spacer()
+						ProgressView()
+							.scaleEffect(1.5)
+							.tint(.neonAquaBlue)
+						Spacer()
 					} else {
 						activityList
 							.transition(.opacity)
 					}
 				}
-				.animation(.easeInOut(duration: 0.25), value: viewModel.filteredActivities.isEmpty)
+				.animation(.easeInOut(duration: 0.25), value: viewModel.activities.isEmpty)
 			}
 			.appBackground()
 			.sheet(isPresented: $isFilterSheetPresented) {
@@ -84,10 +90,10 @@ struct HistoryScreen: View {
 			.navigationDestination(item: $selectedActivity) { activity in
 				EventDetailsScreen(activityData: activity)
 			}
-			// Capture userId once on first appear and start observing events.
+			// Capture userId once on first appear and start loading events.
 			.onAppear {
 				guard let userId = AuthManager.shared.currentUserID else { return }
-				viewModel.startObservingEvents(userId: userId)
+				viewModel.startLoading(userId: userId)
 			}
 		}
 	}
@@ -149,6 +155,25 @@ private extension HistoryScreen {
 					}
 					.tint(.neonAquaBlue)
 				}
+				// Pagination trigger: load next page when the last item appears.
+				.onAppear {
+					if activity.id == viewModel.filteredActivities.last?.id {
+						viewModel.loadNextPage()
+					}
+				}
+			}
+			
+			// Loading-more indicator at the bottom of the list
+			if viewModel.isLoadingMore {
+				HStack {
+					Spacer()
+					ProgressView()
+						.tint(.neonAquaBlue)
+						.padding(.vertical, 16)
+					Spacer()
+				}
+				.listRowBackground(Color.clear)
+				.listRowSeparator(.hidden)
 			}
 		}
 		.listStyle(.plain)

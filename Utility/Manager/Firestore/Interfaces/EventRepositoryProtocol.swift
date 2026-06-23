@@ -7,29 +7,28 @@ import Foundation
 
 protocol EventRepositoryProtocol: AnyObject {
 	func observeActiveEvents(userId: String, onChange: @escaping ([ActivityData]) -> Void) -> ListenerRegistrationToken
-	func observeCompletedEvents(userId: String, onChange: @escaping ([ActivityData]) -> Void) -> ListenerRegistrationToken
 	func fetchActiveEvents(userId: String) async throws -> [ActivityData]
-	func fetchCompletedEvents(userId: String, limit: Int, cursor: Date?) async throws -> [ActivityData]
+	func fetchCompletedEvents(userId: String, limit: Int, cursor: Any?) async throws -> [ActivityData]
 
 	/// Paginated + filtered fetch for History screen.
 	/// - Parameters:
 	///   - userId: Owner of the events.
-	///   - pageSize: Number of documents per page (default 10).
-	///   - cursor: Last `completedAt` date from previous page — nil for first page.
-	///   - distanceMin: Minimum distance in miles (inclusive).
-	///   - distanceMax: Maximum distance in miles (inclusive).
+	///   - pageSize: Number of documents per page.
+	///   - cursor: Opaque pagination cursor from previous page — nil for first page.
+	///   - distanceMin: Minimum distance in miles (inclusive). Nil = no lower bound.
+	///   - distanceMax: Maximum distance in miles (inclusive). Nil = no upper bound.
 	///   - date: If set, restrict to events whose `completedAt` falls on this calendar day.
-	///   - location: If non-empty, restrict to events whose `location` exactly matches (case-sensitive Firestore equality).
-	///   - searchText: Client-side text search applied after fetch (title / location).
+	///   - location: If non-empty, client-side case-insensitive substring filter on location.
+	/// - Returns: Tuple of mapped events and an opaque cursor for the next page (nil when no more).
 	func fetchFilteredCompletedEvents(
 		userId: String,
 		pageSize: Int,
-		cursor: Date?,
+		cursor: Any?,
 		distanceMin: Double?,
 		distanceMax: Double?,
 		date: Date?,
 		location: String?
-	) async throws -> [ActivityData]
+	) async throws -> (events: [ActivityData], nextCursor: Any?)
 
 	func upsert(from payload: [String: Any], isCompleted: Bool, syncStatus: String, source: String, userId: String) async throws
 	func updateMetadata(eventId: Int, userId: String, name: String, location: String) async throws

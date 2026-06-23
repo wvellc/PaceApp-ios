@@ -186,32 +186,6 @@ struct ActivityData: Identifiable, Hashable {
 	var displayDate: String {
 		Self.displayDateFormatter.string(from: date)
 	}
-	
-    // MARK: Sample Data
-    // Sample content used by the dashboard preview state.
-    static let samples: [ActivityData] = [
-        ActivityData(
-            title: "Thursday Run",
-            date: Self.makeDate(day: 29, month: 1),
-            distance: "5.00 mi",
-            duration: "05:35:00",
-            avgPace: "9:00 /mi",
-            delta: "+01:10",
-			deltaColor: .redBoho,
-			location: "New York City",
-			gaitType: .walking
-        ),
-        ActivityData(
-            title: "Saturday Run",
-            date: Self.makeDate(day: 31, month: 1),
-            distance: "15.00 mi",
-            duration: "12:35:03",
-            avgPace: "3:20 /mi",
-            delta: "-02:15",
-			deltaColor: .fluorescentMint,
-			location: "Twin Falls"
-        )
-    ]
 
 	// MARK: - Hashable
 	
