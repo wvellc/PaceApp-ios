@@ -53,12 +53,12 @@ struct HomeScreen: View {
 				ScrollView(showsIndicators: false) {
 					VStack(alignment: .leading, spacing: 0) {
 						
-						// Greeting + sync status
+						// MARK: Greeting + sync status
 						VStack(alignment: .leading) {
-							Text("GM, Jack")
+							Text(greetingText)
 								.font(.bold28)
 								.foregroundColor(.whiteApp)
-							Text("Not Synced Yet!")
+							Text(ciqManager.lastSyncLabel)
 								.font(.medium14)
 								.foregroundColor(.white50)
 						}
@@ -117,6 +117,22 @@ struct HomeScreen: View {
 			guard newUUID != nil else { return }
 			tryShowMetricsPopup()
 		}
+	}
+	
+	// MARK: - Greeting Text
+	
+	/// Builds a time-of-day greeting with the user's first name.
+	/// Falls back to "Hey" if the name is not yet loaded.
+	private var greetingText: String {
+		let hour = Calendar.current.component(.hour, from: Date())
+		let salutation: String
+		switch hour {
+		case 5..<12:  salutation = "GM,"    // Good morning
+		case 12..<17: salutation = "GA,"    // Good afternoon
+		default:      salutation = "GE,"    // Good evening
+		}
+		let name = AuthManager.shared.userDetails?.firstName?.trimmingCharacters(in: .whitespaces)
+		return name.map { "\(salutation) \($0)" } ?? salutation
 	}
 	
 	// MARK: - Metric Row

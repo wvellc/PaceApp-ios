@@ -83,6 +83,16 @@ class ConnectIQManager: NSObject {
     /// pair-watch branch, are invalidated when pairing is saved or cleared.
     var isWatchPreviouslyPaired: Bool = !AppSession.pairedDevices.isEmpty
     
+    /// The last time a sync message was successfully received from the watch (nil = never synced).
+    var lastWatchSyncDate: Date? = nil
+
+    /// Formatted sync status string for display in the greeting area.
+    /// Returns e.g. "Synced 2 min ago" or "Not Synced Yet!" when nil.
+    var lastSyncLabel: String {
+        guard let date = lastWatchSyncDate else { return "Not Synced Yet!" }
+        return "Synced \(date.timeAgoDisplay())"
+    }
+
     /// Messages received from the watch app.
     var receivedMessages: [String] = []
     
@@ -488,6 +498,7 @@ class ConnectIQManager: NSObject {
                 applyRemoteSettings(remoteSettings)
             }
             refreshState()
+            lastWatchSyncDate = Date() // stamp on every sync_request from watch
             // Respond with our full data so the watch gets our events too
             sendFullSync(command: "sync_all", isForceUpdate: isForce)
             return true
@@ -508,6 +519,7 @@ class ConnectIQManager: NSObject {
                 applyRemoteSettings(remoteSettings)
             }
             refreshState()
+            lastWatchSyncDate = Date() // stamp on every sync_all from watch
             return true
 
         // --- DELETE EVENT: Watch deleted a specific event ---
