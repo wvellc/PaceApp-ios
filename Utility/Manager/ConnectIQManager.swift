@@ -103,10 +103,8 @@ class ConnectIQManager: NSObject {
     private var activeEventPayloads: [[String: Any]] = []
     private var completedEventPayloads: [[String: Any]] = []
     private var deletedEventIds: [Int] = []
-    // NOTE: syncedEvents, syncedCompletedEvents, and deletedEventIds are no longer
-    // persisted in UserDefaults — Firestore is the sole persistence layer for events.
-    // Watch settings remain in UserDefaults via settingsStorageKey (offline-only, intentional).
-    private static let settingsStorageKey = "connectIQ.settings"
+    // NOTE: syncedEvents, syncedCompletedEvents, deletedEventIds, and watch settings are
+    // no longer persisted in UserDefaults — Firestore is the sole persistence layer for all state.
     
     // MARK: - Lifecycle
     
@@ -755,45 +753,69 @@ class ConnectIQManager: NSObject {
     }
     
     // MARK: - Settings Sync
-    
-    /// Settings keys synced between watch and phone.
-    /// These match the watch's Application.Storage keys exactly.
-    private static let settingsKeys: [String] = [
-        "vibrate_alert",
-        "beep_alert",
-        "walking_gait",
-        "walking_gait_measure",
-        "running_gait",
-        "running_gait_measure"
-    ]
 
-    /// Returns a dictionary of all synced settings from UserDefaults.
+    /// Builds a watch-compatible settings payload from the current user profile in AuthManager.
+    /// Keys match the watch's Application.Storage keys exactly.
+    /// Source of truth is Firestore (cached in AuthManager.currentUserProfile).
     func getSettingsPayload() -> [String: Any] {
+        guard let profile = AuthManager.shared.userDetails else { return [:] }
         var settings: [String: Any] = [:]
-        let stored = UserDefaults.standard.dictionary(forKey: Self.settingsStorageKey) ?? [:]
-        for key in Self.settingsKeys {
-            settings[key] = stored[key]
+        settings["vibrate_alert"] = profile.intervalVibrate ?? false
+        settings["beep_alert"]    = profile.intervalBeep ?? false
+        if let gait = profile.gait {
+            settings["walking_gait"]         = gait.walkingData.stepLength
+            settings["walking_gait_measure"] = gait.walkingData.unit
+            settings["running_gait"]         = gait.runningData.stepLength
+            settings["running_gait_measure"] = gait.runningData.unit
         }
         return settings
     }
 
-    /// Applies settings received from the watch to local UserDefaults.
-    /// Only updates keys that are present and non-nil in the remote payload.
+    /// Applies settings received from the watch to Firestore (via UserProfileRepository).
+    /// Parses each known watch key and writes only the fields that are present in the payload.
+    /// Watch → App → Firestore direction.
     func applyRemoteSettings(_ settings: [String: Any]) {
-        var stored = UserDefaults.standard.dictionary(forKey: Self.settingsStorageKey) ?? [:]
-        for key in Self.settingsKeys {
-            if let value = settings[key] {
-                stored[key] = value
+        guard let userId = AuthManager.shared.currentUser?.uid else {
+            logger.warning("Skipped applyRemoteSettings — no authenticated user")
+            return
+        }
+
+        // Parse vibrate / beep alert booleans
+        if let vibrate = settings["vibrate_alert"] as? Bool {
+            Task {
+                try? await UserProfileRepository.shared.updateIntervalVibrate(vibrate, userId: userId)
             }
         }
-        UserDefaults.standard.set(stored, forKey: Self.settingsStorageKey)
-        logger.debug("Applied ConnectIQ settings", metadata: [
-            "settingCount": "\(stored.count)"
+        if let beep = settings["beep_alert"] as? Bool {
+            Task {
+                try? await UserProfileRepository.shared.updateIntervalBeep(beep, userId: userId)
+            }
+        }
+
+        // Parse gait fields — only write if all four keys are present
+        let walkingLength  = (settings["walking_gait"] as? Double) ?? (settings["walking_gait"] as? NSNumber).map { $0.doubleValue }
+        let walkingUnit    = settings["walking_gait_measure"] as? String
+        let runningLength  = (settings["running_gait"] as? Double) ?? (settings["running_gait"] as? NSNumber).map { $0.doubleValue }
+        let runningUnit    = settings["running_gait_measure"] as? String
+
+        if let wl = walkingLength, let wu = walkingUnit,
+           let rl = runningLength, let ru = runningUnit {
+            let gait = GaitUserData(
+                walkingData: GaitData(stepLength: wl, unit: wu),
+                runningData: GaitData(stepLength: rl, unit: ru)
+            )
+            Task {
+                try? await UserProfileRepository.shared.updateGait(gait, userId: userId)
+            }
+        }
+
+        logger.debug("Applied ConnectIQ settings to Firestore", metadata: [
+            "settingCount": "\(settings.count)"
         ])
     }
 
     /// Sends all current settings to the watch as a sync_settings command.
-    /// Call this when the user changes any setting on the phone.
+    /// Reads from Firestore profile (via getSettingsPayload). Call when a setting changes on phone.
     func sendSettings() {
         sendMessage([
             "command": "sync_settings",
