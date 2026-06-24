@@ -84,6 +84,24 @@ enum AppSession {
         set { saveObject(newValue, forKey: .pairedDevices) }
     }
 
+    // LAST WATCH SYNC DATE
+    // Persisted so the greeting sync label survives app restarts.
+    // Date conforms to RawRepresentable (ISO8601) via Date+Ext, so @AppStorage-style
+    // round-trips work; here we store it as a Double (timeIntervalSince1970) for simplicity.
+    static var lastWatchSyncDate: Date? {
+        get {
+            let t = defaults.double(forKey: AppSessionKey.lastWatchSyncDate.rawValue)
+            return t > 0 ? Date(timeIntervalSince1970: t) : nil
+        }
+        set {
+            if let date = newValue {
+                defaults.set(date.timeIntervalSince1970, forKey: AppSessionKey.lastWatchSyncDate.rawValue)
+            } else {
+                defaults.removeObject(forKey: AppSessionKey.lastWatchSyncDate.rawValue)
+            }
+        }
+    }
+
     // MARK: - Management Methods
 
     /// Remove stored session using key

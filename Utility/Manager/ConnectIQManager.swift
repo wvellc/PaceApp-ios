@@ -83,8 +83,9 @@ class ConnectIQManager: NSObject {
     /// pair-watch branch, are invalidated when pairing is saved or cleared.
     var isWatchPreviouslyPaired: Bool = !AppSession.pairedDevices.isEmpty
     
-    /// The last time a sync message was successfully received from the watch (nil = never synced).
-    var lastWatchSyncDate: Date? = nil
+    /// The last time a sync message was successfully received from the watch.
+    /// Seeded from UserDefaults on init so the value survives app restarts.
+    var lastWatchSyncDate: Date? = AppSession.lastWatchSyncDate
 
     /// Formatted sync status string for display in the greeting area.
     /// Returns e.g. "Synced 2 min ago" or "Not Synced Yet!" when nil.
@@ -463,10 +464,18 @@ class ConnectIQManager: NSObject {
     private static func activities(from payloads: [[String: Any]]) -> [ActivityData] {
         return payloads.compactMap(ActivityData.init(connectIQPayload:))
     }
+	
+	//Last sync update
+	fileprivate func lastSyncUpdate() {
+		// persist across restarts
+		lastWatchSyncDate = Date()
+		AppSession.lastWatchSyncDate = lastWatchSyncDate
+	}
+
     
     // MARK: - Sync Message Handler
-
-    /// Dispatches incoming sync commands from the watch.
+	
+	/// Dispatches incoming sync commands from the watch.
     /// Returns true if the message was handled as a sync command.
     ///
     /// Supported commands:
@@ -480,6 +489,8 @@ class ConnectIQManager: NSObject {
         guard let command = dict["command"] as? String else { return false }
         let isForce = dict["is_force_update"] as? Bool ?? false
 
+
+		
         switch command {
 
         // --- SYNC REQUEST: Watch asks phone to send all data ---
@@ -498,9 +509,13 @@ class ConnectIQManager: NSObject {
                 applyRemoteSettings(remoteSettings)
             }
             refreshState()
-            lastWatchSyncDate = Date() // stamp on every sync_request from watch
+				
             // Respond with our full data so the watch gets our events too
             sendFullSync(command: "sync_all", isForceUpdate: isForce)
+				
+			//Last sync date update
+			lastSyncUpdate()
+
             return true
 
         // --- SYNC ALL: Watch sends all its data (response to our sync_request) ---
@@ -519,7 +534,10 @@ class ConnectIQManager: NSObject {
                 applyRemoteSettings(remoteSettings)
             }
             refreshState()
-            lastWatchSyncDate = Date() // stamp on every sync_all from watch
+				
+			//Last sync date update
+			lastSyncUpdate()
+
             return true
 
         // --- DELETE EVENT: Watch deleted a specific event ---
@@ -528,6 +546,10 @@ class ConnectIQManager: NSObject {
                 applyDeletedEventId(id)
                 refreshState()
             }
+				
+			//Last sync date update
+			lastSyncUpdate()
+
             return true
 
         // --- CREATE EVENT: Watch created a new active event ---
@@ -535,6 +557,10 @@ class ConnectIQManager: NSObject {
             if let eventPayload = extractEventRecord(from: dict) {
                 upsertEventPayload(eventPayload, isCompleted: false, syncStatus: "synced")
             }
+				
+			//Last sync date update
+			lastSyncUpdate()
+
             return true
 
         // --- FINISH EVENT: Watch finished an event (active → completed) ---
@@ -542,6 +568,10 @@ class ConnectIQManager: NSObject {
             if let eventPayload = extractEventRecord(from: dict) {
                 upsertEventPayload(eventPayload, isCompleted: true, syncStatus: "synced")
             }
+				
+			//Last sync date update
+			lastSyncUpdate()
+
             return true
 
         // --- SYNC SETTINGS: Watch sends updated settings ---
@@ -549,11 +579,17 @@ class ConnectIQManager: NSObject {
             if let remoteSettings = dict["settings"] as? [String: Any] {
                 applyRemoteSettings(remoteSettings)
             }
+				
+			//Last sync date update
+			lastSyncUpdate()
+
             return true
 
         default:
             return false
         }
+
+
     }
 
     /// Sends a full sync payload to the watch.
