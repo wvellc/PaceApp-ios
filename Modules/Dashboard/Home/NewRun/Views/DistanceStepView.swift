@@ -44,7 +44,7 @@ struct DistanceStepView: View {
 					set: { (newValue: Int) in
 						let fractional = viewModel.distance - floor(viewModel.distance)
 						let clampedInt = max(0, min(999, newValue))
-						viewModel.distance = Float(clampedInt) + fractional
+						viewModel.distance = Double(clampedInt) + fractional
 					}
 				)) {
 					ForEach(1...999, id: \.self) { intVal in
@@ -78,7 +78,7 @@ struct DistanceStepView: View {
 					set: { (newValue: Int) in
 						let clampedHundredths = max(0, min(99, newValue))
 						let intPart = Int(viewModel.distance)
-						viewModel.distance = Float(intPart) + Float(clampedHundredths) / 100.0
+						viewModel.distance = Double(intPart) + Double(clampedHundredths) / 100.0
 					}
 				)) {
 					ForEach(0...99, id: \.self) { frac in

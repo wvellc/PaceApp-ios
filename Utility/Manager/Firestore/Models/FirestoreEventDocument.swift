@@ -53,6 +53,10 @@ struct FirestoreEventDocument: Codable, Identifiable {
 	var updatedAt: Timestamp
 	var deletedAt: Timestamp?
 
+	// Flat segment array — replaces the previous segments subcollection.
+	// Written and read as part of the parent event document in a single Firestore operation.
+	var segments: [RunSegment]?
+
 	// Document ID is always derived from the integer event id.
 	var firestoreDocumentId: String { String(id) }
 	var eventStatus: EventStatus { EventStatus(rawValue: status) ?? .active }

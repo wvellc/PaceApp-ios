@@ -79,9 +79,9 @@ struct RunDetailCardView: View {
             }
 
 			// Segments section
-			if !viewModel.segments.isEmpty {
+			if !viewModel.segmentRows.isEmpty {
 				RunSegmentsSectionView(
-					segments: viewModel.segments,
+					segments: viewModel.segmentRows,
 					isExpanded: viewModel.isSegmentsExpanded,
 					onToggle: viewModel.toggleSegments,
 					distanceUnit: (viewModel.activityData?.measure ?? "Miles") == "Miles" ? "mi" : "km"

@@ -33,15 +33,12 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 				return
 			}
 			guard let snapshot else { return }
-			Task {
-				let activities = await self.mapDocuments(snapshot.documents)
-				await MainActor.run { onChange(activities) }
-			}
+			// Segments are now embedded in the document — no async subcollection fetch needed.
+			let activities = self.mapDocuments(snapshot.documents)
+			Task { await MainActor.run { onChange(activities) } }
 		}
 		return ListenerRegistrationToken { registration.remove() }
 	}
-
-
 
 	// MARK: - Fetch
 
@@ -50,7 +47,7 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 			.whereField("status", isEqualTo: EventStatus.active.rawValue)
 			.order(by: "scheduledAt", descending: false)
 			.getDocuments()
-		return await mapDocuments(snapshot.documents)
+		return mapDocuments(snapshot.documents)
 	}
 
 	func fetchCompletedEvents(userId: String, limit: Int = 150, cursor: Any? = nil) async throws -> [ActivityData] {
@@ -64,7 +61,7 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 		}
 
 		let snapshot = try await query.getDocuments()
-		return mapDocumentsWithoutSegments(snapshot.documents)
+		return mapDocuments(snapshot.documents)
 	}
 
 	// MARK: - Filtered + Paginated Fetch (History screen)
@@ -152,8 +149,8 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 		} catch {
 			snapshot = try await query.getDocuments(source: .cache)
 		}
-		
-		var activities = mapDocumentsWithoutSegments(snapshot.documents)
+
+		var activities = mapDocuments(snapshot.documents)
 
 		// ── Client-side distance filter (when both date + distance active) ────
 		if hasDateFilter && isDistanceFiltered {
@@ -194,14 +191,15 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 		source: String,
 		userId: String
 	) async throws {
-		let (document, segments) = EventDocumentMapper.document(
+		let (document, _) = EventDocumentMapper.document(
 			from: payload,
 			userId: userId,
 			isCompleted: isCompleted,
 			syncStatus: syncStatus,
 			source: source
 		)
-		try await write(document: document, segments: segments, merge: true)
+		// Segments are embedded in document.segments — single document write, no subcollection.
+		try await write(document: document, merge: true)
 	}
 
 	func updateMetadata(eventId: Int, userId: String, name: String, location: String) async throws {
@@ -233,63 +231,21 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 		db.collection("events").document(String(eventId))
 	}
 
-	private func write(document: FirestoreEventDocument, segments: [EventSegmentDocument], merge: Bool) async throws {
-		let batch = db.batch()
+	/// Single document write — segments are stored as an embedded array field.
+	/// Previously required a batch write + subcollection; now a single setData call.
+	private func write(document: FirestoreEventDocument, merge: Bool) async throws {
 		let ref = eventRef(eventId: document.id)
-		try batch.setData(from: document, forDocument: ref, merge: merge)
-
-		// Write segments directly by index as document ID — no prior read needed.
-		// Skipping getDocuments() avoids a subcollection read before the parent
-		// event exists, which was causing the "Missing or insufficient permissions"
-		// error on new event creation (parent not yet committed when rule evaluated).
-		let segmentsRef = ref.collection("segments")
-		for segment in segments {
-			let segmentRef = segmentsRef.document(String(segment.index))
-			try batch.setData(from: segment, forDocument: segmentRef, merge: false)
-		}
-		try await batch.commit()
+		try ref.setData(from: document, merge: merge)
 	}
 
-	/// Fast mapping — skips subcollection reads. Uses only the parent document fields.
-	/// Suitable for list screens (History, Favorites) where segment details are not displayed.
-	private func mapDocumentsWithoutSegments(_ documents: [QueryDocumentSnapshot]) -> [ActivityData] {
+	/// Maps Firestore documents to ActivityData — segments are read from the embedded
+	/// document field, eliminating the previous per-event subcollection fetch.
+	private func mapDocuments(_ documents: [QueryDocumentSnapshot]) -> [ActivityData] {
 		documents.compactMap { doc in
 			guard let eventDoc = try? doc.data(as: FirestoreEventDocument.self) else { return nil }
-			return EventDocumentMapper.activityData(from: eventDoc, segments: [])
-		}
-	}
-
-	/// Full mapping with segment subcollection reads — parallelized via TaskGroup.
-	/// Used for detail screens that need segment data.
-	private func mapDocuments(_ documents: [QueryDocumentSnapshot]) async -> [ActivityData] {
-		await withTaskGroup(of: (Int, ActivityData?).self) { group in
-			for (index, doc) in documents.enumerated() {
-				group.addTask {
-					let eventDoc: FirestoreEventDocument? = await MainActor.run {
-						try? doc.data(as: FirestoreEventDocument.self)
-					}
-					guard let eventDoc else {
-						return (index, nil)
-					}
-					let segmentsSnapshot = try? await doc.reference.collection("segments")
-						.order(by: "index")
-						.getDocuments()
-					let segments: [EventSegmentDocument] = await MainActor.run {
-						segmentsSnapshot?.documents.compactMap { snapshot in
-							try? snapshot.data(as: EventSegmentDocument.self)
-						} ?? []
-					}
-					let activity = await EventDocumentMapper.activityData(from: eventDoc, segments: segments)
-					return (index, activity)
-				}
-			}
-
-			// Collect results and sort by original index to preserve document order.
-			var indexed: [(Int, ActivityData)] = []
-			for await (index, activity) in group {
-				if let activity { indexed.append((index, activity)) }
-			}
-			return indexed.sorted { $0.0 < $1.0 }.map(\.1)
+			// Use embedded segments if present; fall back to empty for legacy documents.
+			let segments = eventDoc.segments ?? []
+			return EventDocumentMapper.activityData(from: eventDoc, segments: segments)
 		}
 	}
 
@@ -308,7 +264,7 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 				.whereField(FieldPath.documentID(), in: batchIds)
 				.getDocuments()
 
-			let batchActivities = await mapDocuments(snapshot.documents)
+			let batchActivities = mapDocuments(snapshot.documents)
 			allResults.append(contentsOf: batchActivities)
 		}
 

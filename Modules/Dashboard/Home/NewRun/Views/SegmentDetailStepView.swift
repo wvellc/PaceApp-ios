@@ -19,7 +19,7 @@ struct SegmentDetailStepView: View {
 			RunEventHeaderCard()
 				
 			if let segment = currentSegment {
-				let distBinding = Binding<Float>(
+				let distBinding = Binding<Double>(
 					get: { segment.distance },
 					set: { viewModel.updateSegmentDistance($0, at: viewModel.currentSegmentIndex) }
 				)
