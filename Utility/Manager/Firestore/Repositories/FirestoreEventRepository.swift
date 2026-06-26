@@ -206,7 +206,7 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 		let ref = eventRef(eventId: eventId)
 		let snapshot = try await ref.getDocument()
 		guard snapshot.exists,
-			  var document = try? snapshot.data(as: FirestoreEventDocument.self) else { return }
+			  var document = try? snapshot.data(as: EventDocument.self) else { return }
 		document = EventDocumentMapper.updatedDocument(document, name: name, location: location)
 		try ref.setData(from: document, merge: true)
 	}
@@ -233,7 +233,7 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 
 	/// Single document write — segments are stored as an embedded array field.
 	/// Previously required a batch write + subcollection; now a single setData call.
-	private func write(document: FirestoreEventDocument, merge: Bool) async throws {
+	private func write(document: EventDocument, merge: Bool) async throws {
 		let ref = eventRef(eventId: document.id)
 		try ref.setData(from: document, merge: merge)
 	}
@@ -242,7 +242,7 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 	/// document field, eliminating the previous per-event subcollection fetch.
 	private func mapDocuments(_ documents: [QueryDocumentSnapshot]) -> [ActivityData] {
 		documents.compactMap { doc in
-			guard let eventDoc = try? doc.data(as: FirestoreEventDocument.self) else { return nil }
+			guard let eventDoc = try? doc.data(as: EventDocument.self) else { return nil }
 			// Use embedded segments if present; fall back to empty for legacy documents.
 			let segments = eventDoc.segments ?? []
 			return EventDocumentMapper.activityData(from: eventDoc, segments: segments)
@@ -282,7 +282,7 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 		var deletedIds: [Int] = []
 
 		for doc in snapshot.documents {
-			guard let event = try? doc.data(as: FirestoreEventDocument.self) else { continue }
+			guard let event = try? doc.data(as: EventDocument.self) else { continue }
 			let payload = EventDocumentMapper.connectIQPayload(from: event)
 			switch event.eventStatus {
 			case .active:    active.append(payload)

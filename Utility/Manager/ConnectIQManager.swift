@@ -107,7 +107,7 @@ class ConnectIQManager: NSObject {
     var showInstallGarminConnect: Bool = false
     
     // MARK: - Private
-	private let logger = Logger(label: "net.paceapp.connectiq")
+//	private let logger = Logger(label: "net.paceapp.connectiq")
     private let urlScheme = "connect"
     private let connectIQ = ConnectIQ.sharedInstance()
     private var targetApp: IQApp?
@@ -139,7 +139,7 @@ class ConnectIQManager: NSObject {
     @MainActor
     private func loadPersistedStateFromFirestore() async {
         guard let userId = AuthManager.shared.currentUser?.uid else {
-            logger.debug("Skipped Firestore event load — no authenticated user")
+            logger.debug("[ConnectIQ] Skipped Firestore event load — no authenticated user")
             return
         }
 
@@ -151,13 +151,13 @@ class ConnectIQManager: NSObject {
             deletedEventIds        = snapshot.deletedIds
             pruneActivePayloadsAlreadyCompleted()
             rebuildSyncedActivities()
-            logger.info("Loaded event state from Firestore", metadata: [
+            logger.info("[ConnectIQ] Loaded event state from Firestore", metadata: [
                 "active": "\(activeEventPayloads.count)",
                 "completed": "\(completedEventPayloads.count)",
                 "deleted": "\(deletedEventIds.count)"
             ])
         } catch {
-            logger.error("Firestore event load failed", metadata: ["error": "\(error.localizedDescription)"])
+            logger.error("[ConnectIQ] Firestore event load failed", metadata: ["error": "\(error.localizedDescription)"])
         }
     }
     
@@ -178,7 +178,7 @@ class ConnectIQManager: NSObject {
         guard let uuid = device.uuid else { return }
         let currentStatus = connectIQ?.getDeviceStatus(device) ?? .invalidDevice
         
-        logger.debug("Polled ConnectIQ device status", metadata: [
+        logger.debug("[ConnectIQ] Polled ConnectIQ device status", metadata: [
             "device": "\(device.modelName ?? uuid.uuidString)",
             "status": "\(currentStatus)"
         ])
@@ -219,7 +219,7 @@ class ConnectIQManager: NSObject {
             targetApp = nil
         }
         
-        logger.debug("Updated connected ConnectIQ device", metadata: [
+        logger.debug("[ConnectIQ] Updated connected ConnectIQ device", metadata: [
             "device": "\(connectedDevice?.modelName ?? "nil")",
             "targetAppRegistered": "\(targetApp != nil)"
         ])
@@ -240,7 +240,7 @@ class ConnectIQManager: NSObject {
         // Safe to call multiple times — loadPersistedStateFromFirestore guards on userId.
         Task { await loadPersistedStateFromFirestore() }
 
-        logger.info("Restoring persisted ConnectIQ devices", metadata: [
+        logger.info("[ConnectIQ] Restoring persisted ConnectIQ devices", metadata: [
             "deviceCount": "\(persisted.count)"
         ])
         
@@ -278,7 +278,7 @@ class ConnectIQManager: NSObject {
         
         guard let parsedDevices = connectIQ?.parseDeviceSelectionResponse(from: url) as? [IQDevice],
               !parsedDevices.isEmpty else {
-            logger.warning("ConnectIQ device selection returned no devices")
+            logger.warning("[ConnectIQ] ConnectIQ device selection returned no devices")
             return
         }
         
@@ -307,7 +307,7 @@ class ConnectIQManager: NSObject {
             AppSession.pairedWatchUUID = parsedDevices.first?.uuid.uuidString
             self.isWatchPreviouslyPaired = !snapshot.isEmpty
             
-            self.logger.info("Registered ConnectIQ devices from callback", metadata: [
+            logger.info("[ConnectIQ] Registered ConnectIQ devices from callback", metadata: [
                 "deviceCount": "\(snapshot.count)"
             ])
         }
@@ -322,7 +322,7 @@ class ConnectIQManager: NSObject {
     /// here so `register(forAppMessages:)` is never accidentally skipped.
     func connectToApp(device: IQDevice) {
         guard let app = getIQApp(device: device) else {
-            logger.error("Failed to build ConnectIQ app for device")
+            logger.error("[ConnectIQ] Failed to build ConnectIQ app for device")
             return
         }
         
@@ -335,7 +335,7 @@ class ConnectIQManager: NSObject {
         connectIQ?.register(forAppMessages: app, delegate: self)
         AppSession.pairedWatchUUID = device.uuid.uuidString
         isWatchPreviouslyPaired = true
-        logger.info("Registered ConnectIQ app messages", metadata: [
+        logger.info("[ConnectIQ] Registered ConnectIQ app messages", metadata: [
             "device": "\(device.modelName ?? device.uuid.uuidString)"
         ])
 
@@ -360,18 +360,18 @@ class ConnectIQManager: NSObject {
         AppSession.pairedWatchUUID = nil
         AppSession.pairedDevices   = []
         isWatchPreviouslyPaired = false
-        logger.info("Disconnected ConnectIQ app and cleared local watch state")
+        logger.info("[ConnectIQ] Disconnected ConnectIQ app and cleared local watch state")
     }
     
     /// Sends a message to the currently targeted watch app.
     func sendMessage(_ message: Any) {
         guard let app = targetApp else {
-            logger.warning("Skipped ConnectIQ message because no target app is registered")
+            logger.warning("[ConnectIQ] Skipped ConnectIQ message because no target app is registered")
             return
         }
         
         connectIQ?.sendMessage(message, to: app, progress: nil, completion: { [logger] result in
-            logger.debug("ConnectIQ message send completed", metadata: [
+            logger.debug("[ConnectIQ] ConnectIQ message send completed", metadata: [
                 "result": "\(result.rawValue)"
             ])
         })
@@ -461,8 +461,23 @@ class ConnectIQManager: NSObject {
     }
 
 
+    // Routes all payload parsing through EventDocumentMapper — single parse path,
+    // No duplicate ConnectIQ dict logic.
     private static func activities(from payloads: [[String: Any]]) -> [ActivityData] {
-        return payloads.compactMap(ActivityData.init(connectIQPayload:))
+        return payloads.compactMap { payload in
+			guard let userId = AuthManager.shared.currentUserID else {
+				logger.error("[ConnectIQ] No user ID found for activity payload: \(payload)")
+				return nil
+			}
+            let (doc, segments) = EventDocumentMapper.document(
+                from: payload,
+                userId: userId,
+                isCompleted: false,
+                syncStatus: (payload["syncStatus"] as? String) ?? "pending",
+                source: (payload["source"] as? String) ?? "watch"
+            )
+            return EventDocumentMapper.activityData(from: doc, segments: segments)
+        }
     }
 	
 	//Last sync update
@@ -648,7 +663,7 @@ class ConnectIQManager: NSObject {
                         userId: userId
                     )
                 } catch {
-                    logger.error("Failed to sync upserted ConnectIQ event to Firestore", metadata: [
+                    logger.error("[ConnectIQ] Failed to sync upserted ConnectIQ event to Firestore", metadata: [
                         "eventId": "\(id)",
                         "userId": "\(userId)",
                         "error": "\(error.localizedDescription)"
@@ -691,7 +706,7 @@ class ConnectIQManager: NSObject {
                 do {
                     try await FirestoreEventRepository.shared.softDelete(eventId: id, userId: userId)
                 } catch {
-                    logger.error("Failed to sync deleted ConnectIQ event to Firestore", metadata: [
+                    logger.error("[ConnectIQ] Failed to sync deleted ConnectIQ event to Firestore", metadata: [
                         "eventId": "\(id)",
                         "userId": "\(userId)",
                         "error": "\(error.localizedDescription)"
@@ -740,7 +755,7 @@ class ConnectIQManager: NSObject {
 
         guard !pendingActive.isEmpty || !pendingCompleted.isEmpty else { return }
 
-        logger.info("Resyncing pending ConnectIQ events", metadata: [
+        logger.info("[ConnectIQ] Resyncing pending ConnectIQ events", metadata: [
             "pendingActive":    "\(pendingActive.count)",
             "pendingCompleted": "\(pendingCompleted.count)"
         ])
@@ -824,7 +839,7 @@ class ConnectIQManager: NSObject {
     /// Watch → App → Firestore direction.
     func applyRemoteSettings(_ settings: [String: Any]) {
         guard let userId = AuthManager.shared.currentUser?.uid else {
-            logger.warning("Skipped applyRemoteSettings — no authenticated user")
+            logger.warning("[ConnectIQ] Skipped applyRemoteSettings — no authenticated user")
             return
         }
 
@@ -857,7 +872,7 @@ class ConnectIQManager: NSObject {
             }
         }
 
-        logger.debug("Applied ConnectIQ settings to Firestore", metadata: [
+        logger.debug("[ConnectIQ] Applied ConnectIQ settings to Firestore", metadata: [
             "settingCount": "\(settings.count)"
         ])
     }
@@ -884,7 +899,7 @@ class ConnectIQManager: NSObject {
 extension ConnectIQManager: IQUIOverrideDelegate {
     
     func needsToInstallConnectMobile() {
-        logger.warning("Garmin Connect is not installed")
+        logger.warning("[ConnectIQ] Garmin Connect is not installed")
         Task {
             self.showInstallGarminConnect = true
             ToastManager.shared.present(
@@ -905,7 +920,7 @@ extension ConnectIQManager: IQDeviceEventDelegate {
     /// that case is covered by the `getDeviceStatus` poll in `registerAndPollStatus`.
     func deviceStatusChanged(_ device: IQDevice!, status: IQDeviceStatus) {
         guard let device, let uuid = device.uuid else { return }
-        logger.debug("ConnectIQ device status changed", metadata: [
+        logger.debug("[ConnectIQ] ConnectIQ device status changed", metadata: [
             "device": "\(device.modelName ?? uuid.uuidString)",
             "status": "\(status)"
         ])

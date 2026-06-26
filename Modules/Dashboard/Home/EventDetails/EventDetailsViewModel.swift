@@ -203,29 +203,26 @@ final class EventDetailsViewModel {
 
 		// ── Active event — show plan only ────────────────────────────────────
 		if !isCompletedEvent {
-			return data.segments.enumerated().compactMap { index, seg in
-				guard let goalTime = Self.etaString(from: seg) else { return nil }
-				let distStr = String(format: "%.2f %@", Self.distanceDouble(from: seg, key: "distance"), unit)
-				return SegmentRow(id: index, goalTime: goalTime, plannedDistance: distStr)
+			return data.segments.map { seg in
+				let distStr = String(format: "%.2f %@", seg.distance, unit)
+				return SegmentRow(id: seg.id, goalTime: seg.formattedGoalTime, plannedDistance: distStr)
 			}
 		}
 
 		// ── Completed event — merge plan + actuals positionally ──────────────
 		// Fall back to plan-only rows when the watch hasn't sent completedSegments yet.
 		guard !data.completedSegments.isEmpty else {
-			return data.segments.enumerated().compactMap { index, seg in
-				guard let goalTime = Self.etaString(from: seg) else { return nil }
-				let distStr = String(format: "%.2f %@", Self.distanceDouble(from: seg, key: "distance"), unit)
-				return SegmentRow(id: index, goalTime: goalTime, plannedDistance: distStr)
+			return data.segments.map { seg in
+				let distStr = String(format: "%.2f %@", seg.distance, unit)
+				return SegmentRow(id: seg.id, goalTime: seg.formattedGoalTime, plannedDistance: distStr)
 			}
 		}
 
 		return data.completedSegments.enumerated().map { index, completed in
 			// Goal fields sourced from matching planned segment by position (Q2: positional order is safe).
-			let planned      = index < data.segments.count ? data.segments[index] : [:]
-			let goalTime     = Self.etaString(from: planned) ?? "—"
-			let plannedDistStr = String(format: "%.2f %@",
-									   Self.distanceDouble(from: planned, key: "distance"), unit)
+			let planned        = index < data.segments.count ? data.segments[index] : nil
+			let goalTime       = planned?.formattedGoalTime ?? "—"
+			let plannedDistStr = planned.map { String(format: "%.2f %@", $0.distance, unit) } ?? "—"
 
 			// Actual elapsed time "elapsed_time": "00:00:44"
 			let actualTime = completed["elapsed_time"] as? String
@@ -393,18 +390,13 @@ final class EventDetailsViewModel {
 		return isNeg ? -totalSeconds : totalSeconds
 	}
 
-	/// Extracts a goal/eta time string from a segment dict — supports "eta" and "goalTime" keys.
-	/// Returns nil when the dict has no recognisable time key (used to filter incomplete planned entries).
-	private static func etaString(from seg: [String: Any]) -> String? {
-		(seg["eta"] as? String) ?? (seg["goalTime"] as? String)
-	}
-
-	/// Extracts a distance Double from a segment dict — handles Double, Float, NSNumber, and String.
-	private static func distanceDouble(from seg: [String: Any], key: String) -> Double {
-		if let d = seg[key] as? Double   { return d }
-		if let d = seg[key] as? Float    { return Double(d) }
-		if let d = seg[key] as? NSNumber { return d.doubleValue }
-		if let d = seg[key] as? String   { return Double(d) ?? 0 }
+	/// Extracts a Double from a raw watch dict value — handles String, Float, NSNumber.
+	/// Used only for completedSegments fields which remain [[String: Any]] (variable watch shape).
+	private static func distanceDouble(from dict: [String: Any], key: String) -> Double {
+		if let d = dict[key] as? Double   { return d }
+		if let d = dict[key] as? Float    { return Double(d) }
+		if let d = dict[key] as? NSNumber { return d.doubleValue }
+		if let d = dict[key] as? String   { return Double(d) ?? 0 }
 		return 0
 	}
 }

@@ -28,7 +28,7 @@ final class AnalyticsRepository {
 			.getDocuments()
 
 		return snapshot.documents.compactMap { doc in
-			guard let event = try? doc.data(as: FirestoreEventDocument.self) else { return nil }
+			guard let event = try? doc.data(as: EventDocument.self) else { return nil }
 			return EventDocumentMapper.analyticsRecord(from: event)
 		}
 	}

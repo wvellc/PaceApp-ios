@@ -7,11 +7,17 @@ import Foundation
 import FirebaseFirestore
 import SwiftUI
 
+// MARK: - EventDocumentMapper
+//
+// Single translation layer between raw ConnectIQ payloads, EventDocument
+// (Firestore), and ActivityData (UI). All parsing logic lives here — no
+// other file should parse raw [String: Any] event dicts independently.
+
 enum EventDocumentMapper {
 
-	// MARK: - ConnectIQ Payload → Firestore
-	// Converts the raw [String: Any] dict sent by the Garmin watch into a
-	// FirestoreEventDocument + flat RunSegment array ready for a single Firestore write.
+	// MARK: - ConnectIQ Payload → EventDocument
+	// Converts the raw [String: Any] dict from the Garmin watch into an
+	// EventDocument + typed RunSegment array for a single Firestore write.
 
 	static func document(
 		from payload: [String: Any],
@@ -19,7 +25,7 @@ enum EventDocumentMapper {
 		isCompleted: Bool,
 		syncStatus: String,
 		source: String
-	) -> (FirestoreEventDocument, [RunSegment]) {
+	) -> (EventDocument, [RunSegment]) {
 		let id = connectIQId(from: payload["id"]) ?? Int(Date().timeIntervalSince1970)
 		let now = Timestamp(date: Date())
 		let scheduledAt = parseConnectIQDate(payload["date"] as? String) ?? Date()
@@ -43,7 +49,7 @@ enum EventDocumentMapper {
 			actualTimeSeconds: actualTimeSeconds
 		)
 
-		// Build RunSegment array directly from the ConnectIQ "segments" payload.
+		// Build typed RunSegment array from ConnectIQ "segments" payload.
 		// Each entry has { "distance": Double, "eta": "HH:MM:SS" }.
 		let segmentPayloads = arrayOfDicts(from: payload["segments"])
 		let segments: [RunSegment] = segmentPayloads.enumerated().map { index, seg in
@@ -57,8 +63,7 @@ enum EventDocumentMapper {
 			)
 		}
 
-		// documentId is intentionally omitted — Firestore manages it automatically on read.
-		let doc = FirestoreEventDocument(
+		let doc = EventDocument(
 			id: id,
 			userId: userId,
 			status: status,
@@ -90,12 +95,12 @@ enum EventDocumentMapper {
 		return (doc, segments)
 	}
 
-	// MARK: - Firestore → ActivityData
-	// Builds ActivityData directly from FirestoreEventDocument fields — no [String: Any] round-trip.
-	// segments param accepts the flat RunSegment array stored on the document.
+	// MARK: - EventDocument → ActivityData
+	// Single mapping path from persisted data to the UI layer.
+	// Segments are passed as typed [RunSegment] — no [[String: Any]] round-trip.
 
 	static func activityData(
-		from document: FirestoreEventDocument,
+		from document: EventDocument,
 		segments: [RunSegment] = []
 	) -> ActivityData? {
 		let unit = document.measure == "Miles" ? "mi" : "km"
@@ -106,11 +111,6 @@ enum EventDocumentMapper {
 		let timeVarStr = document.timeVarianceSeconds.map { formatSignedVariance($0) } ?? ""
 		let deltaColor: Color = timeVarStr.hasPrefix("-") ? .fluorescentMint : .redBoho
 		let actualDistStr = document.actualDistance.map { String(format: "%.2f", $0) } ?? ""
-
-		// Convert RunSegment array → [[String: Any]] for ActivityData.segments compatibility.
-		let segmentMaps: [[String: Any]] = segments.map { seg in
-			["distance": seg.distance, "eta": formatTime(seg.totalGoalSeconds)]
-		}
 
 		return ActivityData(
 			id: document.id,
@@ -127,8 +127,8 @@ enum EventDocumentMapper {
 			goal: goalStr,
 			measure: document.measure,
 			intervals: "\(document.lookBackIntervals)",
-			segmentCount: max(segmentMaps.count, 1),
-			segments: segmentMaps,
+			segmentCount: max(segments.count, 1),
+			segments: segments,                                      // typed [RunSegment] — no dict conversion
 			completedSegments: genericDictsToAny(document.completedSegments),
 			actualDist: actualDistStr,
 			timeVar: timeVarStr,
@@ -137,13 +137,13 @@ enum EventDocumentMapper {
 		)
 	}
 
-	// MARK: - ActivityData metadata update
+	// MARK: - Metadata update
 
 	static func updatedDocument(
-		_ document: FirestoreEventDocument,
+		_ document: EventDocument,
 		name: String,
 		location: String
-	) -> FirestoreEventDocument {
+	) -> EventDocument {
 		var copy = document
 		copy.name = name
 		copy.location = location
@@ -151,10 +151,10 @@ enum EventDocumentMapper {
 		return copy
 	}
 
-	// MARK: - FirestoreEventDocument → ConnectIQ wire-format payload
+	// MARK: - EventDocument → ConnectIQ wire-format payload
 	// Inverse of document(from:...) — rebuilds the [String: Any] dict the watch expects.
-	// e.g. document(id:1, name:"Run") → ["id": 1, "name": "Run", "date": "Jun/1/2026", ...]
-	static func connectIQPayload(from document: FirestoreEventDocument) -> [String: Any] {
+
+	static func connectIQPayload(from document: EventDocument) -> [String: Any] {
 		var payload: [String: Any] = [
 			"id":          document.id,
 			"name":        document.name,
@@ -188,7 +188,7 @@ enum EventDocumentMapper {
 		if let completedSegments = document.completedSegments, !completedSegments.isEmpty {
 			payload["completedSegments"] = genericDictsToAny(completedSegments)
 		}
-		// Rebuild the "segments" array the watch expects from the stored RunSegment array.
+		// Rebuild the watch-format "segments" array from the stored RunSegment array.
 		if let segs = document.segments, !segs.isEmpty {
 			payload["segments"] = segs.map { seg in
 				["distance": seg.distance, "eta": formatTime(seg.totalGoalSeconds)] as [String: Any]
@@ -200,7 +200,7 @@ enum EventDocumentMapper {
 
 	// MARK: - Analytics record
 
-	static func analyticsRecord(from document: FirestoreEventDocument) -> EventAnalyticsRecord? {
+	static func analyticsRecord(from document: EventDocument) -> EventAnalyticsRecord? {
 		guard document.eventStatus == .completed,
 			  let completedAt = document.completedAt?.dateValue() else { return nil }
 		return EventAnalyticsRecord(
@@ -218,13 +218,13 @@ enum EventDocumentMapper {
 	// MARK: - Helpers
 
 	static func connectIQId(from value: Any?) -> Int? {
-		if let value = value as? Int    { return value }
+		if let value = value as? Int      { return value }
 		if let value = value as? NSNumber { return value.intValue }
-		if let value = value as? String { return Int(value) }
+		if let value = value as? String   { return Int(value) }
 		return nil
 	}
 
-	// Cached — DateFormatter is one of the most expensive Foundation objects to allocate.
+	// Cached — DateFormatter is expensive to allocate.
 	private static let connectIQDateFormatter: DateFormatter = {
 		let f = DateFormatter()
 		f.locale = Locale(identifier: "en_US_POSIX")
@@ -278,11 +278,11 @@ enum EventDocumentMapper {
 	}
 
 	static func parseDouble(_ value: Any?) -> Double? {
-		if let v = value as? Double  { return v }
-		if let v = value as? Float   { return Double(v) }
-		if let v = value as? Int     { return Double(v) }
+		if let v = value as? Double   { return v }
+		if let v = value as? Float    { return Double(v) }
+		if let v = value as? Int      { return Double(v) }
 		if let v = value as? NSNumber { return v.doubleValue }
-		if let v = value as? String  { return Double(v) }
+		if let v = value as? String   { return Double(v) }
 		return nil
 	}
 
@@ -294,20 +294,19 @@ enum EventDocumentMapper {
 	}
 
 	static func arrayOfDicts(from value: Any?) -> [[String: Any]] {
-		if let arr = value as? [[String: Any]] { return arr }
+		if let arr = value as? [[String: Any]]  { return arr }
 		if let nsArr = value as? NSArray { return nsArr.compactMap { $0 as? [String: Any] } }
 		return []
 	}
 
 	static func mapActivityType(_ value: String?) -> String {
 		switch value {
-			case "Walk", "Walking":    return "walking"
-			case "Cycling", "Cycle":   return "cycling"
-			default:                   return "running"
+			case "Walk", "Walking":  return "walking"
+			case "Cycling", "Cycle": return "cycling"
+			default:                 return "running"
 		}
 	}
 
-	// Inverse of mapActivityType — e.g. "walking" → "Walk", "running" → "Run"
 	static func reverseMapActivityType(_ value: String) -> String {
 		switch value {
 			case "walking": return "Walk"
@@ -354,10 +353,10 @@ enum EventDocumentMapper {
 		return paces.map { pace in
 			var mapped: [String: FirestoreFlexibleValue] = [:]
 			for (key, value) in pace {
-				if let v = value as? String       { mapped[key] = .string(v) }
-				else if let v = value as? Int     { mapped[key] = .int(v) }
+				if let v = value as? String        { mapped[key] = .string(v) }
+				else if let v = value as? Int      { mapped[key] = .int(v) }
 				else if let v = value as? NSNumber { mapped[key] = .int(v.intValue) }
-				else if let v = value as? Double  { mapped[key] = .double(v) }
+				else if let v = value as? Double   { mapped[key] = .double(v) }
 			}
 			return mapped
 		}
@@ -368,10 +367,10 @@ enum EventDocumentMapper {
 		return dicts.map { dict in
 			var mapped: [String: FirestoreFlexibleValue] = [:]
 			for (key, value) in dict {
-				if let v = value as? String       { mapped[key] = .string(v) }
-				else if let v = value as? Int     { mapped[key] = .int(v) }
+				if let v = value as? String        { mapped[key] = .string(v) }
+				else if let v = value as? Int      { mapped[key] = .int(v) }
 				else if let v = value as? NSNumber { mapped[key] = .int(v.intValue) }
-				else if let v = value as? Double  { mapped[key] = .double(v) }
+				else if let v = value as? Double   { mapped[key] = .double(v) }
 			}
 			return mapped
 		}
