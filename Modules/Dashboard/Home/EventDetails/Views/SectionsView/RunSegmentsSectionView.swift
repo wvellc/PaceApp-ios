@@ -54,30 +54,21 @@ struct RunSegmentsSectionView: View {
 				.frame(width: 28, alignment: .leading)
 
 			Spacer()
+			
+			Text( row.isCompleted ? actualLine(row) : "\(row.goalTime) / \(row.plannedDistance)")
+				.font(.semiBold16)
+				.foregroundStyle(.darkCharcoal)
+				.frame(maxWidth: .infinity)
 
-			if row.isCompleted {
-				// Completed: actual on top (prominent), goal underneath (muted)
-				VStack(alignment: .trailing, spacing: 2) {
-					// Actual elapsed time — always present when isCompleted
-					HStack(spacing: 4) {
-						Image(systemName: "checkmark.circle.fill")
-							.font(.system(size: 12))
-							.foregroundStyle(.fluorescentMint)
-						Text(actualLine(row))
-							.font(.semiBold16)
-							.foregroundStyle(.darkCharcoal)
-					}
-					// Planned goal — muted subtitle
-					Text("goal: \(row.goalTime) / \(row.plannedDistance)")
-						.font(.regular13)
-						.foregroundStyle(.grayHint)
-				}
-			} else {
-				// Active: goal only
-				Text("\(row.goalTime) / \(row.plannedDistance)")
-					.font(.semiBold16)
-					.foregroundStyle(.darkCharcoal)
-			}
+			Spacer()
+			
+			Text(row.isCompleted ? "Completed" : "Awaiting")
+				.font(.semiBold11)
+				.foregroundStyle(row.isCompleted ? .darkCharcoal : .fashionGray)
+				.frame(width: 76 ,height: 20, alignment: .center)
+				.background(row.isCompleted ? .fluorescentMint : .grayHint)
+				.cornerRadius(16)
+
 		}
 	}
 
@@ -89,4 +80,14 @@ struct RunSegmentsSectionView: View {
 		}
 		return time
 	}
+}
+
+#Preview {
+	RunSegmentsSectionView(segments: [
+		SegmentRow(id: 1, goalTime: "00:00:23", plannedDistance: "0.10mi"),
+		SegmentRow(id: 2, goalTime: "00:10:23", plannedDistance: "0.10mi"),
+		SegmentRow(id: 3, goalTime: "00:25:23", plannedDistance: "5.10mi", actualTime: "00:00:23", actualDistance: "2.5mi"),
+	], isExpanded: true, onToggle: {
+		
+	}, distanceUnit: "DDDDD").background(Color.white)
 }

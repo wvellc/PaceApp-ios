@@ -13,9 +13,6 @@ import Logging
 // MARK: - SegmentRow
 //
 // Display model for one row in RunSegmentsSectionView.
-// Active events: goalTime + plannedDistance only.
-// Completed events: both goal and actual fields populated.
-// Used exclusively in the view layer — not stored or encoded.
 
 struct SegmentRow: Identifiable {
 	let id: Int                   // 0-based index → displayed as "S1", "S2"…

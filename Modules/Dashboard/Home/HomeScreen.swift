@@ -35,18 +35,18 @@ struct HomeScreen: View {
 				
 				// MARK: Navigation bar
 				AppNavigation(trailing: {
-					Button {
-						router.navigate(to: .notifications)
-					} label: {
-						RoundedRectangle(cornerRadius: 100)
-							.frame(width: 40, height: 40)
-							.foregroundStyle(.whiteApp)
-							.overlay {
-								Image(.icNotification)
-									.resizable()
-									.frame(width: 20, height: 20)
-							}
-					}
+//					Button {
+//						router.navigate(to: .notifications)
+//					} label: {
+//						RoundedRectangle(cornerRadius: 100)
+//							.frame(width: 40, height: 40)
+//							.foregroundStyle(.whiteApp)
+//							.overlay {
+//								Image(.icNotification)
+//									.resizable()
+//									.frame(width: 20, height: 20)
+//							}
+//					}
 				})
 				
 				// MARK: Scrollable content
