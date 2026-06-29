@@ -1,7 +1,11 @@
 //
-//  FirestoreEventDocument.swift
+//  EventDocument.swift
 //  PaceApp
 //
+//  Domain model for a persisted run/walk event.
+//  Encodes/decodes directly to/from the Firestore `events` collection.
+//  Previously named FirestoreEventDocument — renamed to reflect that this
+//  is a core domain type, not an implementation detail of the Firestore layer.
 
 import Foundation
 import FirebaseFirestore
@@ -14,9 +18,18 @@ enum EventStatus: String, Codable, CaseIterable {
 	case deleted
 }
 
-// MARK: - Firestore Event Document
+// MARK: - ConnectIQ Event Snapshot
+// Result of a single fetchAllEventPayloads call — partitioned client-side by status.
+// e.g. snapshot.activePayloads → [["id": 1, "name": "Run", ...], ...]
+struct ConnectIQEventSnapshot {
+	let activePayloads: [[String: Any]]    // status == "active"
+	let completedPayloads: [[String: Any]] // status == "completed"
+	let deletedIds: [Int]                  // status == "deleted" — blocks re-insertion
+}
 
-struct FirestoreEventDocument: Codable, Identifiable {
+// MARK: - EventDocument
+
+struct EventDocument: Codable, Identifiable {
 	var id: Int
 	var userId: String
 	var status: String
@@ -44,12 +57,17 @@ struct FirestoreEventDocument: Codable, Identifiable {
 	var updatedAt: Timestamp
 	var deletedAt: Timestamp?
 
+	// Flat segment array — stored on the parent document, not a subcollection.
+	var segments: [RunSegment]?
+
 	// Document ID is always derived from the integer event id.
 	var firestoreDocumentId: String { String(id) }
 	var eventStatus: EventStatus { EventStatus(rawValue: status) ?? .active }
 }
 
-/// Supports mixed numeric types from legacy ConnectIQ payloads when encoding nested maps.
+// MARK: - FirestoreFlexibleValue
+// Supports mixed numeric types from legacy ConnectIQ payloads when encoding nested maps.
+
 enum FirestoreFlexibleValue: Codable {
 	case string(String)
 	case int(Int)

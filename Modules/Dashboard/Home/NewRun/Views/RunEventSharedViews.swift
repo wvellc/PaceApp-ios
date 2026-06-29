@@ -160,7 +160,7 @@ struct SegmentTimePickerRow: View {
 struct SegmentDistancePickerRow: View {
 	let label: LocalizedStringResource
     let unit: String
-    @Binding var selected: Float
+    @Binding var selected: Double
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -176,7 +176,7 @@ struct SegmentDistancePickerRow: View {
                     set: { (newValue: Int) in
                         let fractional = selected - floor(selected)
                         let clampedInt = max(0, min(999, newValue))
-                        selected = Float(clampedInt) + fractional
+                        selected = Double(clampedInt) + fractional
                     }
                 )) {
                     ForEach(0...999, id: \.self) { intVal in
@@ -207,7 +207,7 @@ struct SegmentDistancePickerRow: View {
                     set: { (newValue: Int) in
                         let clampedHundredths = max(0, min(99, newValue))
                         let intPart = Int(selected)
-						selected = Float(intPart) + Float(clampedHundredths) / 100.0
+						selected = Double(intPart) + Double(clampedHundredths) / 100.0
                     }
                 )) {
                     ForEach(0...99, id: \.self) { frac in

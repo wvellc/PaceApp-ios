@@ -20,4 +20,8 @@ enum AppSessionKey: String, CaseIterable {
     // objects and re-register for device events after a cold launch, so
     // deviceStatusChanged fires without requiring Garmin Connect to be reopened.
     case pairedDevices
+
+    // Timestamp of the last successful watch → phone sync.
+    // Persisted so the greeting line survives app restarts.
+    case lastWatchSyncDate
 }

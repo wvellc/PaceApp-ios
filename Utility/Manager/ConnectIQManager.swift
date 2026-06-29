@@ -83,6 +83,17 @@ class ConnectIQManager: NSObject {
     /// pair-watch branch, are invalidated when pairing is saved or cleared.
     var isWatchPreviouslyPaired: Bool = !AppSession.pairedDevices.isEmpty
     
+    /// The last time a sync message was successfully received from the watch.
+    /// Seeded from UserDefaults on init so the value survives app restarts.
+    var lastWatchSyncDate: Date? = AppSession.lastWatchSyncDate
+
+    /// Formatted sync status string for display in the greeting area.
+    /// Returns e.g. "Synced 2 min ago" or "Not Synced Yet!" when nil.
+    var lastSyncLabel: String {
+        guard let date = lastWatchSyncDate else { return "Not Synced Yet!" }
+        return "Synced \(date.timeAgoDisplay())"
+    }
+
     /// Messages received from the watch app.
     var receivedMessages: [String] = []
     
@@ -96,33 +107,58 @@ class ConnectIQManager: NSObject {
     var showInstallGarminConnect: Bool = false
     
     // MARK: - Private
-	private let logger = Logger(label: "net.paceapp.connectiq")
+//	private let logger = Logger(label: "net.paceapp.connectiq")
     private let urlScheme = "connect"
     private let connectIQ = ConnectIQ.sharedInstance()
     private var targetApp: IQApp?
     private var activeEventPayloads: [[String: Any]] = []
     private var completedEventPayloads: [[String: Any]] = []
     private var deletedEventIds: [Int] = []
-    private static let syncedEventsStorageKey = "connectIQ.syncedEvents"
-    private static let syncedCompletedEventsStorageKey = "connectIQ.syncedCompletedEvents"
-    private static let deletedEventsStorageKey = "connectIQ.deletedEventIds"
-    private static let settingsStorageKey = "connectIQ.settings"
+    // NOTE: syncedEvents, syncedCompletedEvents, deletedEventIds, and watch settings are
+    // no longer persisted in UserDefaults — Firestore is the sole persistence layer for all state.
     
     // MARK: - Lifecycle
     
     private override init() {
         super.init()
-        activeEventPayloads = Self.loadEventPayloads(forKey: Self.syncedEventsStorageKey)
-        completedEventPayloads = Self.loadEventPayloads(forKey: Self.syncedCompletedEventsStorageKey)
-        deletedEventIds = Self.loadDeletedEventIds()
-        pruneActivePayloadsAlreadyCompleted()
-        syncedActivities = Self.activities(from: activeEventPayloads)
-        syncedCompletedActivities = Self.activities(from: completedEventPayloads)
+        // Event arrays start empty — Firestore (with built-in offline cache)
+        // seeds them asynchronously in loadPersistedStateFromFirestore().
+        // This avoids the synchronous UserDefaults blocking the main thread at launch.
         connectIQ?.initialize(
             withUrlScheme: urlScheme,
             uiOverrideDelegate: self,
             stateRestorationIdentifier: urlScheme
         )
+        Task { await loadPersistedStateFromFirestore() }
+    }
+
+    // MARK: - Firestore cold-launch state restoration
+
+    // Seeds the in-memory event arrays from Firestore (offline cache = near-instant, no network needed).
+    // Called from init() and restoreSessionIfNeeded() — safe to call multiple times.
+    @MainActor
+    private func loadPersistedStateFromFirestore() async {
+        guard let userId = AuthManager.shared.currentUser?.uid else {
+            logger.debug("[ConnectIQ] Skipped Firestore event load — no authenticated user")
+            return
+        }
+
+        do {
+            // Single query → client partitions by status. e.g. active: [2], completed: [1], deletedIds: [3]
+            let snapshot = try await FirestoreEventRepository.shared.fetchAllEventPayloads(userId: userId)
+            activeEventPayloads    = snapshot.activePayloads
+            completedEventPayloads = snapshot.completedPayloads
+            deletedEventIds        = snapshot.deletedIds
+            pruneActivePayloadsAlreadyCompleted()
+            rebuildSyncedActivities()
+            logger.info("[ConnectIQ] Loaded event state from Firestore", metadata: [
+                "active": "\(activeEventPayloads.count)",
+                "completed": "\(completedEventPayloads.count)",
+                "deleted": "\(deletedEventIds.count)"
+            ])
+        } catch {
+            logger.error("[ConnectIQ] Firestore event load failed", metadata: ["error": "\(error.localizedDescription)"])
+        }
     }
     
     // MARK: - Core: register + immediate status poll
@@ -142,7 +178,7 @@ class ConnectIQManager: NSObject {
         guard let uuid = device.uuid else { return }
         let currentStatus = connectIQ?.getDeviceStatus(device) ?? .invalidDevice
         
-        logger.debug("Polled ConnectIQ device status", metadata: [
+        logger.debug("[ConnectIQ] Polled ConnectIQ device status", metadata: [
             "device": "\(device.modelName ?? uuid.uuidString)",
             "status": "\(currentStatus)"
         ])
@@ -183,7 +219,7 @@ class ConnectIQManager: NSObject {
             targetApp = nil
         }
         
-        logger.debug("Updated connected ConnectIQ device", metadata: [
+        logger.debug("[ConnectIQ] Updated connected ConnectIQ device", metadata: [
             "device": "\(connectedDevice?.modelName ?? "nil")",
             "targetAppRegistered": "\(targetApp != nil)"
         ])
@@ -199,8 +235,12 @@ class ConnectIQManager: NSObject {
             return
         }
         isWatchPreviouslyPaired = true
-        
-        logger.info("Restoring persisted ConnectIQ devices", metadata: [
+
+        // Re-trigger Firestore event load here in case auth was not ready during init().
+        // Safe to call multiple times — loadPersistedStateFromFirestore guards on userId.
+        Task { await loadPersistedStateFromFirestore() }
+
+        logger.info("[ConnectIQ] Restoring persisted ConnectIQ devices", metadata: [
             "deviceCount": "\(persisted.count)"
         ])
         
@@ -238,7 +278,7 @@ class ConnectIQManager: NSObject {
         
         guard let parsedDevices = connectIQ?.parseDeviceSelectionResponse(from: url) as? [IQDevice],
               !parsedDevices.isEmpty else {
-            logger.warning("ConnectIQ device selection returned no devices")
+            logger.warning("[ConnectIQ] ConnectIQ device selection returned no devices")
             return
         }
         
@@ -267,7 +307,7 @@ class ConnectIQManager: NSObject {
             AppSession.pairedWatchUUID = parsedDevices.first?.uuid.uuidString
             self.isWatchPreviouslyPaired = !snapshot.isEmpty
             
-            self.logger.info("Registered ConnectIQ devices from callback", metadata: [
+            logger.info("[ConnectIQ] Registered ConnectIQ devices from callback", metadata: [
                 "deviceCount": "\(snapshot.count)"
             ])
         }
@@ -282,7 +322,7 @@ class ConnectIQManager: NSObject {
     /// here so `register(forAppMessages:)` is never accidentally skipped.
     func connectToApp(device: IQDevice) {
         guard let app = getIQApp(device: device) else {
-            logger.error("Failed to build ConnectIQ app for device")
+            logger.error("[ConnectIQ] Failed to build ConnectIQ app for device")
             return
         }
         
@@ -295,13 +335,15 @@ class ConnectIQManager: NSObject {
         connectIQ?.register(forAppMessages: app, delegate: self)
         AppSession.pairedWatchUUID = device.uuid.uuidString
         isWatchPreviouslyPaired = true
-        logger.info("Registered ConnectIQ app messages", metadata: [
+        logger.info("[ConnectIQ] Registered ConnectIQ app messages", metadata: [
             "device": "\(device.modelName ?? device.uuid.uuidString)"
         ])
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
 //            self?.requestFullSync()
             self?.forceResync()
+            // Forward any events that failed to sync while the watch was out of range
+            Task { await self?.resyncPendingEvents() }
         }
     }
     
@@ -318,18 +360,18 @@ class ConnectIQManager: NSObject {
         AppSession.pairedWatchUUID = nil
         AppSession.pairedDevices   = []
         isWatchPreviouslyPaired = false
-        logger.info("Disconnected ConnectIQ app and cleared local watch state")
+        logger.info("[ConnectIQ] Disconnected ConnectIQ app and cleared local watch state")
     }
     
     /// Sends a message to the currently targeted watch app.
     func sendMessage(_ message: Any) {
         guard let app = targetApp else {
-            logger.warning("Skipped ConnectIQ message because no target app is registered")
+            logger.warning("[ConnectIQ] Skipped ConnectIQ message because no target app is registered")
             return
         }
         
         connectIQ?.sendMessage(message, to: app, progress: nil, completion: { [logger] result in
-            logger.debug("ConnectIQ message send completed", metadata: [
+            logger.debug("[ConnectIQ] ConnectIQ message send completed", metadata: [
                 "result": "\(result.rawValue)"
             ])
         })
@@ -395,7 +437,7 @@ class ConnectIQManager: NSObject {
             isCompleted = true
         }
 
-        persistSyncState()
+        refreshState()
 
         if let updatedPayload, let userId = AuthManager.shared.currentUser?.uid {
             Task {
@@ -418,27 +460,37 @@ class ConnectIQManager: NSObject {
         }
     }
 
-    private static func loadEventPayloads(forKey key: String) -> [[String: Any]] {
-        UserDefaults.standard.array(forKey: key) as? [[String: Any]] ?? []
-    }
 
-    private static func loadDeletedEventIds() -> [Int] {
-        let values = UserDefaults.standard.array(forKey: deletedEventsStorageKey) ?? []
-        return values.compactMap { value in
-            if let intValue = value as? Int { return intValue }
-            if let numberValue = value as? NSNumber { return numberValue.intValue }
-            if let stringValue = value as? String { return Int(stringValue) }
-            return nil
+    // Routes all payload parsing through EventDocumentMapper — single parse path,
+    // No duplicate ConnectIQ dict logic.
+    private static func activities(from payloads: [[String: Any]]) -> [ActivityData] {
+        return payloads.compactMap { payload in
+			guard let userId = AuthManager.shared.currentUserID else {
+				logger.error("[ConnectIQ] No user ID found for activity payload: \(payload)")
+				return nil
+			}
+            let (doc, segments) = EventDocumentMapper.document(
+                from: payload,
+                userId: userId,
+                isCompleted: false,
+                syncStatus: (payload["syncStatus"] as? String) ?? "pending",
+                source: (payload["source"] as? String) ?? "watch"
+            )
+            return EventDocumentMapper.activityData(from: doc, segments: segments)
         }
     }
+	
+	//Last sync update
+	fileprivate func lastSyncUpdate() {
+		// persist across restarts
+		lastWatchSyncDate = Date()
+		AppSession.lastWatchSyncDate = lastWatchSyncDate
+	}
 
-    private static func activities(from payloads: [[String: Any]]) -> [ActivityData] {
-        return payloads.compactMap(ActivityData.init(connectIQPayload:))
-    }
     
     // MARK: - Sync Message Handler
-
-    /// Dispatches incoming sync commands from the watch.
+	
+	/// Dispatches incoming sync commands from the watch.
     /// Returns true if the message was handled as a sync command.
     ///
     /// Supported commands:
@@ -452,6 +504,8 @@ class ConnectIQManager: NSObject {
         guard let command = dict["command"] as? String else { return false }
         let isForce = dict["is_force_update"] as? Bool ?? false
 
+
+		
         switch command {
 
         // --- SYNC REQUEST: Watch asks phone to send all data ---
@@ -469,9 +523,14 @@ class ConnectIQManager: NSObject {
             if let remoteSettings = dict["settings"] as? [String: Any] {
                 applyRemoteSettings(remoteSettings)
             }
-            persistSyncState()
+            refreshState()
+				
             // Respond with our full data so the watch gets our events too
             sendFullSync(command: "sync_all", isForceUpdate: isForce)
+				
+			//Last sync date update
+			lastSyncUpdate()
+
             return true
 
         // --- SYNC ALL: Watch sends all its data (response to our sync_request) ---
@@ -489,15 +548,23 @@ class ConnectIQManager: NSObject {
             if let remoteSettings = dict["settings"] as? [String: Any] {
                 applyRemoteSettings(remoteSettings)
             }
-            persistSyncState()
+            refreshState()
+				
+			//Last sync date update
+			lastSyncUpdate()
+
             return true
 
         // --- DELETE EVENT: Watch deleted a specific event ---
         case "delete_event":
             if let id = eventId(from: dict) {
                 applyDeletedEventId(id)
-                persistSyncState()
+                refreshState()
             }
+				
+			//Last sync date update
+			lastSyncUpdate()
+
             return true
 
         // --- CREATE EVENT: Watch created a new active event ---
@@ -505,6 +572,10 @@ class ConnectIQManager: NSObject {
             if let eventPayload = extractEventRecord(from: dict) {
                 upsertEventPayload(eventPayload, isCompleted: false, syncStatus: "synced")
             }
+				
+			//Last sync date update
+			lastSyncUpdate()
+
             return true
 
         // --- FINISH EVENT: Watch finished an event (active → completed) ---
@@ -512,6 +583,10 @@ class ConnectIQManager: NSObject {
             if let eventPayload = extractEventRecord(from: dict) {
                 upsertEventPayload(eventPayload, isCompleted: true, syncStatus: "synced")
             }
+				
+			//Last sync date update
+			lastSyncUpdate()
+
             return true
 
         // --- SYNC SETTINGS: Watch sends updated settings ---
@@ -519,11 +594,17 @@ class ConnectIQManager: NSObject {
             if let remoteSettings = dict["settings"] as? [String: Any] {
                 applyRemoteSettings(remoteSettings)
             }
+				
+			//Last sync date update
+			lastSyncUpdate()
+
             return true
 
         default:
             return false
         }
+
+
     }
 
     /// Sends a full sync payload to the watch.
@@ -564,14 +645,11 @@ class ConnectIQManager: NSObject {
             activeEventPayloads.removeAll { eventId(from: $0) == id }
             upsertPayload(normalizedPayload, in: &completedEventPayloads)
         } else {
-            guard !completedEventPayloads.contains(where: { eventId(from: $0) == id }) else {
-                persistSyncState()
-                return
-            }
+            guard !completedEventPayloads.contains(where: { eventId(from: $0) == id }) else { return }
             upsertPayload(normalizedPayload, in: &activeEventPayloads)
         }
 
-        persistSyncState()
+        refreshState()
 
         if let userId = AuthManager.shared.currentUser?.uid {
             let source = (normalizedPayload["source"] as? String) ?? "phone"
@@ -585,7 +663,7 @@ class ConnectIQManager: NSObject {
                         userId: userId
                     )
                 } catch {
-                    logger.error("Failed to sync upserted ConnectIQ event to Firestore", metadata: [
+                    logger.error("[ConnectIQ] Failed to sync upserted ConnectIQ event to Firestore", metadata: [
                         "eventId": "\(id)",
                         "userId": "\(userId)",
                         "error": "\(error.localizedDescription)"
@@ -628,7 +706,7 @@ class ConnectIQManager: NSObject {
                 do {
                     try await FirestoreEventRepository.shared.softDelete(eventId: id, userId: userId)
                 } catch {
-                    logger.error("Failed to sync deleted ConnectIQ event to Firestore", metadata: [
+                    logger.error("[ConnectIQ] Failed to sync deleted ConnectIQ event to Firestore", metadata: [
                         "eventId": "\(id)",
                         "userId": "\(userId)",
                         "error": "\(error.localizedDescription)"
@@ -648,30 +726,55 @@ class ConnectIQManager: NSObject {
         }
     }
 
-    /// Persists all sync state to UserDefaults.
-    /// Also prunes stale data before saving.
-    private func persistSyncState() {
+    // Cleans up in-memory arrays after any event mutation — prune stale data, then rebuild UI-facing lists.
+    private func refreshState() {
         pruneActivePayloadsAlreadyCompleted()
         pruneDeletedEventIds()
         rebuildSyncedActivities()
-        UserDefaults.standard.set(activeEventPayloads, forKey: Self.syncedEventsStorageKey)
-        UserDefaults.standard.set(completedEventPayloads, forKey: Self.syncedCompletedEventsStorageKey)
-        UserDefaults.standard.set(deletedEventIds, forKey: Self.deletedEventsStorageKey)
     }
 
-    /// Removes deleted event IDs that no longer exist in any event list.
-    /// Prevents the deletedEventIds array from growing unbounded.
+    // Removes deleted IDs no longer referenced by any event — prevents unbounded growth.
     private func pruneDeletedEventIds() {
-        let activeIds = Set(activeEventPayloads.compactMap { eventId(from: $0) })
+        let activeIds    = Set(activeEventPayloads.compactMap { eventId(from: $0) })
         let completedIds = Set(completedEventPayloads.compactMap { eventId(from: $0) })
-        deletedEventIds.removeAll { id in
-            !activeIds.contains(id) && !completedIds.contains(id)
-        }
+        deletedEventIds.removeAll { !activeIds.contains($0) && !completedIds.contains($0) }
     }
 
     private func rebuildSyncedActivities() {
-        syncedActivities = Self.activities(from: activeEventPayloads)
+        syncedActivities          = Self.activities(from: activeEventPayloads)
         syncedCompletedActivities = Self.activities(from: completedEventPayloads)
+    }
+
+    // MARK: - Pending event resync
+
+    // Sends create_event/finish_event for any in-memory payload still marked syncStatus == "pending".
+    // e.g. payload written offline → watch unreachable → retried here on reconnect or app launch.
+    func resyncPendingEvents() async {
+        let pendingActive = activeEventPayloads.filter { ($0["syncStatus"] as? String) == "pending" }
+        let pendingCompleted = completedEventPayloads.filter { ($0["syncStatus"] as? String) == "pending" }
+
+        guard !pendingActive.isEmpty || !pendingCompleted.isEmpty else { return }
+
+        logger.info("[ConnectIQ] Resyncing pending ConnectIQ events", metadata: [
+            "pendingActive":    "\(pendingActive.count)",
+            "pendingCompleted": "\(pendingCompleted.count)"
+        ])
+
+        for payload in pendingActive {
+            sendMessage([
+                "command": "create_event",
+                "source": "phone",
+                "event": payload
+            ])
+        }
+
+        for payload in pendingCompleted {
+            sendMessage([
+                "command": "finish_event",
+                "source": "phone",
+                "event": payload
+            ])
+        }
     }
 
     private func eventPayloads(from value: Any?) -> [[String: Any]] {
@@ -713,45 +816,69 @@ class ConnectIQManager: NSObject {
     }
     
     // MARK: - Settings Sync
-    
-    /// Settings keys synced between watch and phone.
-    /// These match the watch's Application.Storage keys exactly.
-    private static let settingsKeys: [String] = [
-        "vibrate_alert",
-        "beep_alert",
-        "walking_gait",
-        "walking_gait_measure",
-        "running_gait",
-        "running_gait_measure"
-    ]
 
-    /// Returns a dictionary of all synced settings from UserDefaults.
+    /// Builds a watch-compatible settings payload from the current user profile in AuthManager.
+    /// Keys match the watch's Application.Storage keys exactly.
+    /// Source of truth is Firestore (cached in AuthManager.currentUserProfile).
     func getSettingsPayload() -> [String: Any] {
+        guard let profile = AuthManager.shared.userDetails else { return [:] }
         var settings: [String: Any] = [:]
-        let stored = UserDefaults.standard.dictionary(forKey: Self.settingsStorageKey) ?? [:]
-        for key in Self.settingsKeys {
-            settings[key] = stored[key]
+        settings["vibrate_alert"] = profile.intervalVibrate ?? false
+        settings["beep_alert"]    = profile.intervalBeep ?? false
+        if let gait = profile.gait {
+            settings["walking_gait"]         = gait.walkingData.stepLength
+            settings["walking_gait_measure"] = gait.walkingData.unit
+            settings["running_gait"]         = gait.runningData.stepLength
+            settings["running_gait_measure"] = gait.runningData.unit
         }
         return settings
     }
 
-    /// Applies settings received from the watch to local UserDefaults.
-    /// Only updates keys that are present and non-nil in the remote payload.
+    /// Applies settings received from the watch to Firestore (via UserProfileRepository).
+    /// Parses each known watch key and writes only the fields that are present in the payload.
+    /// Watch → App → Firestore direction.
     func applyRemoteSettings(_ settings: [String: Any]) {
-        var stored = UserDefaults.standard.dictionary(forKey: Self.settingsStorageKey) ?? [:]
-        for key in Self.settingsKeys {
-            if let value = settings[key] {
-                stored[key] = value
+        guard let userId = AuthManager.shared.currentUser?.uid else {
+            logger.warning("[ConnectIQ] Skipped applyRemoteSettings — no authenticated user")
+            return
+        }
+
+        // Parse vibrate / beep alert booleans
+        if let vibrate = settings["vibrate_alert"] as? Bool {
+            Task {
+                try? await UserProfileRepository.shared.updateIntervalVibrate(vibrate, userId: userId)
             }
         }
-        UserDefaults.standard.set(stored, forKey: Self.settingsStorageKey)
-        logger.debug("Applied ConnectIQ settings", metadata: [
-            "settingCount": "\(stored.count)"
+        if let beep = settings["beep_alert"] as? Bool {
+            Task {
+                try? await UserProfileRepository.shared.updateIntervalBeep(beep, userId: userId)
+            }
+        }
+
+        // Parse gait fields — only write if all four keys are present
+        let walkingLength  = (settings["walking_gait"] as? Double) ?? (settings["walking_gait"] as? NSNumber).map { $0.doubleValue }
+        let walkingUnit    = settings["walking_gait_measure"] as? String
+        let runningLength  = (settings["running_gait"] as? Double) ?? (settings["running_gait"] as? NSNumber).map { $0.doubleValue }
+        let runningUnit    = settings["running_gait_measure"] as? String
+
+        if let wl = walkingLength, let wu = walkingUnit,
+           let rl = runningLength, let ru = runningUnit {
+            let gait = GaitUserData(
+                walkingData: GaitData(stepLength: wl, unit: wu),
+                runningData: GaitData(stepLength: rl, unit: ru)
+            )
+            Task {
+                try? await UserProfileRepository.shared.updateGait(gait, userId: userId)
+            }
+        }
+
+        logger.debug("[ConnectIQ] Applied ConnectIQ settings to Firestore", metadata: [
+            "settingCount": "\(settings.count)"
         ])
     }
 
     /// Sends all current settings to the watch as a sync_settings command.
-    /// Call this when the user changes any setting on the phone.
+    /// Reads from Firestore profile (via getSettingsPayload). Call when a setting changes on phone.
     func sendSettings() {
         sendMessage([
             "command": "sync_settings",
@@ -772,7 +899,7 @@ class ConnectIQManager: NSObject {
 extension ConnectIQManager: IQUIOverrideDelegate {
     
     func needsToInstallConnectMobile() {
-        logger.warning("Garmin Connect is not installed")
+        logger.warning("[ConnectIQ] Garmin Connect is not installed")
         Task {
             self.showInstallGarminConnect = true
             ToastManager.shared.present(
@@ -793,7 +920,7 @@ extension ConnectIQManager: IQDeviceEventDelegate {
     /// that case is covered by the `getDeviceStatus` poll in `registerAndPollStatus`.
     func deviceStatusChanged(_ device: IQDevice!, status: IQDeviceStatus) {
         guard let device, let uuid = device.uuid else { return }
-        logger.debug("ConnectIQ device status changed", metadata: [
+        logger.debug("[ConnectIQ] ConnectIQ device status changed", metadata: [
             "device": "\(device.modelName ?? uuid.uuidString)",
             "status": "\(status)"
         ])
@@ -855,3 +982,4 @@ extension ConnectIQManager {
         return nil
     }
 }
+

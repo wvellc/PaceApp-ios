@@ -7,4 +7,4 @@
 
 import Logging
 
-let logger = Logger(label: "net.paceapp")
+public let logger = Logger(label: "net.paceapp")

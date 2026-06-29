@@ -7,7 +7,6 @@ import Foundation
 import FirebaseFirestore
 
 struct EventAnalyticsRecord: Codable, Identifiable {
-	@DocumentID var documentId: String?
 	var completedAt: Date
 	var avgPaceSeconds: Int
 	var avgHeartRate: Int
@@ -16,7 +15,7 @@ struct EventAnalyticsRecord: Codable, Identifiable {
 	var distanceValue: Double
 	var measure: String
 
-	var id: String { documentId ?? UUID().uuidString }
+	var id: String { UUID().uuidString }
 
 	init(
 		documentId: String? = nil,
@@ -28,7 +27,6 @@ struct EventAnalyticsRecord: Codable, Identifiable {
 		distanceValue: Double,
 		measure: String
 	) {
-		self.documentId = documentId
 		self.completedAt = completedAt
 		self.avgPaceSeconds = avgPaceSeconds
 		self.avgHeartRate = avgHeartRate

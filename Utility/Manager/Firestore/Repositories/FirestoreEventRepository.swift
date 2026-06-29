@@ -12,14 +12,18 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 
 	private let db = Firestore.firestore()
 	private let logger = Logger(label: "net.paceapp.firestore.events")
+	private let calendar = Calendar.current
 
 	private init() {}
 
 	// MARK: - Observe
 
 	func observeActiveEvents(userId: String, onChange: @escaping ([ActivityData]) -> Void) -> ListenerRegistrationToken {
+		let start = calendar.startOfDay(for: Date.now)
+
 		let query = eventsQuery(userId: userId)
 			.whereField("status", isEqualTo: EventStatus.active.rawValue)
+			.whereField("scheduledAt", isGreaterThanOrEqualTo: Timestamp(date: start))
 			.order(by: "scheduledAt", descending: false)
 
 		let registration = query.addSnapshotListener { [weak self] snapshot, error in
@@ -29,31 +33,9 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 				return
 			}
 			guard let snapshot else { return }
-			Task {
-				let activities = await self.mapDocuments(snapshot.documents)
-				await MainActor.run { onChange(activities) }
-			}
-		}
-		return ListenerRegistrationToken { registration.remove() }
-	}
-
-	func observeCompletedEvents(userId: String, onChange: @escaping ([ActivityData]) -> Void) -> ListenerRegistrationToken {
-		let query = eventsQuery(userId: userId)
-			.whereField("status", isEqualTo: EventStatus.completed.rawValue)
-			.order(by: "completedAt", descending: true)
-			.limit(to: 50)
-
-		let registration = query.addSnapshotListener { [weak self] snapshot, error in
-			guard let self else { return }
-			if let error {
-				self.logger.error("Completed events listener failed: \(error.localizedDescription)")
-				return
-			}
-			guard let snapshot else { return }
-			Task {
-				let activities = await self.mapDocuments(snapshot.documents)
-				await MainActor.run { onChange(activities) }
-			}
+			// Segments are now embedded in the document — no async subcollection fetch needed.
+			let activities = self.mapDocuments(snapshot.documents)
+			Task { await MainActor.run { onChange(activities) } }
 		}
 		return ListenerRegistrationToken { registration.remove() }
 	}
@@ -65,21 +47,139 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 			.whereField("status", isEqualTo: EventStatus.active.rawValue)
 			.order(by: "scheduledAt", descending: false)
 			.getDocuments()
-		return await mapDocuments(snapshot.documents)
+		return mapDocuments(snapshot.documents)
 	}
 
-	func fetchCompletedEvents(userId: String, limit: Int = 150, cursor: Date? = nil) async throws -> [ActivityData] {
+	func fetchCompletedEvents(userId: String, limit: Int = 150, cursor: Any? = nil) async throws -> [ActivityData] {
 		var query: Query = eventsQuery(userId: userId)
 			.whereField("status", isEqualTo: EventStatus.completed.rawValue)
 			.order(by: "completedAt", descending: true)
 			.limit(to: limit)
 
-		if let cursor {
-			query = query.start(after: [Timestamp(date: cursor)])
+		if let snapshot = cursor as? DocumentSnapshot {
+			query = query.start(afterDocument: snapshot)
 		}
 
 		let snapshot = try await query.getDocuments()
-		return await mapDocuments(snapshot.documents)
+		return mapDocuments(snapshot.documents)
+	}
+
+	// MARK: - Filtered + Paginated Fetch (History screen)
+
+	/// Firestore-side filters: distance range, exact date window.
+	/// Location filtering is applied client-side (case-insensitive substring).
+	/// Cursor pagination via DocumentSnapshot for robust page boundaries.
+	///
+	/// Composite index required:
+	///   Collection: events
+	///   Fields: userId ASC, status ASC, completedAt DESC
+	///   (Add distanceValue ASC, completedAt DESC when distance filter is active.)
+	func fetchFilteredCompletedEvents(
+		userId: String,
+		pageSize: Int,
+		cursor: Any?,
+		distanceMin: Double?,
+		distanceMax: Double?,
+		date: Date?,
+		location: String?
+	) async throws -> (events: [ActivityData], nextCursor: Any?) {
+
+		var query: Query = eventsQuery(userId: userId)
+			.whereField("status", isEqualTo: EventStatus.completed.rawValue)
+
+		// ── Distance range ─────────────────────────────────────────────────────
+		// distanceValue is stored in miles in Firestore (same unit as the slider).
+		let defaultMin: Double = 0
+		let defaultMax: Double = 150
+
+		let effectiveMin = distanceMin ?? defaultMin
+		let effectiveMax = distanceMax ?? defaultMax
+
+		// Only add the range clause when it differs from defaults.
+		let isDistanceFiltered = effectiveMin > defaultMin || effectiveMax < defaultMax
+
+		// When both date and distance filters are active, Firestore cannot do range
+		// inequalities on two fields. Apply distance server-side and date client-side
+		// over-fetch scenario. When only distance is active, apply it server-side.
+		let hasDateFilter = date != nil
+
+		if isDistanceFiltered && !hasDateFilter {
+			// Distance-only: server-side range + completedAt ordering.
+			query = query
+				.whereField("distanceValue", isGreaterThanOrEqualTo: effectiveMin)
+				.whereField("distanceValue", isLessThanOrEqualTo: effectiveMax)
+				.order(by: "distanceValue", descending: false)
+				.order(by: "scheduledAt", descending: true)
+		} else if hasDateFilter && !isDistanceFiltered {
+			// Date-only: server-side completedAt window.
+			let start = calendar.startOfDay(for: date!)
+			let end   = calendar.date(byAdding: .day, value: 1, to: start) ?? start
+			query = query
+				.whereField("scheduledAt", isGreaterThanOrEqualTo: Timestamp(date: start))
+				.whereField("scheduledAt", isLessThan: Timestamp(date: end))
+				.order(by: "scheduledAt", descending: true)
+		} else if hasDateFilter && isDistanceFiltered {
+			// Both active: date server-side (range on completedAt), distance client-side.
+			// Over-fetch to compensate for client-side distance trimming.
+			let start = calendar.startOfDay(for: date!)
+			let end   = calendar.date(byAdding: .day, value: 1, to: start) ?? start
+			query = query
+				.whereField("scheduledAt", isGreaterThanOrEqualTo: Timestamp(date: start))
+				.whereField("scheduledAt", isLessThan: Timestamp(date: end))
+				.order(by: "scheduledAt", descending: true)
+		} else {
+			// No date or distance filter — just order by completedAt.
+			query = query.order(by: "scheduledAt", descending: true)
+		}
+
+		// ── Pagination ─────────────────────────────────────────────────────────
+		// Over-fetch when distance will be applied client-side.
+		let fetchSize = (hasDateFilter && isDistanceFiltered) ? pageSize * 3 : pageSize
+		query = query.limit(to: fetchSize)
+
+		if let lastDoc = cursor as? DocumentSnapshot {
+			query = query.start(afterDocument: lastDoc)
+		}
+
+		// ── Cache-first strategy ──────────────────────────────────────────────
+		// Try local cache for instant display; fall back to server on cache miss.
+		let snapshot: QuerySnapshot
+		do {
+			snapshot = try await query.getDocuments(source: .default)
+		} catch {
+			snapshot = try await query.getDocuments(source: .cache)
+		}
+
+		var activities = mapDocuments(snapshot.documents)
+
+		// ── Client-side distance filter (when both date + distance active) ────
+		if hasDateFilter && isDistanceFiltered {
+			activities = activities.filter { activity in
+				let miles = Self.parseMilesFromDisplay(activity.distance)
+				return miles >= effectiveMin && miles <= effectiveMax
+			}
+		}
+
+		// ── Client-side location filter (case-insensitive substring) ───────────
+		if let location, !location.trimmingCharacters(in: .whitespaces).isEmpty {
+			let locationQuery = location.trimmingCharacters(in: .whitespaces).lowercased()
+			activities = activities.filter {
+				$0.location.lowercased().contains(locationQuery)
+			}
+		}
+
+		// Next cursor is the last Firestore document from the raw snapshot.
+		let nextCursor: Any? = snapshot.documents.last
+		return (events: activities, nextCursor: nextCursor)
+	}
+
+	/// Parses miles from display strings like "5.00 mi" or "10.00 km".
+	private static func parseMilesFromDisplay(_ display: String) -> Double {
+		let cleaned = display
+			.replacingOccurrences(of: " mi", with: "")
+			.replacingOccurrences(of: " km", with: "")
+			.trimmingCharacters(in: .whitespaces)
+		return Double(cleaned) ?? 0
 	}
 
 	// MARK: - Write
@@ -91,21 +191,22 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 		source: String,
 		userId: String
 	) async throws {
-		let (document, segments) = EventDocumentMapper.document(
+		let (document, _) = EventDocumentMapper.document(
 			from: payload,
 			userId: userId,
 			isCompleted: isCompleted,
 			syncStatus: syncStatus,
 			source: source
 		)
-		try await write(document: document, segments: segments, merge: true)
+		// Segments are embedded in document.segments — single document write, no subcollection.
+		try await write(document: document, merge: true)
 	}
 
 	func updateMetadata(eventId: Int, userId: String, name: String, location: String) async throws {
 		let ref = eventRef(eventId: eventId)
 		let snapshot = try await ref.getDocument()
 		guard snapshot.exists,
-			  var document = try? snapshot.data(as: FirestoreEventDocument.self) else { return }
+			  var document = try? snapshot.data(as: EventDocument.self) else { return }
 		document = EventDocumentMapper.updatedDocument(document, name: name, location: location)
 		try ref.setData(from: document, merge: true)
 	}
@@ -130,61 +231,71 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 		db.collection("events").document(String(eventId))
 	}
 
-	private func write(document: FirestoreEventDocument, segments: [EventSegmentDocument], merge: Bool) async throws {
-		let batch = db.batch()
+	/// Single document write — segments are stored as an embedded array field.
+	/// Previously required a batch write + subcollection; now a single setData call.
+	private func write(document: EventDocument, merge: Bool) async throws {
 		let ref = eventRef(eventId: document.id)
-		try batch.setData(from: document, forDocument: ref, merge: merge)
-
-		// Write segments directly by index as document ID — no prior read needed.
-		// Skipping getDocuments() avoids a subcollection read before the parent
-		// event exists, which was causing the "Missing or insufficient permissions"
-		// error on new event creation (parent not yet committed when rule evaluated).
-		let segmentsRef = ref.collection("segments")
-		for segment in segments {
-			let segmentRef = segmentsRef.document(String(segment.index))
-			try batch.setData(from: segment, forDocument: segmentRef, merge: false)
-		}
-		try await batch.commit()
+		try ref.setData(from: document, merge: merge)
 	}
 
-	private func mapDocuments(_ documents: [QueryDocumentSnapshot]) async -> [ActivityData] {
-		var results: [ActivityData] = []
-		for doc in documents {
-			guard let eventDoc = try? doc.data(as: FirestoreEventDocument.self) else { continue }
-			let segmentsSnapshot = try? await doc.reference.collection("segments").order(by: "index").getDocuments()
-			let segments = segmentsSnapshot?.documents.compactMap { try? $0.data(as: EventSegmentDocument.self) } ?? []
-			if let activity = EventDocumentMapper.activityData(from: eventDoc, segments: segments) {
-				results.append(activity)
-			}
+	/// Maps Firestore documents to ActivityData — segments are read from the embedded
+	/// document field, eliminating the previous per-event subcollection fetch.
+	private func mapDocuments(_ documents: [QueryDocumentSnapshot]) -> [ActivityData] {
+		documents.compactMap { doc in
+			guard let eventDoc = try? doc.data(as: EventDocument.self) else { return nil }
+			// Use embedded segments if present; fall back to empty for legacy documents.
+			let segments = eventDoc.segments ?? []
+			return EventDocumentMapper.activityData(from: eventDoc, segments: segments)
 		}
-		return results
 	}
-	
+
 	// MARK: - Fetch Favorites / By IDs
+
 	/// Fetches specific events by their document/sync IDs.
 	/// Batched because Firestore 'in' queries are limited to 30 values.
 	func fetchEvents(byIds ids: [String]) async throws -> [ActivityData] {
 		guard !ids.isEmpty else { return [] }
-		
+
 		var allResults: [ActivityData] = []
-		
+
 		// Batch in groups of 30 (Firestore 'in' limit)
 		for batchIds in ids.chunked(into: 30) {
-			let snapshot = try await db.collection("events") // Note: userId filter removed here
+			let snapshot = try await db.collection("events")
 				.whereField(FieldPath.documentID(), in: batchIds)
 				.getDocuments()
-			
-			let batchActivities = await mapDocuments(snapshot.documents)
+
+			let batchActivities = mapDocuments(snapshot.documents)
 			allResults.append(contentsOf: batchActivities)
 		}
-		
-//		// Sort newest first (consistent with History tab)
-//		allResults.sort {
-//			($0.completedAt ?? $0.scheduledAt ?? Date.distantPast) >
-//			($1.completedAt ?? $1.scheduledAt ?? Date.distantPast)
-//		}
-		
+
 		return allResults
+	}
+
+	// MARK: - ConnectIQ seeding
+
+	// One query → client-side partition by status. 1 read vs 3, no composite index needed.
+	func fetchAllEventPayloads(userId: String) async throws -> ConnectIQEventSnapshot {
+		let snapshot = try await eventsQuery(userId: userId).getDocuments()
+
+		var active: [[String: Any]] = []
+		var completed: [[String: Any]] = []
+		var deletedIds: [Int] = []
+
+		for doc in snapshot.documents {
+			guard let event = try? doc.data(as: EventDocument.self) else { continue }
+			let payload = EventDocumentMapper.connectIQPayload(from: event)
+			switch event.eventStatus {
+			case .active:    active.append(payload)
+			case .completed: completed.append(payload)
+			case .deleted:   deletedIds.append(event.id)
+			}
+		}
+
+		return ConnectIQEventSnapshot(
+			activePayloads: active,
+			completedPayloads: completed,
+			deletedIds: deletedIds
+		)
 	}
 
 }

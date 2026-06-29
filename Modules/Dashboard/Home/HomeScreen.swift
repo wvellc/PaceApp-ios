@@ -15,7 +15,7 @@ struct HomeScreen: View {
 	// MARK: - State
 	
 	@State private var viewModel = HomeViewModel()
-	@State private var recentActivities = []//ActivityData.samples
+	@State private var recentActivities = []
 	
 	let runActions: [RunAction] = [
 		RunAction(title: .newRun,      symbol: "icNewRun",      rout: .createRunEvent),
@@ -35,30 +35,30 @@ struct HomeScreen: View {
 				
 				// MARK: Navigation bar
 				AppNavigation(trailing: {
-					Button {
-						router.navigate(to: .notifications)
-					} label: {
-						RoundedRectangle(cornerRadius: 100)
-							.frame(width: 40, height: 40)
-							.foregroundStyle(.whiteApp)
-							.overlay {
-								Image(.icNotification)
-									.resizable()
-									.frame(width: 20, height: 20)
-							}
-					}
+//					Button {
+//						router.navigate(to: .notifications)
+//					} label: {
+//						RoundedRectangle(cornerRadius: 100)
+//							.frame(width: 40, height: 40)
+//							.foregroundStyle(.whiteApp)
+//							.overlay {
+//								Image(.icNotification)
+//									.resizable()
+//									.frame(width: 20, height: 20)
+//							}
+//					}
 				})
 				
 				// MARK: Scrollable content
 				ScrollView(showsIndicators: false) {
 					VStack(alignment: .leading, spacing: 0) {
 						
-						// Greeting + sync status
+						// MARK: Greeting + sync status
 						VStack(alignment: .leading) {
-							Text("GM, Jack")
+							Text(greetingText)
 								.font(.bold28)
 								.foregroundColor(.whiteApp)
-							Text("Not Synced Yet!")
+							Text(ciqManager.lastSyncLabel)
 								.font(.medium14)
 								.foregroundColor(.white50)
 						}
@@ -117,6 +117,22 @@ struct HomeScreen: View {
 			guard newUUID != nil else { return }
 			tryShowMetricsPopup()
 		}
+	}
+	
+	// MARK: - Greeting Text
+	
+	/// Builds a time-of-day greeting with the user's first name.
+	/// Falls back to "Hey" if the name is not yet loaded.
+	private var greetingText: String {
+		let hour = Calendar.current.component(.hour, from: Date())
+		let salutation: String
+		switch hour {
+		case 5..<12:  salutation = "GM,"    // Good morning
+		case 12..<17: salutation = "GA,"    // Good afternoon
+		default:      salutation = "GE,"    // Good evening
+		}
+		let name = AuthManager.shared.userDetails?.firstName?.trimmingCharacters(in: .whitespaces)
+		return name.map { "\(salutation) \($0)" } ?? salutation
 	}
 	
 	// MARK: - Metric Row

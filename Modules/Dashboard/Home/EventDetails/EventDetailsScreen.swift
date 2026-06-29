@@ -7,6 +7,7 @@
 
 import SwiftUI
 import MapKit
+import Logging
 
 // MARK: - EventDetailsScreen
 
@@ -31,11 +32,12 @@ struct EventDetailsScreen: View {
 	
 	// MARK: Body
 	var body: some View {
-		VStack(spacing: 0) {
-			scrollContent
-		}
+		scrollContent
 		.padding(.top, 6)
 		.appBackground()
+		.onAppear {
+			logger.debug("Event ID: \(viewModel.activityData?.id.description ?? "Unknown ID")")
+		}
 		// navigationDestination must live on the root container, never inside
 		// a ScrollView or List — SwiftUI warns and will ignore it in future releases.
 		.navigationDestination(item: $viewModel.showEditScreen) { _ in
@@ -120,6 +122,23 @@ struct EventDetailsScreen: View {
 
 #Preview {
 	NavigationStack {
-		EventDetailsScreen(activityData: ActivityData.samples.first)
+		EventDetailsScreen(
+activityData: ActivityData(
+			title: "Thursday Run",
+			date: makeDate(day: 29, month: 1),
+			distance: "5.00 mi",
+			duration: "05:35:00",
+			avgPace: "9:00 /mi",
+			delta: "+01:10",
+			deltaColor: .redBoho,
+			location: "New York City",
+			gaitType: .walking,
+			segments: [
+				RunSegment(id: 787987978897, distance: 2.5, goalHours: 2, goalMinutes: 20, goalSeconds: 50, actualTimeSeconds: 500),
+				RunSegment(id: 8798789789889, distance: 1.5, goalHours: 1, goalMinutes: 20, goalSeconds: 50, actualTimeSeconds: 600),
+				RunSegment(id: 5465456456456, distance: 2.5, goalHours: 2, goalMinutes: 20, goalSeconds: 50, actualTimeSeconds: 500)
+			]
+		)
+)
 	}
 }

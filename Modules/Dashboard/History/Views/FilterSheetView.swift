@@ -107,7 +107,7 @@ private extension FilterSheetView {
             // Min / Max labels
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-					Text(.mi(Int(distanceMin)))
+					Text("\(Int(distanceMin))")
 						.font(.semiBold20)
 						.foregroundColor(.darkCharcoal)
 					Text(.min)
@@ -118,7 +118,7 @@ private extension FilterSheetView {
                 Spacer()
  
                 VStack(alignment: .trailing, spacing: 2) {
-					Text(.mi(Int(distanceMax)))
+					Text("\(Int(distanceMax))")
 						.font(.semiBold20)
 						.foregroundColor(.darkCharcoal)
 					Text(.max)

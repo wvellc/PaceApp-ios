@@ -7,17 +7,25 @@ import Foundation
 import FirebaseFirestore
 import SwiftUI
 
+// MARK: - EventDocumentMapper
+//
+// Single translation layer between raw ConnectIQ payloads, EventDocument
+// (Firestore), and ActivityData (UI). All parsing logic lives here — no
+// other file should parse raw [String: Any] event dicts independently.
+
 enum EventDocumentMapper {
-	
-	// MARK: - ConnectIQ Payload → Firestore
-	
+
+	// MARK: - ConnectIQ Payload → EventDocument
+	// Converts the raw [String: Any] dict from the Garmin watch into an
+	// EventDocument + typed RunSegment array for a single Firestore write.
+
 	static func document(
 		from payload: [String: Any],
 		userId: String,
 		isCompleted: Bool,
 		syncStatus: String,
 		source: String
-	) -> (FirestoreEventDocument, [EventSegmentDocument]) {
+	) -> (EventDocument, [RunSegment]) {
 		let id = connectIQId(from: payload["id"]) ?? Int(Date().timeIntervalSince1970)
 		let now = Timestamp(date: Date())
 		let scheduledAt = parseConnectIQDate(payload["date"] as? String) ?? Date()
@@ -40,21 +48,22 @@ enum EventDocumentMapper {
 			goalTimeSeconds: goalTimeSeconds,
 			actualTimeSeconds: actualTimeSeconds
 		)
-		
+
+		// Build typed RunSegment array from ConnectIQ "segments" payload.
+		// Each entry has { "distance": Double, "eta": "HH:MM:SS" }.
 		let segmentPayloads = arrayOfDicts(from: payload["segments"])
-		let segments = segmentPayloads.enumerated().map { index, segment in
-			// documentId is intentionally omitted — Firestore manages it automatically on read.
-			EventSegmentDocument(
-				index: index,
-				distance: parseDouble(segment["distance"]) ?? 0,
-				goalTimeSeconds: parseTimeString((segment["eta"] as? String) ?? "00:00:00"),
-				completedAt: nil,
-				actualTimeSeconds: nil
+		let segments: [RunSegment] = segmentPayloads.enumerated().map { index, seg in
+			let secs = parseTimeString((seg["eta"] as? String) ?? "00:00:00")
+			return RunSegment(
+				id: index,
+				distance: parseDouble(seg["distance"]) ?? 0,
+				goalHours: secs / 3600,
+				goalMinutes: (secs % 3600) / 60,
+				goalSeconds: secs % 60
 			)
 		}
-		
-		// documentId is intentionally omitted — Firestore manages it automatically on read.
-		let doc = FirestoreEventDocument(
+
+		let doc = EventDocument(
 			id: id,
 			userId: userId,
 			status: status,
@@ -80,17 +89,19 @@ enum EventDocumentMapper {
 			source: source,
 			createdAt: now,
 			updatedAt: now,
-			deletedAt: nil
+			deletedAt: nil,
+			segments: segments.isEmpty ? nil : segments
 		)
 		return (doc, segments)
 	}
-	
-	// MARK: - Firestore → ActivityData
-	// Builds ActivityData directly from FirestoreEventDocument fields — no [String: Any] round-trip.
-	
+
+	// MARK: - EventDocument → ActivityData
+	// Single mapping path from persisted data to the UI layer.
+	// Segments are passed as typed [RunSegment] — no [[String: Any]] round-trip.
+
 	static func activityData(
-		from document: FirestoreEventDocument,
-		segments: [EventSegmentDocument] = []
+		from document: EventDocument,
+		segments: [RunSegment] = []
 	) -> ActivityData? {
 		let unit = document.measure == "Miles" ? "mi" : "km"
 		let distanceText = String(format: "%.2f %@", document.distanceValue, unit)
@@ -100,11 +111,7 @@ enum EventDocumentMapper {
 		let timeVarStr = document.timeVarianceSeconds.map { formatSignedVariance($0) } ?? ""
 		let deltaColor: Color = timeVarStr.hasPrefix("-") ? .fluorescentMint : .redBoho
 		let actualDistStr = document.actualDistance.map { String(format: "%.2f", $0) } ?? ""
-		
-		let segmentMaps: [[String: Any]] = segments.map { seg in
-			["distance": seg.distance, "eta": formatTime(seg.goalTimeSeconds)]
-		}
-		
+
 		return ActivityData(
 			id: document.id,
 			syncId: document.id,
@@ -120,8 +127,8 @@ enum EventDocumentMapper {
 			goal: goalStr,
 			measure: document.measure,
 			intervals: "\(document.lookBackIntervals)",
-			segmentCount: max(segmentMaps.count, 1),
-			segments: segmentMaps,
+			segmentCount: max(segments.count, 1),
+			segments: segments,                                      // typed [RunSegment] — no dict conversion
 			completedSegments: genericDictsToAny(document.completedSegments),
 			actualDist: actualDistStr,
 			timeVar: timeVarStr,
@@ -129,24 +136,71 @@ enum EventDocumentMapper {
 			paces: genericDictsToAny(document.paces)
 		)
 	}
-	
-	// MARK: - ActivityData metadata update
-	
+
+	// MARK: - Metadata update
+
 	static func updatedDocument(
-		_ document: FirestoreEventDocument,
+		_ document: EventDocument,
 		name: String,
 		location: String
-	) -> FirestoreEventDocument {
+	) -> EventDocument {
 		var copy = document
 		copy.name = name
 		copy.location = location
 		copy.updatedAt = Timestamp(date: Date())
 		return copy
 	}
-	
+
+	// MARK: - EventDocument → ConnectIQ wire-format payload
+	// Inverse of document(from:...) — rebuilds the [String: Any] dict the watch expects.
+
+	static func connectIQPayload(from document: EventDocument) -> [String: Any] {
+		var payload: [String: Any] = [
+			"id":          document.id,
+			"name":        document.name,
+			"location":    document.location,
+			"date":        connectIQDateString(from: document.scheduledAt.dateValue()),
+			"distance":    document.distanceValue,
+			"measure":     document.measure,
+			"goal":        formatTime(document.goalTimeSeconds),
+			"intervals":   document.lookBackIntervals,
+			"activity":    reverseMapActivityType(document.activityType),
+			"syncStatus":  document.syncStatus,
+			"source":      document.source
+		]
+
+		// Completed-event fields — only present when the event has been finished
+		if let actualTimeSeconds = document.actualTimeSeconds {
+			payload["actualTime"] = formatTime(actualTimeSeconds)
+		}
+		if let actualDistance = document.actualDistance {
+			payload["actualDist"] = actualDistance
+		}
+		if let timeVarianceSeconds = document.timeVarianceSeconds {
+			payload["timeVar"] = formatSignedVariance(timeVarianceSeconds)
+		}
+		if let avgHeartRate = document.avgHeartRate, avgHeartRate > 0 {
+			payload["avgHeartRate"] = avgHeartRate
+		}
+		if let paces = document.paces, !paces.isEmpty {
+			payload["paces"] = genericDictsToAny(paces)
+		}
+		if let completedSegments = document.completedSegments, !completedSegments.isEmpty {
+			payload["completedSegments"] = genericDictsToAny(completedSegments)
+		}
+		// Rebuild the watch-format "segments" array from the stored RunSegment array.
+		if let segs = document.segments, !segs.isEmpty {
+			payload["segments"] = segs.map { seg in
+				["distance": seg.distance, "eta": formatTime(seg.totalGoalSeconds)] as [String: Any]
+			}
+		}
+
+		return payload
+	}
+
 	// MARK: - Analytics record
-	
-	static func analyticsRecord(from document: FirestoreEventDocument) -> EventAnalyticsRecord? {
+
+	static func analyticsRecord(from document: EventDocument) -> EventAnalyticsRecord? {
 		guard document.eventStatus == .completed,
 			  let completedAt = document.completedAt?.dateValue() else { return nil }
 		return EventAnalyticsRecord(
@@ -156,27 +210,27 @@ enum EventDocumentMapper {
 			avgHeartRate: document.avgHeartRate ?? 0,
 			elevationGain: document.elevationGain ?? 0,
 			effortPercentage: document.effortPercentage ?? 0,
-			distanceValue: document.actualDistance ?? document.distanceValue,
+			distanceValue: document.distanceValue,
 			measure: document.measure
 		)
 	}
-	
+
 	// MARK: - Helpers
-	
+
 	static func connectIQId(from value: Any?) -> Int? {
-		if let value = value as? Int    { return value }
+		if let value = value as? Int      { return value }
 		if let value = value as? NSNumber { return value.intValue }
-		if let value = value as? String { return Int(value) }
+		if let value = value as? String   { return Int(value) }
 		return nil
 	}
-	
-	// Cached — DateFormatter is one of the most expensive Foundation objects to allocate.
+
+	// Cached — DateFormatter is expensive to allocate.
 	private static let connectIQDateFormatter: DateFormatter = {
 		let f = DateFormatter()
 		f.locale = Locale(identifier: "en_US_POSIX")
 		return f
 	}()
-	
+
 	static func parseConnectIQDate(_ value: String?) -> Date? {
 		guard let value else { return nil }
 		for format in ["MMM/d/yyyy", "MMM/dd/yyyy", "yyyy-MM-dd"] {
@@ -185,12 +239,12 @@ enum EventDocumentMapper {
 		}
 		return nil
 	}
-	
+
 	static func connectIQDateString(from date: Date) -> String {
 		connectIQDateFormatter.dateFormat = "MMM/d/yyyy"
 		return connectIQDateFormatter.string(from: date)
 	}
-	
+
 	static func parseTimeString(_ value: String) -> Int {
 		let trimmed = value.trimmingCharacters(in: .whitespaces)
 		guard !trimmed.isEmpty else { return 0 }
@@ -203,13 +257,13 @@ enum EventDocumentMapper {
 			default: return 0
 		}
 	}
-	
+
 	static func parseSignedTimeVariance(_ value: String) -> Int? {
 		let trimmed = value.trimmingCharacters(in: .whitespaces)
 		guard !trimmed.isEmpty else { return nil }
 		return parseTimeString(trimmed)
 	}
-	
+
 	static func formatTime(_ seconds: Int) -> String {
 		let absSeconds = abs(seconds)
 		let h = absSeconds / 3600
@@ -217,42 +271,50 @@ enum EventDocumentMapper {
 		let s = absSeconds % 60
 		return String(format: "%02d:%02d:%02d", h, m, s)
 	}
-	
+
 	static func formatSignedVariance(_ seconds: Int) -> String {
 		let sign = seconds < 0 ? "-" : "+"
 		return sign + formatTime(abs(seconds))
 	}
-	
+
 	static func parseDouble(_ value: Any?) -> Double? {
-		if let v = value as? Double  { return v }
-		if let v = value as? Float   { return Double(v) }
-		if let v = value as? Int     { return Double(v) }
+		if let v = value as? Double   { return v }
+		if let v = value as? Float    { return Double(v) }
+		if let v = value as? Int      { return Double(v) }
 		if let v = value as? NSNumber { return v.doubleValue }
-		if let v = value as? String  { return Double(v) }
+		if let v = value as? String   { return Double(v) }
 		return nil
 	}
-	
+
 	static func parseInt(_ value: Any?) -> Int? {
 		if let v = value as? Int      { return v }
 		if let v = value as? NSNumber { return v.intValue }
 		if let v = value as? String   { return Int(v) }
 		return nil
 	}
-	
+
 	static func arrayOfDicts(from value: Any?) -> [[String: Any]] {
-		if let arr = value as? [[String: Any]] { return arr }
+		if let arr = value as? [[String: Any]]  { return arr }
 		if let nsArr = value as? NSArray { return nsArr.compactMap { $0 as? [String: Any] } }
 		return []
 	}
-	
+
 	static func mapActivityType(_ value: String?) -> String {
 		switch value {
-			case "Walk", "Walking":    return "walking"
-			case "Cycling", "Cycle":   return "cycling"
-			default:                   return "running"
+			case "Walk", "Walking":  return "walking"
+			case "Cycling", "Cycle": return "cycling"
+			default:                 return "running"
 		}
 	}
-	
+
+	static func reverseMapActivityType(_ value: String) -> String {
+		switch value {
+			case "walking": return "Walk"
+			case "cycling": return "Cycling"
+			default:        return "Run"
+		}
+	}
+
 	static func displayActivityType(_ value: String) -> String {
 		switch value {
 			case "walking": return "Walking"
@@ -260,14 +322,14 @@ enum EventDocumentMapper {
 			default:        return "Run"
 		}
 	}
-	
+
 	static func gaitType(from activityType: String) -> GaitType {
 		switch activityType {
 			case "walking": return .walking
 			default:        return .running
 		}
 	}
-	
+
 	static func computeAvgPaceSeconds(
 		actualTimeSeconds: Int?,
 		actualDistance: Double?,
@@ -279,41 +341,41 @@ enum EventDocumentMapper {
 		guard let time = actualTimeSeconds, let distance = actualDistance, distance > 0 else { return nil }
 		return Int(Double(time) / distance)
 	}
-	
+
 	static func computeEffortPercentage(goalTimeSeconds: Int, actualTimeSeconds: Int?) -> Double? {
 		guard let actual = actualTimeSeconds, goalTimeSeconds > 0 else { return nil }
 		let ratio = Double(min(goalTimeSeconds, actual)) / Double(max(goalTimeSeconds, actual))
 		return min(100, max(0, ratio * 100))
 	}
-	
+
 	static func mapPaces(_ paces: [[String: Any]]) -> [[String: FirestoreFlexibleValue]]? {
 		guard !paces.isEmpty else { return nil }
 		return paces.map { pace in
 			var mapped: [String: FirestoreFlexibleValue] = [:]
 			for (key, value) in pace {
-				if let v = value as? String       { mapped[key] = .string(v) }
-				else if let v = value as? Int     { mapped[key] = .int(v) }
+				if let v = value as? String        { mapped[key] = .string(v) }
+				else if let v = value as? Int      { mapped[key] = .int(v) }
 				else if let v = value as? NSNumber { mapped[key] = .int(v.intValue) }
-				else if let v = value as? Double  { mapped[key] = .double(v) }
+				else if let v = value as? Double   { mapped[key] = .double(v) }
 			}
 			return mapped
 		}
 	}
-	
+
 	static func mapGenericDicts(_ dicts: [[String: Any]]) -> [[String: FirestoreFlexibleValue]]? {
 		guard !dicts.isEmpty else { return nil }
 		return dicts.map { dict in
 			var mapped: [String: FirestoreFlexibleValue] = [:]
 			for (key, value) in dict {
-				if let v = value as? String       { mapped[key] = .string(v) }
-				else if let v = value as? Int     { mapped[key] = .int(v) }
+				if let v = value as? String        { mapped[key] = .string(v) }
+				else if let v = value as? Int      { mapped[key] = .int(v) }
 				else if let v = value as? NSNumber { mapped[key] = .int(v.intValue) }
-				else if let v = value as? Double  { mapped[key] = .double(v) }
+				else if let v = value as? Double   { mapped[key] = .double(v) }
 			}
 			return mapped
 		}
 	}
-	
+
 	static func genericDictsToAny(_ dicts: [[String: FirestoreFlexibleValue]]?) -> [[String: Any]] {
 		guard let dicts else { return [] }
 		return dicts.map { dict in
