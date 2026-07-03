@@ -176,9 +176,11 @@ struct HomeScreen: View {
 	
 	private var UpcomingActivitySection: some View {
 		VStack(alignment: .leading, spacing: 16) {
-			Text(.upcomingActivities)
-				.font(.semiBold16)
-				.foregroundColor(.whiteApp)
+			if !viewModel.upcomingEvents.isEmpty {
+				Text(.upcomingActivities)
+					.font(.semiBold16)
+					.foregroundColor(.whiteApp)
+			}
 			
 			VStack(spacing: 16) {
 				ForEach(viewModel.upcomingEvents) { activity in

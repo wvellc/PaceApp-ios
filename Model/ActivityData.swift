@@ -43,7 +43,7 @@ struct ActivityData: Identifiable, Hashable {
 	// Raw dicts retained for completed-segment and pace data whose shape
 	// varies across watch firmware versions and is not yet typed.
 	let completedSegments: [[String: Any]]  // watch actuals: { eta, distance, elapsed_time, completed_distance }
-	let paces: [[String: Any]]              // per-interval pace data: { interval, time, pace, ... }
+	let paces: [Int]                        // per-interval pace, seconds each (e.g. [256, 256, 265])
 
 	// MARK: - Completion Fields (populated after watch sync)
 	let actualDist: String      // actual distance covered e.g. "4.98"
@@ -73,7 +73,7 @@ struct ActivityData: Identifiable, Hashable {
 		actualDist: String = "",
 		timeVar: String = "",
 		avgHeartRate: Int = 0,
-		paces: [[String: Any]] = []
+		paces: [Int] = []
 	) {
 		self.id = id
 		self.syncId = syncId

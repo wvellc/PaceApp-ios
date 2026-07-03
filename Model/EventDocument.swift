@@ -49,7 +49,7 @@ struct EventDocument: Codable, Identifiable {
 	var actualTimeSeconds: Int?
 	var actualDistance: Double?
 	var timeVarianceSeconds: Int?
-	var paces: [[String: FirestoreFlexibleValue]]?
+	var paces: [Int]?  // per-interval pace, seconds each (e.g. [256, 256, 265]) — from watch "paces" array
 	var completedSegments: [[String: FirestoreFlexibleValue]]?
 	var syncStatus: String
 	var source: String

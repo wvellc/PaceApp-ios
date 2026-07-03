@@ -146,6 +146,31 @@ final class HistoryViewModel {
 		}
 	}
 	
+	/// Re-fetches page 1 from Firestore, awaitable — used by pull-to-refresh and by
+	/// automatic re-sync when the watch reports a new completed event. Unlike
+	/// `loadFirstPage`, this does not flip `isLoading` so it doesn't swap in the
+	/// full-screen spinner over `.refreshable`'s own indicator.
+	func refresh() async {
+		guard let userId = currentUserId else { return }
+		
+		do {
+			let result = try await eventRepository.fetchFilteredCompletedEvents(
+				userId: userId,
+				pageSize: Self.pageSize,
+				cursor: nil,
+				distanceMin: committedDistanceMin,
+				distanceMax: committedDistanceMax,
+				date: committedDate,
+				location: committedLocation
+			)
+			activities = result.events
+			lastCursor = result.nextCursor
+			hasMorePages = result.events.count >= Self.pageSize
+		} catch {
+			logger.error("Failed to refresh history: \(error.localizedDescription)")
+		}
+	}
+	
 	/// Fetches the next page and appends results. Called when scrolling near bottom.
 	func loadNextPage() {
 		guard let userId = currentUserId,

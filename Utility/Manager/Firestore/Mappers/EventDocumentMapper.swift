@@ -42,7 +42,7 @@ enum EventDocumentMapper {
 		let avgPaceSeconds = computeAvgPaceSeconds(
 			actualTimeSeconds: actualTimeSeconds,
 			actualDistance: actualDistance,
-			paces: arrayOfDicts(from: payload["paces"])
+			paces: arrayOfInts(from: payload["paces"])
 		)
 		let effortPercentage = computeEffortPercentage(
 			goalTimeSeconds: goalTimeSeconds,
@@ -83,7 +83,7 @@ enum EventDocumentMapper {
 			actualTimeSeconds: actualTimeSeconds,
 			actualDistance: actualDistance,
 			timeVarianceSeconds: timeVarianceSeconds,
-			paces: mapPaces(arrayOfDicts(from: payload["paces"])),
+			paces: arrayOfInts(from: payload["paces"]),
 			completedSegments: mapGenericDicts(arrayOfDicts(from: payload["completedSegments"])),
 			syncStatus: syncStatus,
 			source: source,
@@ -133,7 +133,7 @@ enum EventDocumentMapper {
 			actualDist: actualDistStr,
 			timeVar: timeVarStr,
 			avgHeartRate: document.avgHeartRate ?? 0,
-			paces: genericDictsToAny(document.paces)
+			paces: document.paces ?? []
 		)
 	}
 
@@ -183,7 +183,7 @@ enum EventDocumentMapper {
 			payload["avgHeartRate"] = avgHeartRate
 		}
 		if let paces = document.paces, !paces.isEmpty {
-			payload["paces"] = genericDictsToAny(paces)
+			payload["paces"] = paces
 		}
 		if let completedSegments = document.completedSegments, !completedSegments.isEmpty {
 			payload["completedSegments"] = genericDictsToAny(completedSegments)
@@ -299,6 +299,14 @@ enum EventDocumentMapper {
 		return []
 	}
 
+	// Watch "paces" payload is a flat array of per-interval pace seconds, e.g. [256, 256, 265].
+	static func arrayOfInts(from value: Any?) -> [Int] {
+		if let arr = value as? [Int] { return arr }
+		if let nsArr = value as? NSArray { return nsArr.compactMap { parseInt($0) } }
+		if let arr = value as? [Any] { return arr.compactMap { parseInt($0) } }
+		return []
+	}
+
 	static func mapActivityType(_ value: String?) -> String {
 		switch value {
 			case "Walk", "Walking":  return "walking"
@@ -333,9 +341,9 @@ enum EventDocumentMapper {
 	static func computeAvgPaceSeconds(
 		actualTimeSeconds: Int?,
 		actualDistance: Double?,
-		paces: [[String: Any]]
+		paces: [Int]
 	) -> Int? {
-		if let pace = paces.compactMap({ parseInt($0["paceSecondsPerUnit"]) ?? parseInt($0["pace"]) }).first {
+		if let pace = paces.first {
 			return pace
 		}
 		guard let time = actualTimeSeconds, let distance = actualDistance, distance > 0 else { return nil }
@@ -346,20 +354,6 @@ enum EventDocumentMapper {
 		guard let actual = actualTimeSeconds, goalTimeSeconds > 0 else { return nil }
 		let ratio = Double(min(goalTimeSeconds, actual)) / Double(max(goalTimeSeconds, actual))
 		return min(100, max(0, ratio * 100))
-	}
-
-	static func mapPaces(_ paces: [[String: Any]]) -> [[String: FirestoreFlexibleValue]]? {
-		guard !paces.isEmpty else { return nil }
-		return paces.map { pace in
-			var mapped: [String: FirestoreFlexibleValue] = [:]
-			for (key, value) in pace {
-				if let v = value as? String        { mapped[key] = .string(v) }
-				else if let v = value as? Int      { mapped[key] = .int(v) }
-				else if let v = value as? NSNumber { mapped[key] = .int(v.intValue) }
-				else if let v = value as? Double   { mapped[key] = .double(v) }
-			}
-			return mapped
-		}
 	}
 
 	static func mapGenericDicts(_ dicts: [[String: Any]]) -> [[String: FirestoreFlexibleValue]]? {

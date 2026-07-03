@@ -146,9 +146,9 @@ final class EventDetailsViewModel {
 
 	// MARK: - Computed: Intervals (Paces)
 	//
-	// For completed events, the watch sends a "paces" array with per-interval data.
-	// Each entry may have { "interval": N, "time": "MM:SS" } or similar.
-	// For active events, we generate placeholders based on the intervals count.
+	// For completed events, the watch sends a "paces" array — one entry per interval,
+	// each the pace for that interval in seconds (e.g. [256, 256, 265]).
+	// For active events, we generate placeholders based on the look-back intervals count.
 
 	// TODO: Sample hardcoded intervals for reference — uncomment when needed for testing
 	// var intervals: [RunInterval] {
@@ -158,19 +158,10 @@ final class EventDetailsViewModel {
 	var intervals: [RunInterval] {
 		guard let data = activityData else { return [] }
 
-		// For completed events with pace data from the watch
+		// For completed events with real pace data (seconds per interval) from the watch
 		if !data.paces.isEmpty {
-			return data.paces.enumerated().map { index, pace in
-				let label = (pace["label"] as? String) ?? "Interval \(index + 1)"
-				let time: String
-				if let t = pace["time"] as? String {
-					time = t
-				} else if let t = pace["pace"] as? String {
-					time = t
-				} else {
-					time = "—"
-				}
-				return RunInterval(label: label, time: time)
+			return data.paces.enumerated().map { index, seconds in
+				RunInterval(label: "Interval \(index + 1)", time: Self.formatPaceSeconds(seconds))
 			}
 		}
 
@@ -385,6 +376,13 @@ final class EventDetailsViewModel {
 		}
 
 		return isNeg ? -totalSeconds : totalSeconds
+	}
+
+	/// Formats a per-interval pace in seconds as "MM:SS" for display in the Intervals section.
+	private static func formatPaceSeconds(_ seconds: Int) -> String {
+		let m = seconds / 60
+		let s = seconds % 60
+		return String(format: "%02d:%02d", m, s)
 	}
 
 	/// Extracts a Double from a raw watch dict value — handles String, Float, NSNumber.

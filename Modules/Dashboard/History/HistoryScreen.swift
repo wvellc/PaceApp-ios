@@ -95,6 +95,12 @@ struct HistoryScreen: View {
 				guard let userId = AuthManager.shared.currentUserID else { return }
 				viewModel.startLoading(userId: userId)
 			}
+			// Re-sync History whenever the watch reports a fresh completed event —
+			// lastWatchSyncDate is a stored @Observable var, written after every
+			// successful watch sync, so this fires without any manual pull needed.
+			.onChange(of: ciqManager.lastWatchSyncDate) {
+				Task { await viewModel.refresh() }
+			}
 		}
 	}
 }
@@ -178,6 +184,10 @@ private extension HistoryScreen {
 		}
 		.listStyle(.plain)
 		.padding(.top, Constant.UI.defaultPadding / 2)
+		// Pull-to-refresh: re-fetches page 1 with committed filters and resets pagination.
+		.refreshable {
+			await viewModel.refresh()
+		}
 	}
 }
 
