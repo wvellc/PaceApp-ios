@@ -46,20 +46,26 @@ struct OTPFieldView: View {
                             }
                         }
                     },
-                    onCommit: {
-                        // Called when a single character is entered
-                        if pins[index].count == 1 {
+                    onCommit: { newText in
+                        // Called when a character or string is entered
+                        if newText.count == 1 {
+                            pins[index] = newText
                             if index < numberOfFields - 1 {
                                 pinFocusState = FocusPin.pin(index + 1)
                             } else {
                                 // Last digit entered — keep focus or clear if desired
                                 // pinFocusState = nil
                             }
-                        } else if pins[index].count == numberOfFields, let _ = Int(pins[index]) {
-                            // Pasted full value into this field
-                            otp = pins[index]
+                        } else if newText.count > 1 {
+                            // Pasted value or autofilled into this field
+                            let filtered = newText.filter { $0.isNumber }
+                            otp = filtered
                             updatePinsFromOTP()
-                            pinFocusState = FocusPin.pin(numberOfFields - 1)
+                            
+                            let nextFocusIndex = min(filtered.count, numberOfFields) - 1
+                            if nextFocusIndex >= 0 {
+                                pinFocusState = FocusPin.pin(nextFocusIndex)
+                            }
                         }
                         updateOTPString()
                         HapticManager.shared.light()
@@ -84,8 +90,12 @@ struct OTPFieldView: View {
     
     private func updatePinsFromOTP() {
         let otpArray = Array(otp.prefix(numberOfFields))
-        for (index, char) in otpArray.enumerated() {
-            pins[index] = String(char)
+        for index in 0..<numberOfFields {
+            if index < otpArray.count {
+                pins[index] = String(otpArray[index])
+            } else {
+                pins[index] = ""
+            }
         }
     }
     
@@ -153,7 +163,7 @@ class BackspaceTextField: UITextField {
 struct OTPTextField: UIViewRepresentable {
     @Binding var text: String
     var onBackspace: () -> Void
-    var onCommit: () -> Void
+    var onCommit: (String) -> Void
     
     func makeCoordinator() -> Coordinator {
         Coordinator(text: $text, onBackspace: onBackspace, onCommit: onCommit)
@@ -163,6 +173,7 @@ struct OTPTextField: UIViewRepresentable {
         let tf = BackspaceTextField()
         tf.delegate = context.coordinator
         tf.keyboardType = .numberPad
+        tf.textContentType = .oneTimeCode
         tf.textAlignment = .center
         tf.font = UIFont.systemFont(ofSize: 24, weight: .semibold)
 		tf.textColor = .whiteApp
@@ -180,9 +191,9 @@ struct OTPTextField: UIViewRepresentable {
     class Coordinator: NSObject, UITextFieldDelegate {
         @Binding var text: String
         var onBackspace: () -> Void
-        var onCommit: () -> Void
+        var onCommit: (String) -> Void
         
-        init(text: Binding<String>, onBackspace: @escaping () -> Void, onCommit: @escaping () -> Void) {
+        init(text: Binding<String>, onBackspace: @escaping () -> Void, onCommit: @escaping (String) -> Void) {
             _text = text
             self.onBackspace = onBackspace
             self.onCommit = onCommit
@@ -191,14 +202,16 @@ struct OTPTextField: UIViewRepresentable {
         func textField(_ textField: UITextField,
                        shouldChangeCharactersIn range: NSRange,
                        replacementString string: String) -> Bool {
-            guard string.count <= 1 else { return false }
 			
 			DispatchQueue.main.async { [ self] in
-				text = string
-				if !string.isEmpty {
-					onCommit() // move to next field
-				}
-
+				if string.isEmpty {
+                    text = ""
+                } else if string.count == 1 {
+                    text = string
+                    onCommit(string)
+                } else {
+                    onCommit(string)
+                }
 			}
 			
             return false // we manage text manually
