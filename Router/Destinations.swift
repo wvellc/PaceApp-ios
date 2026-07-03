@@ -30,4 +30,5 @@ enum Destinations: Hashable, Codable {
 	// MARK: - User settings
 	case updateGait
 	case manageWatch
+	case editProfile
 }

@@ -51,6 +51,8 @@ struct ProfileScreen: View {
 		}
 		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 		.appBackground()
+		// Inject viewModel for EditProfileWrapperView.
+		.environment(viewModel)
 		.onAppear {
 			viewModel.loadUserInfoFromSession()
 		}
@@ -95,8 +97,9 @@ struct ProfileScreen: View {
 			VSpace(height: 12)
 			
 			// Edit Profile Button
-			NavigationLink {
-				EditProfileScreen(viewModel: viewModel)
+			// Push EditProfileScreen via global router
+			Button {
+				router.navigate(to: .editProfile)
 			} label: {
 				Text(.editProfile)
 					.font(.semiBold16)

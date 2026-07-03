@@ -16,6 +16,7 @@ struct FavoritesRunScreen: View {
 	// This tracks which item is currently being navigated to
 	@State private var selectedActivity: ActivityData?
 	
+	//MARK: View Builder
 	var body: some View {
 		VStack {
 			if viewModel.isLoading && viewModel.favRuns.isEmpty {

@@ -14,6 +14,10 @@ struct TabBarScreen: View {
 	
 	/// Tracks the currently selected tab in the tab bar.
 	@State private var selectedTab: PaceTab = .home
+
+	// MARK: - Navigation State
+	/// Shared state for tab children routing, observed outside the lazy TabView.
+	@State private var tabNavState = TabNavigationState()
 	
 	// MARK: - Stable Tab Views
 	//
@@ -91,6 +95,21 @@ struct TabBarScreen: View {
 					Text(PaceTab.profile.title)
 				}
 				.tag(PaceTab.profile)
+		}
+		// Inject navigation state so tab children can write their selection.
+		.environment(tabNavState)
+		// ── Navigation Destinations (placed outside TabView to satisfy SwiftUI) ──
+		.navigationDestination(item: Bindable(tabNavState).selectedActivity) { activity in
+			EventDetailsScreen(activityData: activity)
+		}
+		.navigationDestination(item: Bindable(tabNavState).selectedMetric) { metric in
+			if let vm = tabNavState.analyticsViewModel {
+				AnalyticsDetailScreen(
+					metricType: metric,
+					initialPeriod: vm.selectedPeriod,
+					viewModel: vm
+				)
+			}
 		}
 	}
 }

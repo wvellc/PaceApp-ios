@@ -26,6 +26,8 @@ struct HomeScreen: View {
 	
 	@Environment(Router.self)           private var router
 	@Environment(ConnectIQManager.self) private var ciqManager
+	/// Shared navigation state to push destinations from TabBarScreen.
+	@Environment(TabNavigationState.self) private var tabNavState
 	
 	// MARK: - Body
 	
@@ -184,11 +186,13 @@ struct HomeScreen: View {
 			
 			VStack(spacing: 16) {
 				ForEach(viewModel.upcomingEvents) { activity in
-					NavigationLink {
-						EventDetailsScreen(activityData: activity)
+					// Push EventDetailsScreen via shared TabNavigationState
+					Button {
+						tabNavState.selectedActivity = activity
 					} label: {
 						UpcomingActivityView(activity: activity)
 					}
+					.buttonStyle(.plain)
 					.swipeActions(edge: .trailing, allowsFullSwipe: true) {
 						Button(role: .destructive) {
 							withAnimation {

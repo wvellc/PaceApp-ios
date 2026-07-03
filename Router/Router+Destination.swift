@@ -75,6 +75,7 @@ extension Router {
 			
 			case .updateGait	: UpdateGaitScreen()
 			case .manageWatch	: ManageWatchScreen()
+			case .editProfile	: EditProfileWrapperView()
 		}
 	}
 }

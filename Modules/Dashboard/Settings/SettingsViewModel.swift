@@ -18,7 +18,7 @@ final class SettingsViewModel {
 	
 	// MARK: - Menu Items
 	let menuItems: [SettingsMenuItem] = [
-		SettingsMenuItem(id: .notifications,   icon: .icNotificationWhile, title: .notifications),
+//		SettingsMenuItem(id: .notifications,   icon: .icNotificationWhile, title: .notifications),
 		SettingsMenuItem(id: .privacyPolicy,   icon: .icPrivacy,           title: .privacyPolicy),
 		SettingsMenuItem(id: .termsConditions, icon: .icTerms,             title: .termsOfService),
 		SettingsMenuItem(id: .licenses,        icon: .icLicense,           title: .licenses),

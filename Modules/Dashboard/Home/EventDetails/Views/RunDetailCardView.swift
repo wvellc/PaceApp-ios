@@ -10,8 +10,11 @@ import SwiftUI
 // MARK: - Run Detail Card View
 struct RunDetailCardView: View {
 
-    @Bindable var viewModel: EventDetailsViewModel  // @Observable → @Bindable
+	//MARK: States
+    @Bindable var viewModel: EventDetailsViewModel
 
+	
+	//MARK: View Builder
     var body: some View {
         VStack(alignment: .leading) {
 			

@@ -17,90 +17,83 @@ struct HistoryScreen: View {
 	@FocusState var focusedField: Bool?
 	@State private var isFilterSheetPresented = false
 	
-	/// Tracks which activity is currently being navigated to
-	@State private var selectedActivity: ActivityData?
-	
 	// MARK: - Environment
 	
 	@Environment(Router.self) private var router
 	@Environment(ConnectIQManager.self) private var ciqManager
+	/// Shared navigation state to push destinations from TabBarScreen.
+	@Environment(TabNavigationState.self) private var tabNavState
 	
 	// MARK: - Body
 	
 	var body: some View {
-		NavigationStack {
-			VStack(spacing: 0) {
-				
-				// Navigation Bar
-				AppNavigation()
-				
-				// Search Bar
-				searchBar
-					.padding(.horizontal, 16)
-					.padding(.top, 16)
-					.padding(.bottom, 8)
-				
-				// Activity List
-				Group {
-					if viewModel.filteredActivities.isEmpty && !viewModel.isLoading {
-						Spacer(minLength: 25)
-						NoDataView(
-							icon: .icEmptyHistory,
-							title: .letsGetAfterItPrsAwait,
-							onIconTap: {
-								router.navigate(to: .createRunEvent)
-							}
-						)
+		// Global NavigationStack in PaceApp.swift is the single navigation host.
+		VStack(spacing: 0) {
+			
+			// Navigation Bar
+			AppNavigation()
+			
+			// Search Bar
+			searchBar
+				.padding(.horizontal, 16)
+				.padding(.top, 16)
+				.padding(.bottom, 8)
+			
+			// Activity List
+			Group {
+				if viewModel.filteredActivities.isEmpty && !viewModel.isLoading {
+					Spacer(minLength: 25)
+					NoDataView(
+						icon: .icEmptyHistory,
+						title: .letsGetAfterItPrsAwait,
+						onIconTap: {
+							router.navigate(to: .createRunEvent)
+						}
+					)
+					.transition(.opacity)
+					Spacer(minLength: 25)
+					Spacer()
+				} else if viewModel.isLoading {
+					Spacer()
+					ProgressView()
+						.scaleEffect(1.5)
+						.tint(.neonAquaBlue)
+					Spacer()
+				} else {
+					activityList
 						.transition(.opacity)
-						Spacer(minLength: 25)
-						Spacer()
-					} else if viewModel.isLoading {
-						Spacer()
-						ProgressView()
-							.scaleEffect(1.5)
-							.tint(.neonAquaBlue)
-						Spacer()
-					} else {
-						activityList
-							.transition(.opacity)
-					}
 				}
-				.animation(.easeInOut(duration: 0.25), value: viewModel.activities.isEmpty)
 			}
-			.appBackground()
-			.sheet(isPresented: $isFilterSheetPresented) {
-				FilterSheetView(
-					distanceMin:    $viewModel.filterDistanceMin,
-					distanceMax:    $viewModel.filterDistanceMax,
-					filterDate:     $viewModel.filterDate,
-					filterLocation: $viewModel.filterLocation,
-					onApply: { viewModel.applyFilter() },
-					onClear: {
-						viewModel.clearFilter()
-						isFilterSheetPresented = false
-					},
-					onDismiss: { isFilterSheetPresented = false }
-				)
-				.applySheetSizing(height: 580)
-				.presentationBackground(.whiteApp)
-				.scrollDismissesKeyboard(.immediately)
-			}
-			// navigationDestination is on the NavigationStack content root — outside
-			// the lazy List — so the stack can always see the destination.
-			.navigationDestination(item: $selectedActivity) { activity in
-				EventDetailsScreen(activityData: activity)
-			}
-			// Capture userId once on first appear and start loading events.
-			.onAppear {
-				guard let userId = AuthManager.shared.currentUserID else { return }
-				viewModel.startLoading(userId: userId)
-			}
-			// Re-sync History whenever the watch reports a fresh completed event —
-			// lastWatchSyncDate is a stored @Observable var, written after every
-			// successful watch sync, so this fires without any manual pull needed.
-			.onChange(of: ciqManager.lastWatchSyncDate) {
-				Task { await viewModel.refresh() }
-			}
+			.animation(.easeInOut(duration: 0.25), value: viewModel.activities.isEmpty)
+		}
+		.appBackground()
+		.sheet(isPresented: $isFilterSheetPresented) {
+			FilterSheetView(
+				distanceMin:    $viewModel.filterDistanceMin,
+				distanceMax:    $viewModel.filterDistanceMax,
+				filterDate:     $viewModel.filterDate,
+				filterLocation: $viewModel.filterLocation,
+				onApply: { viewModel.applyFilter() },
+				onClear: {
+					viewModel.clearFilter()
+					isFilterSheetPresented = false
+				},
+				onDismiss: { isFilterSheetPresented = false }
+			)
+			.applySheetSizing(height: 580)
+			.presentationBackground(.whiteApp)
+			.scrollDismissesKeyboard(.immediately)
+		}
+		// Capture userId once on first appear and start loading events.
+		.onAppear {
+			guard let userId = AuthManager.shared.currentUserID else { return }
+			viewModel.startLoading(userId: userId)
+		}
+		// Re-sync History whenever the watch reports a fresh completed event —
+		// lastWatchSyncDate is a stored @Observable var, written after every
+		// successful watch sync, so this fires without any manual pull needed.
+		.onChange(of: ciqManager.lastWatchSyncDate) {
+			Task { await viewModel.refresh() }
 		}
 	}
 }
@@ -129,10 +122,11 @@ private extension HistoryScreen {
 	
 	@ViewBuilder
 	var activityList: some View {
-		List(selection: $selectedActivity) {
+		List {
 			ForEach(viewModel.filteredActivities) { activity in
 				Button {
-					selectedActivity = activity
+					// Push EventDetailsScreen via shared TabNavigationState
+					tabNavState.selectedActivity = activity
 				} label: {
 					PaceRunActivityCard(activity: activity)
 				}
@@ -154,8 +148,8 @@ private extension HistoryScreen {
 					}
 					.tint(.redBoho)
 					
-					NavigationLink {
-						withAnimation { CreateRunEventScreen(type: .duplicate, intialData: activity) }
+						Button {
+						router.navigate(to: .createRunEvent)
 					} label: {
 						Image(systemName: "plus.square.fill.on.square.fill")
 					}
@@ -184,6 +178,7 @@ private extension HistoryScreen {
 		}
 		.listStyle(.plain)
 		.padding(.top, Constant.UI.defaultPadding / 2)
+		.tint(.purple)
 		// Pull-to-refresh: re-fetches page 1 with committed filters and resets pagination.
 		.refreshable {
 			await viewModel.refresh()
