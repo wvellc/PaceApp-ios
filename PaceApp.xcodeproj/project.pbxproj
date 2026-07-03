@@ -68,6 +68,7 @@
 		E6C4BEFA2F618A2800C17C69 /* Spacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C4BEF92F618A2800C17C69 /* Spacing.swift */; };
 		E6C69B682F603CC400ACED81 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E6C69B652F603CC400ACED81 /* Assets.xcassets */; };
 		E6C69B732F603EAB00ACED81 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E6C69B722F603EAB00ACED81 /* Colors.xcassets */; };
+		E6D24C132FF7EFBB003A7D30 /* PolylineCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6D24C122FF7EFBB003A7D30 /* PolylineCodec.swift */; };
 		E6F888EF2F9A2FFC00F17F95 /* NoDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6F888EE2F9A2FFC00F17F95 /* NoDataView.swift */; };
 /* End PBXBuildFile section */
 
@@ -128,6 +129,7 @@
 		E6C69B572F603C8D00ACED81 /* PaceApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PaceApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E6C69B652F603CC400ACED81 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E6C69B722F603EAB00ACED81 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
+		E6D24C122FF7EFBB003A7D30 /* PolylineCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PolylineCodec.swift; sourceTree = "<group>"; };
 		E6F888EE2F9A2FFC00F17F95 /* NoDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoDataView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -300,6 +302,7 @@
 				E61F83AE2F641B0900C215DF /* CGFloat+Ext.swift */,
 				E6C4BEFE2F618CE000C17C69 /* Date+Ext.swift */,
 				E6C4BEFF2F618CE000C17C69 /* View+Ext.swift */,
+				E6D24C122FF7EFBB003A7D30 /* PolylineCodec.swift */,
 			);
 			path = Extensions;
 			sourceTree = "<group>";
@@ -468,6 +471,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E6D24C132FF7EFBB003A7D30 /* PolylineCodec.swift in Sources */,
 				E638E08B2FAE24F6009D62CC /* PlainSelectedButtonStyle.swift in Sources */,
 				E6370ED22F83A70000007CDF /* AppLabel.swift in Sources */,
 				E684F1E72F769CDF0059C38F /* ProfilePhotoShape.swift in Sources */,

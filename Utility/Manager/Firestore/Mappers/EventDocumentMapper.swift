@@ -6,6 +6,7 @@
 import Foundation
 import FirebaseFirestore
 import SwiftUI
+import CoreLocation
 
 // MARK: - EventDocumentMapper
 //
@@ -63,6 +64,26 @@ enum EventDocumentMapper {
 			)
 		}
 
+		// Parse coordinates leniently and encode via PolylineCodec
+		let coordsPayload = arrayOfDicts(from: payload["coordinates"]) // watch uses ["lat":, "lng":] or we can just iterate [Any]
+		var coordinates = [CLLocationCoordinate2D]()
+		if let anyCoords = payload["coordinates"] as? [Any] {
+			for item in anyCoords {
+				if let dict = item as? [String: Any] {
+					let lat = parseDouble(dict["lat"]) ?? parseDouble(dict["latitude"])
+					let lng = parseDouble(dict["lng"]) ?? parseDouble(dict["longitude"])
+					if let lat = lat, let lng = lng {
+						coordinates.append(CLLocationCoordinate2D(latitude: lat, longitude: lng))
+					}
+				} else if let arr = item as? [Any], arr.count >= 2 {
+					if let lat = parseDouble(arr[0]), let lng = parseDouble(arr[1]) {
+						coordinates.append(CLLocationCoordinate2D(latitude: lat, longitude: lng))
+					}
+				}
+			}
+		}
+		let routePolyline = coordinates.isEmpty ? nil : PolylineCodec.encode(coordinates)
+
 		let doc = EventDocument(
 			id: id,
 			userId: userId,
@@ -90,7 +111,8 @@ enum EventDocumentMapper {
 			createdAt: now,
 			updatedAt: now,
 			deletedAt: nil,
-			segments: segments.isEmpty ? nil : segments
+			segments: segments.isEmpty ? nil : segments,
+			routePolyline: routePolyline
 		)
 		return (doc, segments)
 	}
@@ -111,6 +133,7 @@ enum EventDocumentMapper {
 		let timeVarStr = document.timeVarianceSeconds.map { formatSignedVariance($0) } ?? ""
 		let deltaColor: Color = timeVarStr.hasPrefix("-") ? .fluorescentMint : .redBoho
 		let actualDistStr = document.actualDistance.map { String(format: "%.2f", $0) } ?? ""
+		let routeCoords = document.routePolyline.map { PolylineCodec.decode($0) } ?? []
 
 		return ActivityData(
 			id: document.id,
@@ -133,7 +156,8 @@ enum EventDocumentMapper {
 			actualDist: actualDistStr,
 			timeVar: timeVarStr,
 			avgHeartRate: document.avgHeartRate ?? 0,
-			paces: document.paces ?? []
+			paces: document.paces ?? [],
+			routeCoordinates: routeCoords
 		)
 	}
 
@@ -192,6 +216,12 @@ enum EventDocumentMapper {
 		if let segs = document.segments, !segs.isEmpty {
 			payload["segments"] = segs.map { seg in
 				["distance": seg.distance, "eta": formatTime(seg.totalGoalSeconds)] as [String: Any]
+			}
+		}
+		if let routePolyline = document.routePolyline {
+			let coords = PolylineCodec.decode(routePolyline)
+			if !coords.isEmpty {
+				payload["coordinates"] = coords.map { ["lat": $0.latitude, "lng": $0.longitude] }
 			}
 		}
 

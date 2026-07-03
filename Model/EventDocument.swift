@@ -60,6 +60,11 @@ struct EventDocument: Codable, Identifiable {
 	// Flat segment array — stored on the parent document, not a subcollection.
 	var segments: [RunSegment]?
 
+	// Full-route GPS trace, Google encoded-polyline format (single field on the
+	// parent document — see PolylineCodec). Keeps large coordinate datasets
+	// compact enough to stay well under Firestore's 1MB document limit.
+	var routePolyline: String?
+
 	// Document ID is always derived from the integer event id.
 	var firestoreDocumentId: String { String(id) }
 	var eventStatus: EventStatus { EventStatus(rawValue: status) ?? .active }

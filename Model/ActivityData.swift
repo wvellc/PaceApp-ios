@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreLocation
 
 // MARK: - ActivityData
 //
@@ -50,6 +51,9 @@ struct ActivityData: Identifiable, Hashable {
 	let timeVar: String         // time variance string e.g. "+01:10" or "-00:30"
 	let avgHeartRate: Int       // average heart rate in BPM; 0 when unavailable
 
+	// MARK: - Route (populated once the watch has sent GPS data)
+	let routeCoordinates: [CLLocationCoordinate2D]  // decoded from EventDocument.routePolyline
+
 	// MARK: - Full Initializer
 
 	init(
@@ -73,7 +77,8 @@ struct ActivityData: Identifiable, Hashable {
 		actualDist: String = "",
 		timeVar: String = "",
 		avgHeartRate: Int = 0,
-		paces: [Int] = []
+		paces: [Int] = [],
+		routeCoordinates: [CLLocationCoordinate2D] = []
 	) {
 		self.id = id
 		self.syncId = syncId
@@ -96,6 +101,7 @@ struct ActivityData: Identifiable, Hashable {
 		self.timeVar = timeVar
 		self.avgHeartRate = avgHeartRate
 		self.paces = paces
+		self.routeCoordinates = routeCoordinates
 	}
 
 	// MARK: - Display Helpers
