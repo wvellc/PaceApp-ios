@@ -19,7 +19,7 @@ struct SegmentRow: Identifiable {
 	let goalTime: String          // Planned goal time "HH:MM:SS"
 	let plannedDistance: String   // Planned distance "1.83 mi"
 	var actualTime: String?       // Actual elapsed time from watch — nil for active events
-	var actualDistance: String?   // Actual distance covered — nil when 0.00 or not yet completed
+	var actualDistance: String?   // Actual distance covered — always shown once completed (incl. 0.00)
 
 	/// True when the watch has sent completion data for this segment.
 	var isCompleted: Bool { actualTime != nil }
@@ -215,11 +215,11 @@ final class EventDetailsViewModel {
 			// Actual elapsed time "elapsed_time": "00:00:44"
 			let actualTime = completed["elapsed_time"] as? String
 
-			// Actual distance "completed_distance": "0.00" — treat 0.00 as nil (Q1: genuine zero = no display)
+			// Actual distance "completed_distance": "0.00" — always shown for completed segments,
+			// matching the "0.00 km"/"0.00 mi" format used on Awaiting rows (Q1 revised: genuine
+			// zero is still a real completed distance and should display, not be hidden as nil).
 			let rawActual  = Self.distanceDouble(from: completed, key: "completed_distance")
-			let actualDist: String? = rawActual > 0
-				? String(format: "%.2f %@", rawActual, unit)
-				: nil
+			let actualDist: String? = String(format: "%.2f %@", rawActual, unit)
 
 			return SegmentRow(
 				id: index,
