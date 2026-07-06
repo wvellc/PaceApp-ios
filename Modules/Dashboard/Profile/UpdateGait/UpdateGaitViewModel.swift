@@ -44,6 +44,8 @@ final class UpdateGaitViewModel {
         let snapshot = gaitData
         // Keep in-memory model in sync immediately
         AuthManager.shared.userDetails?.gait = snapshot
+        // Push the updated gait to the watch (app → watch).
+        ConnectIQManager.shared.sendSettings()
         Task {
             try? await UserProfileRepository.shared.updateGait(snapshot, userId: currentUID)
         }

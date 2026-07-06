@@ -24,6 +24,11 @@ final class AuthManager {
 	
 	@ObservationIgnored
 	private var _authStateListenerHandle: AuthStateDidChangeListenerHandle?
+
+	/// Live Firestore listener on the user document — keeps `userDetails` in sync
+	/// with changes the watch (or another device) writes to Firestore.
+	@ObservationIgnored
+	private var _profileListener: ListenerRegistrationToken?
 	
 	@ObservationIgnored
 	private let logger = Logger(label: "AUTH")
@@ -75,16 +80,20 @@ final class AuthManager {
 							self.logger.error("Failed to create initial profile for \(user.uid): \(error.localizedDescription)")
 						}
 					}
-					
-					
+
+					// Keep userDetails live — watch → Firestore → app updates flow
+					// through this listener without any manual pull.
+					self.startProfileListener(userId: user.uid)
+
 					//Set the root navigation
 					Router.shared.setupRootNavigation()
-					
+
 				} else {
+					self.stopProfileListener()
 					self.userDetails = nil
-					
+
 					try? await AuthManager.shared.logout()
-					
+
 					Router.shared.setRoot(.auth)
 				}
 			}
@@ -215,6 +224,26 @@ final class AuthManager {
 		}
 	}
 	
+	// MARK: - Live Profile Listener
+
+	/// Attaches a real-time listener on the user document. Every change (including
+	/// settings the watch syncs into Firestore) refreshes `userDetails`, which the
+	/// UI observes — so the Profile screen updates instantly, no relaunch needed.
+	private func startProfileListener(userId: String) {
+		_profileListener?.remove()
+		_profileListener = UserProfileRepository.shared.listenToProfile(userId: userId) { [weak self] model in
+			guard let model else { return }
+			Task { @MainActor in
+				self?.userDetails = model
+			}
+		}
+	}
+
+	private func stopProfileListener() {
+		_profileListener?.remove()
+		_profileListener = nil
+	}
+
 	// MARK: - Private Helpers
 	
 	/// Logs which settings were successfully loaded vs missing (will use defaults).

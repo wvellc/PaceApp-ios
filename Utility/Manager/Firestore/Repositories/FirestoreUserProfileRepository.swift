@@ -24,6 +24,33 @@ final class FirestoreUserProfileRepository: UserProfileRepositoryProtocol {
 			throw NSError(domain: "UserProfileRepository", code: 404,
 						  userInfo: [NSLocalizedDescriptionKey: "User profile not found."])
 		}
+		return decodeProfile(snap, userId: userId)
+	}
+
+	// MARK: - Live Updates
+
+	func listenToProfile(userId: String, onChange: @escaping (UserModel?) -> Void) -> ListenerRegistrationToken {
+		let registration = db.collection("users").document(userId)
+			.addSnapshotListener { [weak self] snapshot, error in
+				guard let self else { return }
+				if let error {
+					self.logger.error("Profile listener failed: \(error.localizedDescription)")
+					return
+				}
+				guard let snapshot, snapshot.exists, snapshot.data() != nil else {
+					onChange(nil)
+					return
+				}
+				onChange(self.decodeProfile(snapshot, userId: userId))
+			}
+		return ListenerRegistrationToken { registration.remove() }
+	}
+
+	// MARK: - Decoding
+
+	/// Decodes a user document into `UserModel`, falling back to a manual map for
+	/// legacy documents written before the typed Codable shape existed.
+	private func decodeProfile(_ snap: DocumentSnapshot, userId: String) -> UserModel {
 		// Decode UserModel directly — Firestore Timestamp fields are auto-converted to Date.
 		if var model = try? snap.data(as: UserModel.self) {
 			model.uuid = userId  // ensure uuid is always the authoritative Firebase Auth UID

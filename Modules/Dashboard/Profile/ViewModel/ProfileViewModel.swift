@@ -21,17 +21,23 @@ final class ProfileViewModel {
 
     var isIntvlVibrateOn: Bool = false {
         didSet {
-            guard isIntvlVibrateOn != oldValue else { return }
+            // Skip persistence when the value is being synced in from a remote
+            // (watch → Firestore) update — that would echo the write straight back.
+            guard !isApplyingRemote, isIntvlVibrateOn != oldValue else { return }
             persistIntervalVibrate(isIntvlVibrateOn)
         }
     }
 
     var isIntvlBeepOn: Bool = false {
         didSet {
-            guard isIntvlBeepOn != oldValue else { return }
+            guard !isApplyingRemote, isIntvlBeepOn != oldValue else { return }
             persistIntervalBeep(isIntvlBeepOn)
         }
     }
+
+    /// True while `loadUserInfoFromSession` is applying remote values, so the
+    /// toggle `didSet`s don't persist a value that just arrived from Firestore.
+    @ObservationIgnored private var isApplyingRemote = false
 
     // MARK: - Init
 
@@ -82,9 +88,11 @@ final class ProfileViewModel {
         lastName  = user?.lastName
         gender    = user?.gender
         contactInfo = user?.contactInfo ?? ""
-        // Seed toggles from the Firestore-cached model; no didSet fires during init assignment
+        // Sync toggles from the live model without echoing the value back to Firestore.
+        isApplyingRemote = true
         isIntvlVibrateOn = user?.intervalVibrate ?? false
         isIntvlBeepOn    = user?.intervalBeep    ?? false
+        isApplyingRemote = false
     }
 
     // MARK: - Update Profile Action
@@ -112,12 +120,16 @@ final class ProfileViewModel {
     private func persistIntervalVibrate(_ enabled: Bool) {
         guard let uid = AuthManager.shared.currentUserID else { return }
         AuthManager.shared.userDetails?.intervalVibrate = enabled
+        // Push the updated settings to the watch (app → watch).
+        ConnectIQManager.shared.sendSettings()
         Task { try? await UserProfileRepository.shared.updateIntervalVibrate(enabled, userId: uid) }
     }
 
     private func persistIntervalBeep(_ enabled: Bool) {
         guard let uid = AuthManager.shared.currentUserID else { return }
         AuthManager.shared.userDetails?.intervalBeep = enabled
+        // Push the updated settings to the watch (app → watch).
+        ConnectIQManager.shared.sendSettings()
         Task { try? await UserProfileRepository.shared.updateIntervalBeep(enabled, userId: uid) }
     }
 }

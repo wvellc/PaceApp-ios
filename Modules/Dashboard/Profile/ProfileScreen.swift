@@ -56,6 +56,11 @@ struct ProfileScreen: View {
 		.onAppear {
 			viewModel.loadUserInfoFromSession()
 		}
+		// Live refresh: the AuthManager profile listener updates userDetails when
+		// the watch syncs settings to Firestore — re-sync the view model instantly.
+		.onChange(of: AuthManager.shared.userDetails) { _, _ in
+			viewModel.loadUserInfoFromSession()
+		}
 	}
 	
 	// MARK: - Avatar Section
