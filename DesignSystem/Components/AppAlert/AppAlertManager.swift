@@ -55,3 +55,26 @@ final class AppAlertManager: ObservableObject {
 		}
 	}
 }
+
+// MARK: - Event Deletion Confirmation
+
+extension AppAlertManager {
+
+	/// Presents the standard "delete event" confirmation popup.
+	///
+	/// `onConfirm` runs only when the user taps **Delete**; tapping **Cancel**
+	/// (or the button) simply dismisses. The alert auto-dismisses on either
+	/// choice, and the outside tap is restricted so the destructive action is
+	/// always an explicit decision.
+	func confirmEventDeletion(onConfirm: @escaping () -> Void) {
+		present(
+			AppAlertModel(
+				title: "Delete Event?",
+				description: "This event and its data will be permanently removed. This can't be undone.",
+				primaryButton: AppAlertButton("Cancel"),
+				secondaryButton: AppAlertButton("Delete", action: onConfirm),
+				restrictOutsideTap: true
+			)
+		)
+	}
+}

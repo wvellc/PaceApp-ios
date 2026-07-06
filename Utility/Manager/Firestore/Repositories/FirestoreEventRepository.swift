@@ -264,7 +264,14 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 				.whereField(FieldPath.documentID(), in: batchIds)
 				.getDocuments()
 
-			let batchActivities = mapDocuments(snapshot.documents)
+			// Unlike the active/completed queries, this fetch is keyed purely by
+			// document ID, so soft-deleted events would otherwise slip through —
+			// e.g. a favorited event that was later deleted. Filter them out.
+			let liveDocuments = snapshot.documents.filter {
+				(try? $0.data(as: EventDocument.self))?.eventStatus != .deleted
+			}
+
+			let batchActivities = mapDocuments(liveDocuments)
 			allResults.append(contentsOf: batchActivities)
 		}
 

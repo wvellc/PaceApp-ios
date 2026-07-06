@@ -69,6 +69,10 @@ struct FavoritesRunScreen: View {
 			guard let userId = AuthManager.shared.currentUserID else { return }
 			await viewModel.loadFavorites(userId: userId)
 		}
+		// Prune immediately when an event is deleted from anywhere (Details, Home, History).
+		.onChange(of: EventDeletionCenter.shared.lastDeletedEventId) { _, id in
+			if let id { viewModel.removeLocally(eventId: id) }
+		}
 	}
 	
 	// MARK: - Activity List

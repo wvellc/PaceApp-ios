@@ -43,6 +43,12 @@ final class FavoritesViewModel {
 		}
 	}
 	
+	/// Prunes a deleted event from the favorites list — driven by `EventDeletionCenter`
+	/// so deleting an event anywhere also removes it here.
+	func removeLocally(eventId: Int) {
+		favRuns.removeAll { $0.id == eventId }
+	}
+
 	// MARK: - Actions
 	func unFavorite(run: ActivityData, userId: String) async {
 		guard let syncId = run.syncId else {

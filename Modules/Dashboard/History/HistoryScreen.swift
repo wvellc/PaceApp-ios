@@ -95,6 +95,10 @@ struct HistoryScreen: View {
 		.onChange(of: ciqManager.lastWatchSyncDate) {
 			Task { await viewModel.refresh() }
 		}
+		// Prune immediately when an event is deleted from anywhere (Details, Home, …).
+		.onChange(of: EventDeletionCenter.shared.lastDeletedEventId) { _, id in
+			if let id { viewModel.removeLocally(eventId: id) }
+		}
 	}
 }
 
@@ -134,13 +138,16 @@ private extension HistoryScreen {
 				.listRowInsets(EdgeInsets(top: 8, leading: Constant.UI.defaultPadding, bottom: 8, trailing: Constant.UI.defaultPadding))
 				.listRowBackground(Color.clear)
 				.listRowSeparator(.hidden)
-				.swipeActions(edge: .trailing, allowsFullSwipe: true) {
+				.swipeActions(edge: .trailing, allowsFullSwipe: false) {
 					Button(role: .destructive) {
-						withAnimation {
-							if let syncId = activity.syncId {
-								ciqManager.deleteSyncedEvent(id: syncId)
-							} else {
-								viewModel.delete(event: activity)
+						// Confirm before deleting — destructive and irreversible.
+						AppAlertManager.shared.confirmEventDeletion {
+							withAnimation {
+								if let syncId = activity.syncId {
+									ciqManager.deleteSyncedEvent(id: syncId)
+								} else {
+									viewModel.delete(event: activity)
+								}
 							}
 						}
 					} label: {

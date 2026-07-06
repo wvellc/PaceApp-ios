@@ -107,11 +107,13 @@ struct EventDetailsScreen: View {
 	private var bottomActions: some View {
 		FooterActions(
 			onDelete: {
-				if let syncId = activityData?.syncId {
-					let _ = viewModel.isCompletedEvent ? "completed" : "active"
-					ciqManager.deleteSyncedEvent(id: syncId)
+				// Confirm before deleting — destructive and irreversible.
+				AppAlertManager.shared.confirmEventDeletion {
+					if let syncId = activityData?.syncId {
+						ciqManager.deleteSyncedEvent(id: syncId)
+					}
+					dismiss()
 				}
-				dismiss()
 			},
 			onEdit: viewModel.editEvent
 		)

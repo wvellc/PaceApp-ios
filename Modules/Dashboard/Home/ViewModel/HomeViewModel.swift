@@ -85,6 +85,14 @@ final class HomeViewModel {
 		activeListenerUserId = nil
 	}
 
+	/// Reacts to an event deleted anywhere in the app. The upcoming list already
+	/// updates live via the listener; this also refreshes the header metrics in
+	/// case the deleted event was the latest completed one backing them.
+	func handleEventDeleted(eventId: Int, userId: String) {
+		upcomingEvents.removeAll { $0.id == eventId }
+		refreshLatestCompletedMetrics(userId: userId)
+	}
+
 	// MARK: - Latest Completed Event → Metrics
 
 	/// Fetches the most recent completed event and maps it into the header metric

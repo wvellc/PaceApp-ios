@@ -701,6 +701,11 @@ class ConnectIQManager: NSObject {
         completedEventPayloads.removeAll { eventId(from: $0) == id }
         rebuildSyncedActivities()
 
+        // Broadcast so History / Favorites prune the row wherever the delete came from.
+        Task { @MainActor in
+            EventDeletionCenter.shared.notifyDeleted(eventId: id)
+        }
+
         if let userId = AuthManager.shared.currentUser?.uid {
             Task {
                 do {

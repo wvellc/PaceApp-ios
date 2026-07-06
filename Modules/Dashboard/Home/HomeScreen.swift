@@ -107,6 +107,11 @@ struct HomeScreen: View {
 			guard newUUID != nil else { return }
 			tryShowMetricsPopup()
 		}
+		// Refresh header metrics when an event is deleted from anywhere.
+		.onChange(of: EventDeletionCenter.shared.lastDeletedEventId) { _, id in
+			guard let id, let userId = AuthManager.shared.currentUserID else { return }
+			viewModel.handleEventDeleted(eventId: id, userId: userId)
+		}
 	}
 	
 	// MARK: - Greeting Text
@@ -184,9 +189,12 @@ struct HomeScreen: View {
 					.buttonStyle(.plain)
 					.swipeActions(edge: .trailing, allowsFullSwipe: true) {
 						Button(role: .destructive) {
-							withAnimation {
-								if let syncId = activity.syncId {
-									ciqManager.deleteSyncedEvent(id: syncId)
+							// Confirm before deleting — destructive and irreversible.
+							AppAlertManager.shared.confirmEventDeletion {
+								withAnimation {
+									if let syncId = activity.syncId {
+										ciqManager.deleteSyncedEvent(id: syncId)
+									}
 								}
 							}
 						} label: {
