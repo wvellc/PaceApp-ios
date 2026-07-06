@@ -187,9 +187,8 @@ struct HomeScreen: View {
 						UpcomingActivityView(activity: activity)
 					}
 					.buttonStyle(.plain)
-					.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-						Button(role: .destructive) {
-							// Confirm before deleting — destructive and irreversible.
+					.swipeActions(edge: .trailing, allowsFullSwipe: false) {
+						Button {
 							AppAlertManager.shared.confirmEventDeletion {
 								withAnimation {
 									if let syncId = activity.syncId {

@@ -139,8 +139,7 @@ private extension HistoryScreen {
 				.listRowBackground(Color.clear)
 				.listRowSeparator(.hidden)
 				.swipeActions(edge: .trailing, allowsFullSwipe: false) {
-					Button(role: .destructive) {
-						// Confirm before deleting — destructive and irreversible.
+					Button {
 						AppAlertManager.shared.confirmEventDeletion {
 							withAnimation {
 								if let syncId = activity.syncId {
