@@ -38,7 +38,8 @@ struct AnalyticsMetricRow: View {
                     accentColor: metricType.accentColor,
                     gradientColors: metricType.gradientColors,
 					showAxes: true,
-                    height: 105
+                    height: 105,
+                    valueFormat: metricType.formatValue
                 )
                 .allowsHitTesting(false)
             }

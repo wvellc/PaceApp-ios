@@ -14,6 +14,7 @@ enum AnalyticsFetchState: Equatable {
 	case failure(String)
 }
 
+@MainActor
 @Observable
 final class AnalyticsViewModel {
 
@@ -31,14 +32,21 @@ final class AnalyticsViewModel {
 	}
 
 	func load() async {
+		// Capture the period this load is for. Runs on the main actor, so the
+		// @Observable mutations below are serialized — no data race on the
+		// dictionaries. If the user switches period mid-flight, the in-flight
+		// result is dropped so a slow older fetch can't clobber newer data.
+		let period = selectedPeriod
 		fetchState = .loading
-		let (start, end) = selectedPeriod.dateRange()
+		let (start, end) = period.dateRange()
 		do {
 			let records = try await repository.fetchCompletedEvents(userId: userId, from: start, to: end)
+			guard period == selectedPeriod else { return }
 			buildDataPoints(from: records)
 			buildSummaryCards(from: records)
 			fetchState = .success
 		} catch {
+			guard period == selectedPeriod else { return }
 			fetchState = .failure(error.localizedDescription)
 		}
 	}
@@ -91,22 +99,6 @@ final class AnalyticsViewModel {
 					unit: "bpm",
 					accentColor: AnalyticsMetricType.heartRate.accentColor,
 					dataPoints: dataPointsByMetric[.heartRate] ?? []
-				)
-			],
-			.elevation: [
-				AnalyticsSummaryCard(
-					title: "Overall Elevation Climbed",
-					value: "\(Int(records.map(\.elevationGain).reduce(0, +)))",
-					unit: "ft",
-					accentColor: AnalyticsMetricType.elevation.accentColor,
-					dataPoints: dataPointsByMetric[.elevation] ?? []
-				),
-				AnalyticsSummaryCard(
-					title: "Total Distance Covered",
-					value: String(format: "%.1f", records.map(\.distanceValue).reduce(0, +)),
-					unit: "mi",
-					accentColor: AnalyticsMetricType.elevation.accentColor,
-					dataPoints: dataPointsByMetric[.pace] ?? []
 				)
 			],
 			.percentage: [

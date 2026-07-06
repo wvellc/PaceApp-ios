@@ -108,7 +108,8 @@ struct AnalyticsDetailScreen: View {
                 accentColor: card.accentColor,
 				gradientColors: metricType.gradientColors,
                 showAxes: true,
-                height: 172
+                height: 172,
+                valueFormat: metricType.formatValue
             )
         }
 		.padding(.horizontal, Constant.UI.defaultPadding)
@@ -123,7 +124,7 @@ struct AnalyticsDetailScreen: View {
 #Preview {
     NavigationStack {
         AnalyticsDetailScreen(
-			metricType: .elevation,
+			metricType: .pace,
 			initialPeriod: .day,
 			viewModel: AnalyticsViewModel(userId: "preview")
 		)

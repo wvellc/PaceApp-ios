@@ -7,6 +7,16 @@ import Foundation
 
 extension AnalyticsPeriod {
 
+	/// Short weekday label ("Mon", "Tue", …) derived from a real date. Cached
+	/// because DateFormatter allocation is expensive; POSIX locale keeps labels
+	/// stable in English to match the fixed year/month column labels.
+	private static let weekdayFormatter: DateFormatter = {
+		let f = DateFormatter()
+		f.locale = Locale(identifier: "en_US_POSIX")
+		f.dateFormat = "EEE"
+		return f
+	}()
+
 	func dateRange() -> (Date, Date) {
 		let now = Date()
 		let calendar = Calendar.current
@@ -39,19 +49,26 @@ extension AnalyticsPeriod {
 				return (label, group)
 			}
 		case .week:
-			let days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-			return days.enumerated().map { index, label in
-				let target = calendar.date(byAdding: .day, value: index - 6, to: Date()) ?? Date()
-				let group = records.filter { calendar.isDate($0.completedAt, inSameDayAs: target) }
+			// Last 7 days ending today. Labels are derived from each column's real
+			// date (e.g. today may be "Wed"), not a fixed Mon–Sun list that would
+			// mislabel every column by the current weekday offset.
+			let today = calendar.startOfDay(for: Date())
+			return (0..<7).map { offset in
+				let day = calendar.date(byAdding: .day, value: offset - 6, to: today) ?? today
+				let label = Self.weekdayFormatter.string(from: day)
+				let group = records.filter { calendar.isDate($0.completedAt, inSameDayAs: day) }
 				return (label, group)
 			}
 		case .month:
-			let weeks = ["W1", "W2", "W3", "W4"]
-			return weeks.enumerated().map { index, label in
-				let group = records.filter {
-					let weeksAgo = calendar.dateComponents([.weekOfYear], from: $0.completedAt, to: Date()).weekOfYear ?? 0
-					return weeksAgo == (3 - index)
-				}
+			// Four rolling 7-day windows ending now. Bucketing by absolute date
+			// windows avoids the weekOfYear delta bug that broke across the
+			// year boundary (week 51 → week 2 produced a nonsensical delta).
+			let now = Date()
+			return ["W1", "W2", "W3", "W4"].enumerated().map { index, label in
+				let weeksBack = 3 - index
+				let upper = calendar.date(byAdding: .day, value: -7 * weeksBack, to: now) ?? now
+				let lower = calendar.date(byAdding: .day, value: -7, to: upper) ?? upper
+				let group = records.filter { $0.completedAt > lower && $0.completedAt <= upper }
 				return (label, group)
 			}
 		case .year:
@@ -73,8 +90,6 @@ extension AnalyticsMetricType {
 			return records.map { Double($0.avgPaceSeconds) }.reduce(0, +) / Double(records.count)
 		case .heartRate:
 			return records.map { Double($0.avgHeartRate) }.reduce(0, +) / Double(records.count)
-		case .elevation:
-			return records.map(\.elevationGain).reduce(0, +)
 		case .percentage:
 			return records.map(\.effortPercentage).reduce(0, +) / Double(records.count)
 		}

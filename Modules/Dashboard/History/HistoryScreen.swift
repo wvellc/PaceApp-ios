@@ -155,7 +155,7 @@ private extension HistoryScreen {
 					}
 					.tint(.redBoho)
 					
-						Button {
+					Button {
 						router.navigate(to: .createRunEvent)
 					} label: {
 						Image(systemName: "plus.square.fill.on.square.fill")

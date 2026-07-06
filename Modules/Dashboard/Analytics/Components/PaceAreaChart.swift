@@ -28,6 +28,9 @@ struct PaceAreaChart: View {
     let gradientColors: [Color]
     var showAxes: Bool = false
     var height: CGFloat = 90
+    /// Formats a raw Y value for its metric (e.g. pace → "8:45", HR → "142").
+    /// Defaults to a plain integer so the chart never falls back to a blanket "%".
+    var valueFormat: (Double) -> String = { "\(Int($0.rounded()))" }
 
 	// 1. State to track the currently selected index
 	@State private var selectedIndex: Int? = nil
@@ -75,7 +78,7 @@ struct PaceAreaChart: View {
 						.foregroundStyle(.grayMild)
 						.lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
 						.annotation(position: .top, spacing: 20) {
-							Text("\(Int(selectedPoint.value))%")
+							Text(valueFormat(selectedPoint.value))
 								.font(.semiBold10)
 								.foregroundStyle(.blackApp)
 								.padding(.horizontal, 8)
@@ -107,12 +110,23 @@ struct PaceAreaChart: View {
 
         .chartXAxis {
             if showAxes {
-				AxisMarks(values: .automatic(desiredCount: 7)) { _ in
+				// X is plotted by integer index (for edge-to-edge), so map each
+				// index back to its bucket label. The label already reflects the
+				// selected period — hours for Day, weekdays for Week, W1–W4 for
+				// Month, months for Year.
+				AxisMarks(values: Array(0..<dataPoints.count)) { value in
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 1))
 						.foregroundStyle(.grayLight)
-//                    AxisValueLabel()
-//                        .foregroundStyle(Color.darkCharcoal.opacity(0.45))
-//                        .font(.semiBold10)
+					if let index = value.as(Int.self), dataPoints.indices.contains(index) {
+						// Anchor the two edge labels inward so they aren't clipped
+						// by the plot bounds: the first hugs leading, the last
+						// hugs trailing, the rest stay centred on their tick.
+						AxisValueLabel(anchor: index == 0 ? .topLeading : (index == dataPoints.count - 1 ? .topTrailing : .top)) {
+							Text(dataPoints[index].label)
+								.font(.semiBold10)
+								.foregroundStyle(.grayMild)
+						}
+					}
                 }
             } else {
                 AxisMarks { _ in AxisGridLine().foregroundStyle(Color.clear) }
@@ -120,22 +134,17 @@ struct PaceAreaChart: View {
         }
         .chartYAxis {
             if showAxes {
-                AxisMarks(position: .leading, values: .automatic(desiredCount: 5)) { value in
+                // Y value labels are hidden for now — only the horizontal
+                // gridlines remain. This also frees leading width so the first
+                // X-axis label is no longer pushed off-screen.
+                AxisMarks(position: .leading, values: .automatic(desiredCount: 5)) { _ in
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 1))
 						.foregroundStyle(.grayLight)
-                    AxisValueLabel {
-                        if let v = value.as(Double.self) {
-                            Text("\(Int(v))%")
-                                .font(.semiBold10)
-								.foregroundStyle(.grayMild)
-                        }
-                    }
                 }
             } else {
                 AxisMarks { _ in AxisGridLine().foregroundStyle(Color.clear) }
             }
         }
-        .chartYScale(domain: 0...maxValue)
         .frame(height: height)
     }
 }
@@ -157,9 +166,9 @@ struct PaceAreaChart: View {
 
             // Detail usage with axes
             PaceAreaChart(
-                dataPoints: AnalyticsDummyData.dataPoints(for: .week, metricType: .elevation),
-                accentColor: AnalyticsMetricType.elevation.accentColor,
-                gradientColors: AnalyticsMetricType.elevation.gradientColors,
+                dataPoints: AnalyticsDummyData.dataPoints(for: .week, metricType: .heartRate),
+                accentColor: AnalyticsMetricType.heartRate.accentColor,
+                gradientColors: AnalyticsMetricType.heartRate.gradientColors,
                 showAxes: true,
                 height: 180
             )
