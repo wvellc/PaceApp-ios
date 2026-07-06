@@ -34,6 +34,7 @@ struct HomeMetricCard: View {
 						.minimumScaleFactor(0.75)
 						.scaleEffect(isHighPerformance ? 1.0 : 0.98)
 						.opacity(1.0)
+						.contentTransition(.opacity)
 						.animation(.easeInOut(duration: 0.25), value: isHighPerformance)
 
 					Text(metric.unit)
@@ -43,6 +44,7 @@ struct HomeMetricCard: View {
 						.multilineTextAlignment(.center)
 						.scaleEffect(isHighPerformance ? 1.0 : 0.98)
 						.opacity(0.98)
+						.contentTransition(.opacity)
 						.animation(.easeInOut(duration: 0.25), value: isHighPerformance)
 				}
 			}

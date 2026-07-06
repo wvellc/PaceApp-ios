@@ -15,8 +15,7 @@ struct HomeScreen: View {
 	// MARK: - State
 	
 	@State private var viewModel = HomeViewModel()
-	@State private var recentActivities = []
-	
+
 	let runActions: [RunAction] = [
 		RunAction(title: .newRun,      symbol: "icNewRun",      rout: .createRunEvent),
 		RunAction(title: .favoriteRun, symbol: "icFavoriteRun", rout: .favoritesRun),
@@ -36,20 +35,7 @@ struct HomeScreen: View {
 			VStack(alignment: .leading, spacing: 0) {
 				
 				// MARK: Navigation bar
-				AppNavigation(trailing: {
-//					Button {
-//						router.navigate(to: .notifications)
-//					} label: {
-//						RoundedRectangle(cornerRadius: 100)
-//							.frame(width: 40, height: 40)
-//							.foregroundStyle(.whiteApp)
-//							.overlay {
-//								Image(.icNotification)
-//									.resizable()
-//									.frame(width: 20, height: 20)
-//							}
-//					}
-				})
+				AppNavigation()
 				
 				// MARK: Scrollable content
 				ScrollView(showsIndicators: false) {
@@ -72,9 +58,11 @@ struct HomeScreen: View {
 							}
 						} else {
 							VStack(alignment: .leading, spacing: 16) {
-								// Metrics
-								metricRow
-								
+								// Metrics — latest completed event; hidden until one exists.
+								if !viewModel.metrics.isEmpty {
+									metricRow
+								}
+
 								// Run Actions
 								runActionGrid
 								
@@ -143,7 +131,8 @@ struct HomeScreen: View {
 		HStack {
 			ForEach(viewModel.metrics) { metric in
 				if metric.id != viewModel.metrics.first?.id { Spacer() }
-				HomeMetricCard(metric: metric, isHighPerformance: viewModel.isHighPerformance) {
+				// Always rendered in the green (high-performance) style.
+				HomeMetricCard(metric: metric, isHighPerformance: true) {
 					viewModel.didTapMetric(metric)
 				}
 				if metric.id != viewModel.metrics.last?.id  { Spacer() }
@@ -220,7 +209,8 @@ struct HomeScreen: View {
 	/// .onChange(of: connectedDevice) (covers the async restore / pairing path).
 	private func tryShowMetricsPopup() {
 		guard ciqManager.connectedDevice != nil else { return }
-		
+		guard !viewModel.metrics.isEmpty else { return }
+
 		Task { @MainActor in
 			try? await Task.sleep(seconds: 1)
 			viewModel.showMetricPopup = AppSession.canShowMetricsOnboarding
