@@ -40,11 +40,7 @@ enum EventDocumentMapper {
 		let actualDistance = parseDouble(payload["actualDist"])
 		let timeVarianceSeconds = parseSignedTimeVariance((payload["timeVar"] as? String) ?? "")
 		let avgHeartRate = parseInt(payload["avgHeartRate"])
-		let avgPaceSeconds = computeAvgPaceSeconds(
-			actualTimeSeconds: actualTimeSeconds,
-			actualDistance: actualDistance,
-			paces: arrayOfInts(from: payload["paces"])
-		)
+		let avgPaceSeconds = parseInt(payload["avgPace"])     // watch/Firebase value only — never computed locally
 		let effortPercentage = computeEffortPercentage(
 			goalTimeSeconds: goalTimeSeconds,
 			actualTimeSeconds: actualTimeSeconds
@@ -64,8 +60,7 @@ enum EventDocumentMapper {
 			)
 		}
 
-		// Parse coordinates leniently and encode via PolylineCodec
-//		let coordsPayload = arrayOfDicts(from: payload["coordinates"]) // watch uses ["lat":, "lng":] or we can just iterate [Any]
+		// Parse coordinates leniently and encode via PolylineCodec.
 		var coordinates = [CLLocationCoordinate2D]()
 		if let anyCoords = payload["coordinates"] as? [Any] {
 			for item in anyCoords {
@@ -142,7 +137,7 @@ enum EventDocumentMapper {
 			date: document.scheduledAt.dateValue(),
 			distance: distanceText,
 			duration: durationStr,
-			avgPace: "",
+			avgPace: document.avgPaceSeconds ?? 0,
 			delta: timeVarStr,
 			deltaColor: deltaColor,
 			location: document.location,
@@ -354,18 +349,6 @@ enum EventDocumentMapper {
 			case .walking: return .walking
 			default:       return .running
 		}
-	}
-
-	static func computeAvgPaceSeconds(
-		actualTimeSeconds: Int?,
-		actualDistance: Double?,
-		paces: [Int]
-	) -> Int? {
-		if let pace = paces.first {
-			return pace
-		}
-		guard let time = actualTimeSeconds, let distance = actualDistance, distance > 0 else { return nil }
-		return Int(Double(time) / distance)
 	}
 
 	static func computeEffortPercentage(goalTimeSeconds: Int, actualTimeSeconds: Int?) -> Double? {

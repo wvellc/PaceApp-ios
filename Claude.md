@@ -1,13 +1,45 @@
-# PaceApp iOS — Project Intelligence (CLAUDE.md)
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+# PaceApp iOS — Project Intelligence
 
 ## Overview
 
 **PaceApp** is a native iOS running/walking pace-tracking app built with **SwiftUI** (iOS 17+). It pairs with **Garmin ConnectIQ** watches to sync real-time activity data (segments, heart rate, pace, distance) and persists everything to **Firebase** (Auth, Firestore). The app uses a light-mode-only, dark-themed design system built around the **Gilroy** font family and a neon-aqua-on-navy color palette.
 
-- **Bundle ID**: `com.garmin.paceapp`
+- **Bundle ID**: `net.paceapp` (the string `com.garmin.paceapp` in `PaceApp-Info.plist` is a `CFBundleURLName` identifier for the ConnectIQ URL type, **not** the app bundle ID).
 - **Firebase Project**: `thepaceapp`
 - **Minimum iOS**: 17.0
+- **Xcode project**: `PaceApp.xcodeproj` (no `.xcworkspace`; dependencies are Swift Package Manager, not CocoaPods). Scheme: `PaceApp`.
 - **Color Scheme**: Force `.light` — the "dark" look comes from dark background colors, not system dark mode.
+
+---
+
+## Build, Test & Deploy Commands
+
+> There is **no test target** in this project — `Command+U` / `xcodebuild test` will not run anything. Verify changes by building.
+
+**Build (CLI):**
+```bash
+xcodebuild -project PaceApp.xcodeproj -scheme PaceApp \
+  -destination 'platform=iOS Simulator,name=iPhone 16' build
+```
+
+**Preferred in-editor build/log workflow** (this environment exposes Xcode tools):
+- `BuildProject` to compile, then `GetBuildLog` with `severity: error` to read failures.
+- Run this after each batch of file writes.
+
+**Firebase deploy** (requires `firebase-cli`, from repo root):
+```bash
+firebase deploy --only firestore:rules,firestore:indexes   # security rules + composite indexes
+firebase deploy --only hosting                              # email sign-in landing page
+```
+
+**Dependencies** are resolved by Xcode via SPM automatically. To resolve from CLI:
+```bash
+xcodebuild -resolvePackageDependencies -project PaceApp.xcodeproj -scheme PaceApp
+```
 
 ---
 
@@ -724,7 +756,7 @@ Each tab view is held as `@State` to maintain identity across tab switches.
 7. **New root flows** must be added to `RootFlow` enum in `Router+Roots.swift` and handled in `Router.rootView()`.
 8. **Colors**: Use named color assets from `Colors.xcassets` — never hardcode hex values inline.
 9. **Fonts**: Always use the `Font` extension tokens (`.semiBold16`, etc.) — never use `Font.custom("Gilroy-...", size:)` directly in views.
-10. **Bundle ID**: `com.garmin.paceapp` (Garmin-namespaced for ConnectIQ integration).
+10. **Bundle ID**: `net.paceapp`. Do not confuse with `com.garmin.paceapp`, which is only the `CFBundleURLName` for the ConnectIQ `connect://` URL type in `PaceApp-Info.plist`.
 11. **Keyboard dismissal**: Applied globally via `.dismissKeyboardOnTap()` at the NavigationStack level — don't add per-screen.
 12. **Firestore cache**: 500 MB persistent cache configured in AppDelegate — don't reconfigure elsewhere.
 13. **Never declare `@Bindable var viewModel` inside `body`** — always derive `Binding<T>` from a `@State` property to prevent @Observable re-registration feedback loops.
@@ -762,6 +794,9 @@ Each tab view is held as `@State` to maintain identity across tab switches.
 | **ConnectIQ** | `ConnectIQ` | Garmin Connect IQ iOS SDK |
 | **FITSwiftSDK** | `FITSwiftSDK` | Garmin FIT file parsing (pre-existing unresolved build error) |
 | **swift-log** | `Logging` | Structured logging (`Logger.app`) |
+| **CountryPicker** | `CountryPicker` | Country/dial-code picker for phone auth (SURYAKANTSHARMA/CountryPicker) |
+
+> All dependencies are Swift Package Manager. SPM repos: `firebase/firebase-ios-sdk`, `garmin/connectiq-companion-app-sdk-ios`, `apple/swift-log`, `SURYAKANTSHARMA/CountryPicker`.
 
 ---
 

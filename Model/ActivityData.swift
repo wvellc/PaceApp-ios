@@ -25,7 +25,7 @@ struct ActivityData: Identifiable, Hashable {
 	let date: Date
 	let distance: String        // e.g. "5.00 mi" or "10.00 km" — pre-formatted for display
 	let duration: String        // goal time for active events; actual time for completed (HH:MM:SS)
-	let avgPace: String?
+	let avgPace: Int            // average pace in seconds; 0 when unavailable — sourced from the watch/Firebase payload, never computed locally
 	let delta: String?          // time delta display string e.g. "+01:10" or "-00:30"
 	let deltaColor: Color       // .fluorescentMint (negative/ahead) or .redBoho (positive/behind)
 	var location: String
@@ -63,7 +63,7 @@ struct ActivityData: Identifiable, Hashable {
 		date: Date,
 		distance: String,
 		duration: String,
-		avgPace: String,
+		avgPace: Int = 0,
 		delta: String,
 		deltaColor: Color,
 		location: String,
@@ -108,6 +108,12 @@ struct ActivityData: Identifiable, Hashable {
 
 	var displayDate: String {
 		Self.displayDateFormatter.string(from: date)
+	}
+
+	// Average pace formatted as "M:SS" (e.g. "9:00"); "00:00" when unavailable (avgPace == 0).
+	var avgPaceFormatted: String {
+		guard avgPace > 0 else { return "00:00" }
+		return String(format: "%02d:%02d", avgPace / 60, avgPace % 60)
 	}
 
 	// MARK: - Hashable

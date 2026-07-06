@@ -56,7 +56,7 @@ struct PaceRunActivityCard: View {
 
                 Spacer(minLength: 12)
 
-				activityMetric(title: .avgPace, value: activity.avgPace ?? "--:--")
+				activityMetric(title: .avgPace, value: activity.avgPaceFormatted)
             }
         }
         .padding(.horizontal, 14)

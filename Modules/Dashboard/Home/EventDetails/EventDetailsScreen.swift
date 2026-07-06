@@ -128,7 +128,7 @@ activityData: ActivityData(
 			date: makeDate(day: 29, month: 1),
 			distance: "5.00 mi",
 			duration: "05:35:00",
-			avgPace: "9:00 /mi",
+			avgPace: 540,	// 9:00 per mile, in seconds
 			delta: "+01:10",
 			deltaColor: .redBoho,
 			location: "New York City",
