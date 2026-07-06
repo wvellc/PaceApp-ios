@@ -180,15 +180,12 @@ struct HomeScreen: View {
 			
 			VStack(spacing: 16) {
 				ForEach(viewModel.upcomingEvents) { activity in
-					// Push EventDetailsScreen via shared TabNavigationState
-					Button {
-						tabNavState.selectedActivity = activity
-					} label: {
-						UpcomingActivityView(activity: activity)
-					}
-					.buttonStyle(.plain)
-					.swipeActions(edge: .trailing, allowsFullSwipe: false) {
-						Button {
+					// Custom swipe row: `.swipeActions` only works inside a List,
+					// and this section lives in a ScrollView/VStack.
+					SwipeToDeleteRow(
+						// Push EventDetailsScreen via shared TabNavigationState.
+						onTap: { tabNavState.selectedActivity = activity },
+						onDelete: {
 							AppAlertManager.shared.confirmEventDeletion {
 								withAnimation {
 									if let syncId = activity.syncId {
@@ -196,10 +193,9 @@ struct HomeScreen: View {
 									}
 								}
 							}
-						} label: {
-							Image(systemName: "trash.fill")
 						}
-						.tint(.redBoho)
+					) {
+						UpcomingActivityView(activity: activity)
 					}
 				}
 			}
