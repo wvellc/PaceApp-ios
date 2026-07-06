@@ -154,8 +154,9 @@ private extension HistoryScreen {
 					}
 					.tint(.redBoho)
 					
+					// Duplicate: reuse this event's plan as a new upcoming event.
 					Button {
-						router.navigate(to: .createRunEvent)
+						tabNavState.duplicateActivity = activity
 					} label: {
 						Image(systemName: "plus.square.fill.on.square.fill")
 					}

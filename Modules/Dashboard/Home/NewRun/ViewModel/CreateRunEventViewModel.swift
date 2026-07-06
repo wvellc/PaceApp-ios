@@ -75,15 +75,59 @@ class CreateRunEventViewModel {
 
 
 	//MARK: Initializer
-	init(type: CreateEventType = .new) {
-		#if DEBUG
-			eventName = "Pace event"
-			location = "NY City"
-		#endif
+	init(type: CreateEventType = .new, initialData: ActivityData? = nil) {
+		self.type = type
 
 		distanceType = AuthManager.shared.userDetails?.distanceUnit ?? .miles
 
-		self.type = type
+		#if DEBUG
+		if type == .new {
+			eventName = "Pace event"
+			location = "NY City"
+		}
+		#endif
+
+		// Duplicate flow short-circuits at Save on the first step, so every plan
+		// field must be seeded up front — otherwise the copy would use defaults.
+		if let initialData {
+			applyDuplicateSource(initialData)
+		}
+	}
+
+	// MARK: - Duplicate Seeding
+
+	/// Copies a source event's plan into the form for the duplicate flow.
+	/// The date resets to today — a duplicate is a fresh, upcoming event.
+	private func applyDuplicateSource(_ source: ActivityData) {
+		eventName = source.title
+		location  = source.location
+		eventDate = Date()
+
+		if let unit = MeasureUnit(fullName: source.measure) {
+			distanceType = unit
+		}
+
+		// distance is stored pre-formatted ("5.00 mi") — take the numeric prefix.
+		let numeric = source.distance.split(separator: " ").first.map(String.init) ?? source.distance
+		if let value = Double(numeric) {
+			distance = value
+		}
+
+		// goal is "HH:MM:SS".
+		let parts = source.goal.split(separator: ":").map { Int($0) ?? 0 }
+		if parts.count == 3 {
+			goalHours   = parts[0]
+			goalMinutes = parts[1]
+			goalSeconds = parts[2]
+		}
+
+		lookBackIntervals = Int(source.intervals) ?? 1
+
+		if !source.segments.isEmpty {
+			wantsSegments = true
+			segments      = source.segments
+			segmentCount  = source.segments.count
+		}
 	}
 
 

@@ -23,7 +23,7 @@ struct CreateRunEventScreen: View {
 	init(type:CreateEventType = .new, intialData: ActivityData? = nil) {
 		self.type = type
 		self.intialData = intialData
-		_viewModel = State(initialValue: CreateRunEventViewModel(type: type))
+		_viewModel = State(initialValue: CreateRunEventViewModel(type: type, initialData: intialData))
 	}
 
 
@@ -71,12 +71,9 @@ struct CreateRunEventScreen: View {
 		}
 		.appBackground()
 		.onAppear {
+			// Plan fields (incl. duplicate seeding) are set in the ViewModel init;
+			// here we only hand it the router for post-submit navigation.
 			viewModel.router = self.router
-			
-			//FIXME: Remove after FB integration
-			viewModel.eventName = intialData?.title ?? ""
-			viewModel.location = intialData?.location ?? ""
-			viewModel.eventDate = intialData?.date ?? Date()
 		}
 		.navigationBarBackButtonHidden(true)
 		.navigationBarTitleDisplayMode(.inline)

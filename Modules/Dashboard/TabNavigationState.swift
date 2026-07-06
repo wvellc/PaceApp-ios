@@ -18,6 +18,9 @@ final class TabNavigationState {
     /// Activity selected for EventDetailsScreen, consumed by TabBarScreen's destination.
     var selectedActivity: ActivityData?
 
+    /// Activity to duplicate — pushes CreateRunEventScreen in the `.duplicate` flow.
+    var duplicateActivity: ActivityData?
+
     // MARK: - Analytics
 
     /// Metric selected for AnalyticsDetailScreen, consumed by TabBarScreen's destination.

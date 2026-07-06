@@ -102,6 +102,9 @@ struct TabBarScreen: View {
 		.navigationDestination(item: Bindable(tabNavState).selectedActivity) { activity in
 			EventDetailsScreen(activityData: activity)
 		}
+		.navigationDestination(item: Bindable(tabNavState).duplicateActivity) { activity in
+			CreateRunEventScreen(type: .duplicate, intialData: activity)
+		}
 		.navigationDestination(item: Bindable(tabNavState).selectedMetric) { metric in
 			if let vm = tabNavState.analyticsViewModel {
 				AnalyticsDetailScreen(
