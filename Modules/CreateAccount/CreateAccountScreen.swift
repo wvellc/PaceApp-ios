@@ -112,8 +112,9 @@ struct CreateAccountScreen: View {
 					onRunningChange: { viewModel.onRunningGaitChange($0) },
 					onWalkingChange: { viewModel.onWalkingGaitChange($0) }
 				)
-			case .connectStrava:
-				ConnectStravaStepView(viewModel: viewModel)
+			// Hidden for now — Connect Strava step disabled.
+//			case .connectStrava:
+//				ConnectStravaStepView(viewModel: viewModel)
 		}
 	}
 	
