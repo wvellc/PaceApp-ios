@@ -65,7 +65,7 @@ enum EventDocumentMapper {
 		}
 
 		// Parse coordinates leniently and encode via PolylineCodec
-		let coordsPayload = arrayOfDicts(from: payload["coordinates"]) // watch uses ["lat":, "lng":] or we can just iterate [Any]
+//		let coordsPayload = arrayOfDicts(from: payload["coordinates"]) // watch uses ["lat":, "lng":] or we can just iterate [Any]
 		var coordinates = [CLLocationCoordinate2D]()
 		if let anyCoords = payload["coordinates"] as? [Any] {
 			for item in anyCoords {
@@ -338,33 +338,21 @@ enum EventDocumentMapper {
 	}
 
 	static func mapActivityType(_ value: String?) -> String {
-		switch value {
-			case "Walk", "Walking":  return "walking"
-			case "Cycling", "Cycle": return "cycling"
-			default:                 return "running"
-		}
+		return ActivityType(from: value).rawValue
 	}
 
 	static func reverseMapActivityType(_ value: String) -> String {
-		switch value {
-			case "walking": return "Walk"
-			case "cycling": return "Cycling"
-			default:        return "Run"
-		}
+		return ActivityType(from: value).watchString
 	}
 
 	static func displayActivityType(_ value: String) -> String {
-		switch value {
-			case "walking": return "Walking"
-			case "cycling": return "Cycling"
-			default:        return "Run"
-		}
+		return ActivityType(from: value).rawValue
 	}
 
 	static func gaitType(from activityType: String) -> GaitType {
-		switch activityType {
-			case "walking": return .walking
-			default:        return .running
+		switch ActivityType(from: activityType) {
+			case .walking: return .walking
+			default:       return .running
 		}
 	}
 

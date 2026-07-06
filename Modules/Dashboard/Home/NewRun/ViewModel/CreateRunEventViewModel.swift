@@ -67,7 +67,7 @@ class CreateRunEventViewModel {
 	var segmentValidationError: String? = nil
 
 	// MARK: Step – Look-Back Intervals
-	var lookBackIntervals: Int = 13
+	var lookBackIntervals: Int = 1
 	var eventType: ActivityType = .run
 
 	// MARK: Navigation
