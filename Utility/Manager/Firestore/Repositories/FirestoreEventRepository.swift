@@ -19,11 +19,12 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 	// MARK: - Observe
 
 	func observeActiveEvents(userId: String, onChange: @escaping ([ActivityData]) -> Void) -> ListenerRegistrationToken {
-		let start = calendar.startOfDay(for: Date.now)
-
+		// NOTE: No `scheduledAt >= today` filter. An active event whose scheduled
+		// date is in the past but was never completed is still pending — filtering
+		// it out here orphaned it (invisible in Home *and* History). Show every
+		// active event; past-dated ones simply sort to the top as overdue.
 		let query = eventsQuery(userId: userId)
 			.whereField("status", isEqualTo: EventStatus.active.rawValue)
-			.whereField("scheduledAt", isGreaterThanOrEqualTo: Timestamp(date: start))
 			.order(by: "scheduledAt", descending: false)
 
 		let registration = query.addSnapshotListener { [weak self] snapshot, error in
@@ -191,13 +192,28 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 		source: String,
 		userId: String
 	) async throws {
-		let (document, _) = EventDocumentMapper.document(
+		var (document, _) = EventDocumentMapper.document(
 			from: payload,
 			userId: userId,
 			isCompleted: isCompleted,
 			syncStatus: syncStatus,
 			source: source
 		)
+
+		// Immutable-on-sync fields. The same event round-trips app ⇄ watch many
+		// times; each pass rebuilds a full document and `merge: true` would rewrite
+		// every field. `source` (who created it) and `createdAt` (when) are set once
+		// at creation and must never change afterwards — otherwise a phone-created
+		// event echoed back by the watch could flip to "watch". `id` is the document
+		// key, so it is inherently immutable. Carry the stored values forward.
+		let ref = eventRef(eventId: document.id)
+		if let existing = try? await ref.getDocument(source: .default),
+		   existing.exists,
+		   let current = try? existing.data(as: EventDocument.self) {
+			document.source    = current.source
+			document.createdAt = current.createdAt
+		}
+
 		// Segments are embedded in document.segments — single document write, no subcollection.
 		try await write(document: document, merge: true)
 	}

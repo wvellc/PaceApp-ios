@@ -420,6 +420,7 @@ class CreateRunEventViewModel {
             "id": Int(Date().timeIntervalSince1970),
             "syncType": "active",
             "syncStatus": "pending",
+            "source": "phone",   // created in the app — never overwritten by a later sync
 			"name": eventName,
 			"location": location,
 			"date": Self.connectIQDateFormatter.string(from: eventDate),

@@ -652,7 +652,11 @@ class ConnectIQManager: NSObject {
         refreshState()
 
         if let userId = AuthManager.shared.currentUser?.uid {
-            let source = (normalizedPayload["source"] as? String) ?? "phone"
+            // App-created payloads tag themselves "phone" explicitly. A payload that
+            // reaches here without a source can therefore only have come from the
+            // watch, so default to "watch". Either way, the repository preserves the
+            // stored source for events that already exist — this only sets it once.
+            let source = (normalizedPayload["source"] as? String) ?? "watch"
             Task {
                 do {
                     try await FirestoreEventRepository.shared.upsert(
@@ -949,6 +953,7 @@ extension ConnectIQManager: IQAppMessageDelegate {
     /// First tries to dispatch as a sync command; if not recognized,
     /// falls back to treating the message as a raw event record (legacy support).
     func receivedMessage(_ message: Any!, from app: IQApp!) {
+		logger.info("\(String(describing: message))")
         DispatchQueue.main.async {
             if let str = message as? String {
                 self.receivedMessages.append(str)
