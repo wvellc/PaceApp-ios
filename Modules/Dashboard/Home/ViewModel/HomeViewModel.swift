@@ -210,6 +210,7 @@ final class HomeViewModel {
 
 				self.flashShowsDistance.toggle()
 				let face = self.flashShowsDistance ? self.distanceFace(event) : self.finishTimeFace(event)
+				// Simple crossfade between the distance and finish-time faces.
 				withAnimation(.easeInOut(duration: 0.35)) {
 					self.metrics[Self.flashSlotIndex] = face
 				}

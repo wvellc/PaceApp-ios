@@ -31,7 +31,7 @@ struct HomeMetricCard: View {
 						.foregroundStyle(isHighPerformance ? .fluorescentMint : .inferno)
 						.lineLimit(1)
 						.tracking(0.32)
-						.minimumScaleFactor(0.75)
+						.minimumScaleFactor(0.6)
 						.scaleEffect(isHighPerformance ? 1.0 : 0.98)
 						.opacity(1.0)
 						.contentTransition(.opacity)
@@ -48,7 +48,7 @@ struct HomeMetricCard: View {
 						.animation(.easeInOut(duration: 0.25), value: isHighPerformance)
 				}
 			}
-			.padding(.horizontal, 6)
+			.padding(.horizontal, 2)
 			.padding(.vertical, 21)
 			.frame(minWidth: 60,maxWidth: 60, minHeight: 112, maxHeight: 112)
 			.modifier(HomeMetricCardGlassModifier())

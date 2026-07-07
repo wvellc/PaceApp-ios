@@ -33,49 +33,12 @@ struct HomeScreen: View {
 	var body: some View {
 		ZStack {
 			VStack(alignment: .leading, spacing: 0) {
-				
+
 				// MARK: Navigation bar
 				AppNavigation()
-				
-				// MARK: Scrollable content
-				ScrollView(showsIndicators: false) {
-					VStack(alignment: .leading, spacing: 0) {
-						
-						// MARK: Greeting + sync status
-						VStack(alignment: .leading) {
-							Text(greetingText)
-								.font(.bold28)
-								.foregroundColor(.whiteApp)
-							Text(ciqManager.lastSyncLabel)
-								.font(.medium14)
-								.foregroundColor(.white50)
-						}
-						
-						// MARK: Home data & Pair watch view
-						if !ciqManager.isWatchPreviouslyPaired {
-							PairWatchView {
-								router.navigate(to: .manageWatch)
-							}
-						} else {
-							VStack(alignment: .leading, spacing: 16) {
-								// Metrics — latest completed event; hidden until one exists.
-								if !viewModel.metrics.isEmpty {
-									metricRow
-								}
 
-								// Run Actions
-								runActionGrid
-								
-								// Recent Activity
-								UpcomingActivitySection
-							}
-							.padding(.vertical, 16)
-						}
-					}
-					.padding(.horizontal, 16)
-					.padding(.bottom, 18)
-				}
-				.scrollBounceBehavior(.basedOnSize)
+				// MARK: Scrollable content — native List for smooth scroll + swipe.
+				upCommingActivityList
 			}
 			.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 			.appBackground()
@@ -140,6 +103,8 @@ struct HomeScreen: View {
 				HomeMetricCard(metric: metric, isHighPerformance: true) {
 					viewModel.didTapMetric(metric)
 				}
+				// Borderless so each capsule stays tappable inside the List row.
+				.buttonStyle(.borderless)
 				if metric.id != viewModel.metrics.last?.id  { Spacer() }
 			}
 		}
@@ -154,7 +119,8 @@ struct HomeScreen: View {
 		return LazyVGrid(columns: columns, alignment: .center, spacing: spacing) {
 			ForEach(runActions) { action in
 				Button {
-					router.navigate(to: action.rout)
+					ConnectIQManager.shared.forceResync()
+//					router.navigate(to: action.rout)
 				} label: {
 					GeometryReader { geo in
 						RunActionCard(action: action)
@@ -168,24 +134,39 @@ struct HomeScreen: View {
 		.fixedSize(horizontal: false, vertical: true)
 	}
 	
-	// MARK: - Upcoming Activity
-	
-	private var UpcomingActivitySection: some View {
-		VStack(alignment: .leading, spacing: 16) {
-			if !viewModel.upcomingEvents.isEmpty {
+	// MARK: - Upcoming Activity List
+
+	// Whole screen scrolls in one native List: header block + swipeable upcoming rows.
+	private var upCommingActivityList: some View {
+		List {
+			// Header — one self-sizing row, keeps the original layout.
+			headerBlock
+				.listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+				.listRowBackground(Color.clear)
+				.listRowSeparator(.hidden)
+
+			// Upcoming activities — native swipe-to-delete rows.
+			if ciqManager.isWatchPreviouslyPaired, !viewModel.upcomingEvents.isEmpty {
 				Text(.upcomingActivities)
 					.font(.semiBold16)
 					.foregroundColor(.whiteApp)
-			}
-			
-			VStack(spacing: 16) {
+					.listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+					.listRowBackground(Color.clear)
+					.listRowSeparator(.hidden)
+
 				ForEach(viewModel.upcomingEvents) { activity in
-					// Custom swipe row: `.swipeActions` only works inside a List,
-					// and this section lives in a ScrollView/VStack.
-					SwipeToDeleteRow(
+					Button {
 						// Push EventDetailsScreen via shared TabNavigationState.
-						onTap: { tabNavState.selectedActivity = activity },
-						onDelete: {
+						tabNavState.selectedActivity = activity
+					} label: {
+						UpcomingActivityView(activity: activity)
+					}
+					.buttonStyle(.plain)
+					.listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 14, trailing: 16))
+					.listRowBackground(Color.clear)
+					.listRowSeparator(.hidden)
+					.swipeActions(edge: .trailing, allowsFullSwipe: false) {
+						Button {
 							AppAlertManager.shared.confirmEventDeletion {
 								withAnimation {
 									if let syncId = activity.syncId {
@@ -193,11 +174,52 @@ struct HomeScreen: View {
 									}
 								}
 							}
+						} label: {
+							Image(systemName: "trash.fill")
 						}
-					) {
-						UpcomingActivityView(activity: activity)
+						.tint(.redBoho)
 					}
 				}
+			}
+		}
+		.listStyle(.plain)
+		.scrollContentBackground(.hidden)
+		.scrollBounceBehavior(.basedOnSize)
+	}
+
+	// MARK: - Header Block
+
+	// Greeting + sync status, then metrics/actions (or the pair-watch prompt).
+	private var headerBlock: some View {
+		VStack(alignment: .leading, spacing: 0) {
+
+			// Greeting + sync status
+			VStack(alignment: .leading) {
+				Text(greetingText)
+					.font(.bold28)
+					.foregroundColor(.whiteApp)
+				Text(ciqManager.lastSyncLabel)
+					.font(.medium14)
+					.foregroundColor(.white50)
+			}
+
+			// Home data & Pair watch view
+			if !ciqManager.isWatchPreviouslyPaired {
+				PairWatchView {
+					router.navigate(to: .manageWatch)
+				}
+			} else {
+				VStack(alignment: .leading, spacing: 18) {
+					// Metrics — latest completed event; hidden until one exists.
+					if !viewModel.metrics.isEmpty {
+						metricRow
+					}
+
+					// Run Actions
+					runActionGrid
+				}
+				.padding(.top, 16)
+				.padding(.bottom, 8)
 			}
 		}
 	}
