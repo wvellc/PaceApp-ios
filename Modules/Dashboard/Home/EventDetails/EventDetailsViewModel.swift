@@ -240,9 +240,10 @@ final class EventDetailsViewModel {
 		}
 	}
 
-	/// True when there's real GPS route data to display on the map
+	/// True when there's real GPS route data to display on the map.
+	/// Needs at least two points — a single coordinate can't draw a polyline.
 	var hasRouteData: Bool {
-		!routeCoordinates.isEmpty
+		routeCoordinates.count >= 2
 	}
 
 	// MARK: - Favorites
