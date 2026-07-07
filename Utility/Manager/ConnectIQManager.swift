@@ -836,11 +836,35 @@ class ConnectIQManager: NSObject {
         settings["beep_alert"]    = profile.intervalBeep ?? false
         if let gait = profile.gait {
             settings["walking_gait"]         = gait.walkingData.stepLength
-            settings["walking_gait_measure"] = gait.walkingData.unit
+            settings["walking_gait_measure"] = Self.watchGaitUnit(gait.walkingData.unit)
             settings["running_gait"]         = gait.runningData.stepLength
-            settings["running_gait_measure"] = gait.runningData.unit
+            settings["running_gait_measure"] = Self.watchGaitUnit(gait.runningData.unit)
         }
         return settings
+    }
+
+    // MARK: - Gait unit / value conversion (watch ⇄ app)
+
+    /// Watch step-length values can arrive as Double, NSNumber or String ("2.5").
+    private static func settingDouble(_ value: Any?) -> Double? {
+        if let v = value as? Double   { return v }
+        if let v = value as? NSNumber { return v.doubleValue }
+        if let v = value as? String   { return Double(v) }
+        return nil
+    }
+
+    /// Normalises the watch unit ("ft"/"m") to the app's full-word form so it
+    /// matches the gait segment control. Defaults to "Feet" for anything unknown.
+    private static func appGaitUnit(_ raw: Any?) -> String {
+        switch (raw as? String)?.lowercased() {
+        case "m", "meter", "meters", "metre", "metres": return "Meters"
+        default:                                        return "Feet"
+        }
+    }
+
+    /// Inverse of `appGaitUnit` — the compact form the watch expects on the wire.
+    private static func watchGaitUnit(_ unit: String) -> String {
+        unit.lowercased().hasPrefix("m") ? "m" : "ft"
     }
 
     /// Applies settings received from the watch to Firestore (via UserProfileRepository).
@@ -864,17 +888,15 @@ class ConnectIQManager: NSObject {
             }
         }
 
-        // Parse gait fields — only write if all four keys are present
-        let walkingLength  = (settings["walking_gait"] as? Double) ?? (settings["walking_gait"] as? NSNumber).map { $0.doubleValue }
-        let walkingUnit    = settings["walking_gait_measure"] as? String
-        let runningLength  = (settings["running_gait"] as? Double) ?? (settings["running_gait"] as? NSNumber).map { $0.doubleValue }
-        let runningUnit    = settings["running_gait_measure"] as? String
-
-        if let wl = walkingLength, let wu = walkingUnit,
-           let rl = runningLength, let ru = runningUnit {
+        // Parse gait fields. The watch sends step length as a string (e.g. "2.5")
+        // and the unit as "ft"/"m", so parse numbers leniently and normalise the
+        // unit to the app's full-word form ("Feet"/"Meters") that the gait segment
+        // control expects. Write when both step lengths are present.
+        if let wl = Self.settingDouble(settings["walking_gait"]),
+           let rl = Self.settingDouble(settings["running_gait"]) {
             let gait = GaitUserData(
-                walkingData: GaitData(stepLength: wl, unit: wu),
-                runningData: GaitData(stepLength: rl, unit: ru)
+                walkingData: GaitData(stepLength: wl, unit: Self.appGaitUnit(settings["walking_gait_measure"])),
+                runningData: GaitData(stepLength: rl, unit: Self.appGaitUnit(settings["running_gait_measure"]))
             )
             Task {
                 try? await UserProfileRepository.shared.updateGait(gait, userId: userId)
