@@ -234,10 +234,13 @@ final class EventDetailsViewModel {
 	// MARK: - Route Coordinates
 	//
 	var routeCoordinates: [CLLocationCoordinate2D] {
-		activityData?.routeCoordinates ?? []
+		// Drop invalid / (0,0) placeholder points the watch or Firebase send for events without GPS.
+		(activityData?.routeCoordinates ?? []).filter {
+			CLLocationCoordinate2DIsValid($0) && ($0.latitude != 0 || $0.longitude != 0)
+		}
 	}
 
-	/// True when there's GPS route data to display on the map
+	/// True when there's real GPS route data to display on the map
 	var hasRouteData: Bool {
 		!routeCoordinates.isEmpty
 	}
