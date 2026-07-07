@@ -16,7 +16,7 @@ struct PaceRunActivityCard: View {
         VStack(alignment: .leading, spacing: 8) {
             // Header row with run summary and pace delta badge.
             HStack(alignment: .top, spacing: 8) {
-					Image(.icRunLeft)
+					Image(activity.eventType.icon)
 					.frame(width: 38, height: 38)
 
 				VStack(alignment: .leading, spacing: 4) {

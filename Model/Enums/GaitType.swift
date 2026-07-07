@@ -20,4 +20,12 @@ enum GaitType: String, CaseIterable, Identifiable, Equatable {
 			case .running: "Run"
 		}
 	}
+
+	/// Full-word title for screen headers, e.g. "Running Details".
+	var title: String {
+		switch self {
+			case .walking: "Walking"
+			case .running: "Running"
+		}
+	}
 }

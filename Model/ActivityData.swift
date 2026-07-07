@@ -30,6 +30,7 @@ struct ActivityData: Identifiable, Hashable {
 	let deltaColor: Color       // .fluorescentMint (negative/ahead) or .redBoho (positive/behind)
 	var location: String
 	let gaitType: GaitType?
+	let eventType: ActivityType   // run / walk / cycling / other — drives screen titles
 
 	// MARK: - Extended Event Fields
 	let goal: String            // planned goal time as "HH:MM:SS"
@@ -68,6 +69,7 @@ struct ActivityData: Identifiable, Hashable {
 		deltaColor: Color,
 		location: String,
 		gaitType: GaitType = .running,
+		eventType: ActivityType = .run,
 		goal: String = "00:00:00",
 		measure: String = "Miles",
 		intervals: String = "1",
@@ -91,6 +93,7 @@ struct ActivityData: Identifiable, Hashable {
 		self.deltaColor = deltaColor
 		self.location = location
 		self.gaitType = gaitType
+		self.eventType = eventType
 		self.goal = goal
 		self.measure = measure
 		self.intervals = intervals

@@ -58,7 +58,7 @@ struct EventDetailsScreen: View {
 							coordinates: viewModel.routeCoordinates
 						)
 						.navigationBarTitle(
-							"\(activityData?.gaitType?.label ?? "")\(activityData?.gaitType?.label != nil ? " " : "")Details",
+							detailsTitle,
 							displayMode: .inline
 						)
 					} label: {
@@ -95,11 +95,20 @@ struct EventDetailsScreen: View {
 			}
 			
 			ToolbarItem(placement: .principal) {
-				Text("\(activityData?.gaitType?.label ?? "")\(activityData?.gaitType?.label != nil ? " " : "")Details")
+				Text(detailsTitle)
 					.font(.medium16)
 					.foregroundStyle(.whiteApp)
 			}
 		}
+	}
+
+	// MARK: - Title
+
+	/// Screen title, e.g. "Running Details" / "Cycling Details" — driven by the
+	/// event's activity type. Falls back to "Details" when no event is loaded.
+	private var detailsTitle: String {
+		guard let eventType = activityData?.eventType else { return "Details" }
+		return "\(eventType.title) Details"
 	}
 	
 	// MARK: - Bottom Actions

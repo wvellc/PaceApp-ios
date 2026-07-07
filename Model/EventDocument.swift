@@ -68,6 +68,10 @@ struct EventDocument: Codable, Identifiable {
 	// Document ID is always derived from the integer event id.
 	var firestoreDocumentId: String { String(id) }
 	var eventStatus: EventStatus { EventStatus(rawValue: status) ?? .active }
+
+	// Typed accessor for the stored `activityType` string (run/walk/cycling/other),
+	// set by the mapper both when decoding from Firestore and when creating events.
+	var eventType: ActivityType { ActivityType(from: activityType) }
 }
 
 // MARK: - FirestoreFlexibleValue

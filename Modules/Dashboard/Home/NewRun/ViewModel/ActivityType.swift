@@ -5,6 +5,7 @@
 //  Created by FURKAN VIJAPURA on 4/3/26.
 //
 
+import SwiftUI
 
 // MARK: - Event Enums
 enum ActivityType: String, CaseIterable, Codable {
@@ -38,6 +39,26 @@ enum ActivityType: String, CaseIterable, Codable {
         case .cycling: return "Cycling"
         case .other: return "Other"
         case .run: return "Run"
+        }
+    }
+
+    /// Full-word title for screen headers, e.g. "Running Details".
+    var title: String {
+        switch self {
+        case .walking: return "Walking"
+        case .cycling: return "Cycling"
+        case .other: return "Other"
+        case .run: return "Running"
+        }
+    }
+
+    /// Asset icon representing the activity, used in list/upcoming cells.
+    var icon: ImageResource {
+        switch self {
+        case .walking: return .icWalk
+        case .cycling: return .icCycle
+        case .other: return .icOther
+        case .run: return .icRunLeft
         }
     }
 }

@@ -142,6 +142,7 @@ enum EventDocumentMapper {
 			deltaColor: deltaColor,
 			location: document.location,
 			gaitType: gaitType(from: document.activityType),
+			eventType: document.eventType,
 			goal: goalStr,
 			measure: document.measure,
 			intervals: "\(document.lookBackIntervals)",

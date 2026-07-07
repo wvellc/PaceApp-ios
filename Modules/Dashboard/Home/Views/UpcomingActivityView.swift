@@ -13,7 +13,7 @@ struct UpcomingActivityView: View {
 	
 	var body: some View {
 		HStack(alignment: .top) {
-			Image(.icRunLeft)
+			Image(activity.eventType.icon)
 				.frame(width: 35.38, height: 42)
 			
 			VStack(alignment: .leading, spacing: 16) {
