@@ -115,23 +115,22 @@ struct HomeScreen: View {
 	private var runActionGrid: some View {
 		let spacing: CGFloat = 16
 		let columns = Array(repeating: GridItem(.flexible(), spacing: spacing), count: 2)
-		
+		// Deterministic square side (screen − row insets − column gap, halved).
+		// Avoids GeometryReader, which loops UICollectionView sizing inside a List cell.
+		let side = (UIScreen.main.bounds.width - 48) / 2
+
 		return LazyVGrid(columns: columns, alignment: .center, spacing: spacing) {
 			ForEach(runActions) { action in
 				Button {
-					ConnectIQManager.shared.forceResync()
-//					router.navigate(to: action.rout)
+					router.navigate(to: action.rout)
 				} label: {
-					GeometryReader { geo in
-						RunActionCard(action: action)
-							.frame(width: geo.size.width, height: geo.size.width)
-					}
-					.aspectRatio(1, contentMode: .fit)
+					RunActionCard(action: action)
+						.frame(maxWidth: .infinity)
+						.frame(height: side)
 				}
 				.buttonStyle(.plain)
 			}
 		}
-		.fixedSize(horizontal: false, vertical: true)
 	}
 	
 	// MARK: - Upcoming Activity List

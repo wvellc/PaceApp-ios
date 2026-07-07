@@ -16,6 +16,40 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
+## Recent Architecture Notes (current — overrides any stale detail below)
+
+Read this first. Where it disagrees with older sections, this wins.
+
+### Events — one embedded document, no subcollection
+- The event model is **`EventDocument`** (`Model/EventDocument.swift`), stored as a single doc at `events/{id}`. **Segments are an embedded `[RunSegment]` array on the document — there is no `events/{id}/segments` subcollection.** Route GPS is one encoded `routePolyline` string (`PolylineCodec`).
+- Key fields: `status` (`active`/`completed`/`deleted` → `EventStatus`), `syncStatus` (`pending`/`synced`), `source` (`phone`/`watch`), `activityType`, `createdAt`.
+- Repository: **`FirestoreEventRepository.shared`** (protocol namespace: `EventRepository.shared`). The single parse path for raw ConnectIQ `[String: Any]` payloads is **`EventDocumentMapper`** — never parse event dicts anywhere else.
+- **Immutable on sync**: `id` (doc key), `source`, and `createdAt` are set once at creation and must never be rewritten by a later app⇄watch sync. `FirestoreEventRepository.upsert` reloads the existing doc and preserves them. App-created payloads tag `source: "phone"`; a source-less payload arriving through the sync layer is treated as `"watch"`.
+- **Active events ignore date**: `observeActiveEvents` has NO `scheduledAt >= today` filter, so a past-due but still-active event stays visible on Home instead of being orphaned.
+
+### ConnectIQ ⇄ app settings sync
+- Two-way: watch→Firestore via `applyRemoteSettings`; app→watch via `sendSettings()` / `getSettingsPayload()` (message `sync_settings`). Call `sendSettings()` after any app-side settings mutation.
+- **Gait unit/value boundary**: the watch speaks `ft`/`m` and sends step length as a String (`"2.5"`); the app stores full words `Feet`/`Meters` and a `Double`. Convert only at the boundary — `settingDouble` (lenient number), `appGaitUnit` (in), `watchGaitUnit` (out). Internal gait unit is always `"Feet"`/`"Meters"` (matches `AppSegmentedControl` keys).
+- `AuthManager` runs a **live Firestore profile listener** (`startProfileListener`) that keeps `userDetails` current, so watch→Firestore changes appear without relaunch. Screens re-sync their VM on `AuthManager.shared.userDetails` change (see `ProfileScreen`).
+
+### ActivityType carried end-to-end
+- `ActivityType` (`run`/`walking`/`cycling`/`other`) exposes `.title` (header text) and `.icon` (asset). `EventDocument.eventType` is a typed accessor over the stored `activityType` string; `ActivityData.eventType` carries it to the UI (set by `EventDocumentMapper`). Drives the EventDetails title and the Home/History activity-row icons.
+
+### Home is a single native `List`
+- Home is one `List` — a self-sizing header row + upcoming events as rows with native `.swipeActions`. This replaced a `ScrollView` + custom gesture row. History uses the same `List` + `.swipeActions` pattern (the reference for smooth scroll + swipe).
+- **Never put a `GeometryReader` inside a `List`/collection cell** — the unstable self-sizing height crashes with `UICollectionView … recursive layout loop`. Size deterministically (e.g. from `UIScreen.main.bounds.width`).
+- **Buttons inside a `List` row need `.buttonStyle(.borderless)` / `.plain`**, otherwise the row swallows the tap (this is why `runActionGrid` and the metric capsules set an explicit button style).
+
+### EventDetails map
+- Show the route map only when `hasRouteData` == **≥ 2 valid, non-`(0,0)` coordinates**. `routeCoordinates` filters invalid/placeholder points the watch/Firebase send; a single point can't draw a polyline.
+
+### Working style (owner preferences)
+- **Single-line comments** — one concise `//` line over multi-line blocks; keep structure clean. Still preserve `// MARK: -` sections and author headers.
+- **Commit messages** — conventional `type(scope): summary`, but the summary and bullets must be **non-technical and high-level** (what the user experiences), not implementation detail.
+- **Build check** — `xcodebuild -project PaceApp.xcodeproj -scheme PaceApp -destination 'id=<sim-udid>' build`. There is no test target. Get an available iPhone 16-class simulator UDID via `xcrun simctl list devices available`.
+
+---
+
 ## Build, Test & Deploy Commands
 
 > There is **no test target** in this project — `Command+U` / `xcodebuild test` will not run anything. Verify changes by building.
@@ -210,8 +244,8 @@ Utility/Manager/Firestore/
 | Collection | Path | Purpose |
 |---|---|---|
 | `users` | `users/{uid}` | User profiles + gait data (nested `gait` map) + settings (flat fields) |
-| `events` | `events/{eventId}` | Run/walk events with metadata |
-| `segments` | `events/{eventId}/segments/{segmentId}` | Event segment subcollection (HR, pace, cadence, distance arrays) |
+| `events` | `events/{eventId}` | Run/walk events; **segments are embedded on the doc**, plus `routePolyline`, `status`, `syncStatus`, `source` (see Recent Architecture Notes) |
+| ~~`segments`~~ | ~~`events/{eventId}/segments`~~ | **Deprecated** — segments now live as an embedded `[RunSegment]` array on the event document (single-doc write) |
 | `favorites` | `favorites/{favoriteId}` | User favorited events |
 
 ### Repository Interfaces
@@ -618,19 +652,22 @@ AppAlert(
 
 ## Enums Reference
 
-All enums in `Model/Enums/` conform to `String, CaseIterable, Codable, CustomStringConvertible`:
+Enums live in `Model/Enums/` (conformances vary — check the file; not all are `Codable`/`CustomStringConvertible`):
 
 | Enum | Cases | Usage |
 |---|---|---|
-| `GaitType` | `.walk`, `.jog`, `.run` | Gait metric categorization |
+| `GaitType` | `.walking` (`"Walking"`), `.running` (`"Running"`) | Gait mode; `.label` = "Walk"/"Run", `.title` = "Walking"/"Running" |
+| `ActivityType` | `.run`, `.walking`, `.cycling`, `.other` | Event activity; `.title` (header), `.icon` (asset), `.watchString` (wire) |
+| `EventStatus` | `.active`, `.completed`, `.deleted` | Event lifecycle (the `status` field on `EventDocument`) |
 | `PaceTab` | `.home`, `.history`, `.analytics`, `.profile` | Tab bar tabs |
 | `Gender` | `.male`, `.female`, `.other`, `.preferNotToSay` | User profile |
-| `LoginType` | `.phone`, `.email` | Auth method toggle |
+| `LoginType` | `.phoneNumber`, `.email` | Auth method toggle |
 | `WeightUnit` | `.lbs`, `.kg` | Weight display/input |
 | `HeightUnit` | `.feetInches`, `.cm` | Height display/input |
-| `DistanceUnit` | `.miles`, `.km` | Distance display/input |
-| `SyncType` | `.scheduled`, `.inProgress`, `.completed`, `.synced` | Event lifecycle state |
+| `DistanceUnit` / `MeasureUnit` | miles/km | Distance display/input |
 | `RootFlow` | `.splash`, `.welcome`, `.auth`, `.authenticating`, `.accountCreation`, `.dashboard` | Root navigation states |
+
+> Gait step-length unit is stored as the full word `"Feet"`/`"Meters"` (not `ft`/`m` — that's only the watch wire format; see Recent Architecture Notes).
 
 ---
 
@@ -660,7 +697,7 @@ Each tab view is held as `@State` to maintain identity across tab switches.
 | Home/EditEvent | `EditEventViewModel` | `EventRepository.shared` | Update event (pre-populated) |
 | Home/Favorites | `FavoritesViewModel` | `FavoriteRepository.shared` | Fetch/toggle favorites |
 | History | `HistoryViewModel` | `EventRepository.shared` | Fetch completed events, group by date |
-| History/Detail | `EventDetailViewModel` | `EventRepository.shared` | Fetch event + segments subcollection |
+| History/Detail | `EventDetailsViewModel` | `FirestoreEventRepository.shared` / `FirestoreFavoritesRepository.shared` | Show event + embedded segments; toggle favorite; map gated on `hasRouteData` |
 | Analytics | `AnalyticsViewModel` | `AnalyticsRepository` | Aggregate data by period (week/month/year/all) |
 | Analytics/Detail | `AnalyticsDetailViewModel` | `AnalyticsRepository` | Detailed trends and charts |
 | Profile | `ProfileViewModel` | `UserProfileRepository.shared` | Fetch user profile |
@@ -783,6 +820,10 @@ Each tab view is held as `@State` to maintain identity across tab switches.
 | **Timer threading** | `Timer.scheduledTimer` fires off `@MainActor`. Wrap mutations in `Task { @MainActor in ... }`. |
 | **Mapper field loss** | When editing mappers, ensure computed fields (`formattedGoalTime`, `totalGoalSeconds`, `isProfileCompleted`, `contactInfo`) are preserved — they're easily silently dropped. |
 | **Form field loss on tab switch** | ViewModel must be owned at parent scope (`@State`) and injected. Never constructed inline in views. |
+| **`GeometryReader` in a `List` cell** | Crashes at launch: `UICollectionView … recursive layout loop`. Size deterministically (e.g. `UIScreen.main.bounds.width`), never via `GeometryReader` inside a self-sizing row. |
+| **Un-tappable button in a `List` row** | The row swallows the tap. Give buttons `.buttonStyle(.borderless)` / `.plain` so each stays independently tappable. |
+| **`source`/`id` flipping on sync** | `EventDocument.source`, `id`, `createdAt` are write-once. Rely on `FirestoreEventRepository.upsert` preserving them — don't rewrite them from an echoed watch payload. |
+| **Gait unit shows wrong / segment inactive** | Watch sends `ft`/`m` + String numbers; convert with `appGaitUnit`/`watchGaitUnit`/`settingDouble`. App stores `"Feet"`/`"Meters"`. |
 
 ---
 

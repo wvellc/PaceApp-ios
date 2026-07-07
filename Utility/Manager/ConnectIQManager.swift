@@ -975,7 +975,7 @@ extension ConnectIQManager: IQAppMessageDelegate {
     /// First tries to dispatch as a sync command; if not recognized,
     /// falls back to treating the message as a raw event record (legacy support).
     func receivedMessage(_ message: Any!, from app: IQApp!) {
-		logger.info("\(String(describing: message))")
+//		logger.info("\(String(describing: message))")
         DispatchQueue.main.async {
             if let str = message as? String {
                 self.receivedMessages.append(str)
