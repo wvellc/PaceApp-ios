@@ -129,8 +129,9 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 				.whereField("scheduledAt", isLessThan: Timestamp(date: end))
 				.order(by: "scheduledAt", descending: true)
 		} else {
-			// No date or distance filter — just order by completedAt.
-			query = query.order(by: "scheduledAt", descending: true)
+			// No date or distance filter — newest activity first: order by last update
+			// so a freshly edited or synced event jumps to the top of History.
+			query = query.order(by: "updatedAt", descending: true)
 		}
 
 		// ── Pagination ─────────────────────────────────────────────────────────
