@@ -38,6 +38,12 @@ struct EventDetailsScreen: View {
 		.onAppear {
 			logger.debug("Event ID: \(viewModel.activityData?.id.description ?? "Unknown ID")")
 		}
+		// Reflect a name/location edit made on EditEventScreen without a refetch.
+		.onChange(of: EventUpdateCenter.shared.lastUpdate) { _, update in
+			guard let update, update.eventId == viewModel.activityData?.id else { return }
+			viewModel.activityData?.title = update.name
+			viewModel.activityData?.location = update.location
+		}
 		// navigationDestination must live on the root container, never inside
 		// a ScrollView or List — SwiftUI warns and will ignore it in future releases.
 		.navigationDestination(item: $viewModel.showEditScreen) { _ in

@@ -93,6 +93,14 @@ final class HomeViewModel {
 		refreshLatestCompletedMetrics(userId: userId)
 	}
 
+	/// Patches an edited event's name/location on the upcoming list in place — driven
+	/// by `EventUpdateCenter` so a metadata edit reflects instantly without a refetch.
+	func applyMetadataUpdate(eventId: Int, name: String, location: String) {
+		guard let index = upcomingEvents.firstIndex(where: { $0.id == eventId }) else { return }
+		upcomingEvents[index].title = name
+		upcomingEvents[index].location = location
+	}
+
 	// MARK: - Latest Completed Event → Metrics
 
 	/// Fetches the most recent completed event and maps it into the header metric

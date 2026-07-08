@@ -49,6 +49,14 @@ final class FavoritesViewModel {
 		favRuns.removeAll { $0.id == eventId }
 	}
 
+	/// Patches an edited event's name/location in place — driven by `EventUpdateCenter`
+	/// so a metadata edit made elsewhere also reflects on a favorited event.
+	func applyMetadataUpdate(eventId: Int, name: String, location: String) {
+		guard let index = favRuns.firstIndex(where: { $0.id == eventId }) else { return }
+		favRuns[index].title = name
+		favRuns[index].location = location
+	}
+
 	// MARK: - Actions
 	func unFavorite(run: ActivityData, userId: String) async {
 		guard let syncId = run.syncId else {

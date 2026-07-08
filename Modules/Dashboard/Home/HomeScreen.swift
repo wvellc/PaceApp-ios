@@ -75,6 +75,11 @@ struct HomeScreen: View {
 			guard let id, let userId = AuthManager.shared.currentUserID else { return }
 			viewModel.handleEventDeleted(eventId: id, userId: userId)
 		}
+		// Reflect a name/location edit on the upcoming list when edited elsewhere.
+		.onChange(of: EventUpdateCenter.shared.lastUpdate) { _, update in
+			guard let update else { return }
+			viewModel.applyMetadataUpdate(eventId: update.eventId, name: update.name, location: update.location)
+		}
 	}
 	
 	// MARK: - Greeting Text

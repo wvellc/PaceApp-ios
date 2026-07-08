@@ -99,6 +99,11 @@ struct HistoryScreen: View {
 		.onChange(of: EventDeletionCenter.shared.lastDeletedEventId) { _, id in
 			if let id { viewModel.removeLocally(eventId: id) }
 		}
+		// Patch an edited event's name/location in place when edited on EditEventScreen.
+		.onChange(of: EventUpdateCenter.shared.lastUpdate) { _, update in
+			guard let update else { return }
+			viewModel.applyMetadataUpdate(eventId: update.eventId, name: update.name, location: update.location)
+		}
 	}
 }
 

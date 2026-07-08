@@ -259,4 +259,15 @@ final class HistoryViewModel {
 	func removeLocally(eventId: Int) {
 		activities.removeAll { $0.id == eventId }
 	}
+
+	/// Patches an edited event's name/location and floats it to the top — driven by
+	/// `EventUpdateCenter`. The edit bumps the doc's `updatedAt` and History is ordered
+	/// by `updatedAt`, so the just-edited row belongs first (matches a fresh fetch).
+	func applyMetadataUpdate(eventId: Int, name: String, location: String) {
+		guard let index = activities.firstIndex(where: { $0.id == eventId }) else { return }
+		var updated = activities.remove(at: index)
+		updated.title = name
+		updated.location = location
+		activities.insert(updated, at: 0)
+	}
 }

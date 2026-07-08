@@ -73,6 +73,11 @@ struct FavoritesRunScreen: View {
 		.onChange(of: EventDeletionCenter.shared.lastDeletedEventId) { _, id in
 			if let id { viewModel.removeLocally(eventId: id) }
 		}
+		// Reflect a name/location edit made elsewhere on a favorited event.
+		.onChange(of: EventUpdateCenter.shared.lastUpdate) { _, update in
+			guard let update else { return }
+			viewModel.applyMetadataUpdate(eventId: update.eventId, name: update.name, location: update.location)
+		}
 	}
 	
 	// MARK: - Activity List

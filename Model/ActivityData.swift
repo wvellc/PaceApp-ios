@@ -121,12 +121,33 @@ struct ActivityData: Identifiable, Hashable {
 
 	// MARK: - Hashable
 
+	// Identity stays keyed on `id` (stable list identity + navigation hashing).
 	func hash(into hasher: inout Hasher) {
 		hasher.combine(id)
 	}
 
+	// Content-aware equality: SwiftUI List/ForEach skips re-rendering a row when its
+	// value compares equal, so an id-only `==` froze edited/synced rows. Compare the
+	// displayed fields so a name/location edit or watch sync actually refreshes the row.
 	static func == (lhs: ActivityData, rhs: ActivityData) -> Bool {
-		lhs.id == rhs.id
+		lhs.id == rhs.id &&
+		lhs.title == rhs.title &&
+		lhs.location == rhs.location &&
+		lhs.date == rhs.date &&
+		lhs.distance == rhs.distance &&
+		lhs.duration == rhs.duration &&
+		lhs.avgPace == rhs.avgPace &&
+		lhs.delta == rhs.delta &&
+		lhs.goal == rhs.goal &&
+		lhs.measure == rhs.measure &&
+		lhs.intervals == rhs.intervals &&
+		lhs.segmentCount == rhs.segmentCount &&
+		lhs.actualDist == rhs.actualDist &&
+		lhs.timeVar == rhs.timeVar &&
+		lhs.avgHeartRate == rhs.avgHeartRate &&
+		lhs.eventType == rhs.eventType &&
+		lhs.gaitType == rhs.gaitType &&
+		lhs.paces == rhs.paces
 	}
 }
 

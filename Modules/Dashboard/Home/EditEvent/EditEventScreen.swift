@@ -88,22 +88,25 @@ struct EditEventScreen: View {
 			let trimmedName = eventName.trimmingCharacters(in: .whitespaces)
 			let trimmedLocation = location.trimmingCharacters(in: .whitespaces)
 
-			eventData?.title = trimmedName
-			eventData?.location = trimmedLocation
-
+			// Persist to Firebase (synced events round-trip through the watch too).
 			if let syncId = eventData?.syncId {
 				ciqManager.updateEventMetadata(eventId: syncId, name: trimmedName, location: trimmedLocation)
-			} else if let userId = AuthManager.shared.currentUserID {
+			} else if let eventId = eventData?.id, let userId = AuthManager.shared.currentUserID {
 				Task {
 					try? await FirestoreEventRepository.shared.updateMetadata(
-						eventId: Int(Date().timeIntervalSince1970),
+						eventId: eventId,
 						userId: userId,
 						name: trimmedName,
 						location: trimmedLocation
 					)
 				}
 			}
-			
+
+			// Broadcast so open Details + the History list patch in place — no refetch.
+			if let eventId = eventData?.id {
+				EventUpdateCenter.shared.notifyUpdated(eventId: eventId, name: trimmedName, location: trimmedLocation)
+			}
+
 			//Close screen
 			dismiss()
 		}
