@@ -78,8 +78,10 @@ final class AnalyticsViewModel {
 					dataPoints: dataPointsByMetric[.pace] ?? []
 				),
 				AnalyticsSummaryCard(
+					// Best = fastest = smallest pace; ignore 0s (records without pace data)
+					// so a missing value can't win min() and freeze the label at 0:00.
 					title: "Best Pace",
-					value: formatPace(records.map(\.avgPaceSeconds).min() ?? 0),
+					value: formatPace(records.map(\.avgPaceSeconds).filter { $0 > 0 }.min() ?? 0),
 					unit: "min/mi",
 					accentColor: AnalyticsMetricType.pace.accentColor,
 					dataPoints: dataPointsByMetric[.pace] ?? []
