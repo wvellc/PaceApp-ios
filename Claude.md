@@ -45,6 +45,8 @@ Read this first. Where it disagrees with older sections, this wins.
 
 ### Working style (owner preferences)
 - **Single-line comments** — one concise `//` line over multi-line blocks; keep structure clean. Still preserve `// MARK: -` sections and author headers.
+- **Example / flow when needed** — add a short inline example or the data flow only where it genuinely aids understanding (e.g. `// watch "2.5" ft → 2.5 Feet`), not on self-explanatory lines.
+- **At most two comment lines together** — never stack more than two `//` lines in one place; if a block needs more explanation than that, the code is too dense — simplify it instead. (`// MARK: -` headers don't count.)
 - **Commit messages** — conventional `type(scope): summary`, but the summary and bullets must be **non-technical and high-level** (what the user experiences), not implementation detail.
 - **Build check** — `xcodebuild -project PaceApp.xcodeproj -scheme PaceApp -destination 'id=<sim-udid>' build`. There is no test target. Get an available iPhone 16-class simulator UDID via `xcrun simctl list devices available`.
 
@@ -761,7 +763,7 @@ Each tab view is held as `@State` to maintain identity across tab switches.
 - **`// MARK: -`** sections in every file — preserve them
 - **File headers**: Standard Xcode format `//  FileName.swift  //  PaceApp  //  Created by FURKAN VIJAPURA on ...`
 - **Tab indentation**: The project uses **tabs**, not spaces
-- **Comment policy**: Never remove inline comments, `// MARK:` sections, or block comments. Always preserve author headers
+- **Comment policy**: Prefer **single-line** `//` comments; add a short example or flow only when it aids understanding; **never stack more than two comment lines together** (`// MARK:` headers exempt). Never remove existing `// MARK:` sections or author headers
 
 ### Naming Conventions
 
@@ -804,6 +806,7 @@ Each tab view is held as `@State` to maintain identity across tab switches.
 18. **`continueURL` for Firebase email link** — must be path-qualified (e.g., `https://thepaceapp.firebaseapp.com/emailSignIn`), not a bare domain root.
 19. **Form validation** — always centralize in ViewModel, never inline in views. Use `ValidationProvider` methods.
 20. **New forms** — use `AppTextField` and `AppSegmentedControl` from the design system. Never create ad-hoc form components.
+21. **Comment discipline** — write **single-line** `//` comments; include a short example or flow only when it genuinely helps (e.g. `// watch "2.5" ft → 2.5 Feet`); **never stack more than two comment lines together** in one place (`// MARK: -` headers are exempt). If a block needs more, simplify the code. Preserve existing `// MARK: -` sections and author headers.
 
 ---
 
