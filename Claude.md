@@ -48,6 +48,7 @@ Read this first. Where it disagrees with older sections, this wins.
 - **Example / flow when needed** — add a short inline example or the data flow only where it genuinely aids understanding (e.g. `// watch "2.5" ft → 2.5 Feet`), not on self-explanatory lines.
 - **At most two comment lines together** — never stack more than two `//` lines in one place; if a block needs more explanation than that, the code is too dense — simplify it instead. (`// MARK: -` headers don't count.)
 - **Commit messages** — conventional `type(scope): summary`, but the summary and bullets must be **non-technical and high-level** (what the user experiences), not implementation detail.
+- **Sole-author commits** — every commit has a single author (the git logged-in user). **Never** append a `Co-Authored-By:` trailer (no Claude co-author).
 - **Build check** — `xcodebuild -project PaceApp.xcodeproj -scheme PaceApp -destination 'id=<sim-udid>' build`. There is no test target. Get an available iPhone 16-class simulator UDID via `xcrun simctl list devices available`.
 
 ---
@@ -807,6 +808,7 @@ Each tab view is held as `@State` to maintain identity across tab switches.
 19. **Form validation** — always centralize in ViewModel, never inline in views. Use `ValidationProvider` methods.
 20. **New forms** — use `AppTextField` and `AppSegmentedControl` from the design system. Never create ad-hoc form components.
 21. **Comment discipline** — write **single-line** `//` comments; include a short example or flow only when it genuinely helps (e.g. `// watch "2.5" ft → 2.5 Feet`); **never stack more than two comment lines together** in one place (`// MARK: -` headers are exempt). If a block needs more, simplify the code. Preserve existing `// MARK: -` sections and author headers.
+22. **Sole-author commits** — commits always have a single author (the git logged-in user). **Never** add a `Co-Authored-By:` trailer or any second author.
 
 ---
 
@@ -891,7 +893,7 @@ After each batch of file writes: `BuildProject` → `GetBuildLog` with `severity
 
 ### Git Commits
 
-Conventional commits style:
+Conventional commits style — **sole author, no `Co-Authored-By:` trailer**:
 ```
 feat(scope): impactful non-technical summary
 
