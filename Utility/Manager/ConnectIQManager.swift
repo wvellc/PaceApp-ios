@@ -295,16 +295,18 @@ class ConnectIQManager: NSObject {
                 self.registerAndPollStatus(for: device)
             }
             
-            // Persist for cold-launch restore
-            let snapshot = parsedDevices.map {
-                PersistedDevice(
-                    uuidString:   $0.uuid.uuidString,
-                    modelName:    $0.modelName   ?? "",
-                    friendlyName: $0.friendlyName ?? ""
+            // Persist for cold-launch restore. Skip any device without a UUID —
+            // reading the implicitly-unwrapped `uuid` directly would crash.
+            let snapshot = parsedDevices.compactMap { device -> PersistedDevice? in
+                guard let uuid = device.uuid else { return nil }
+                return PersistedDevice(
+                    uuidString:   uuid.uuidString,
+                    modelName:    device.modelName   ?? "",
+                    friendlyName: device.friendlyName ?? ""
                 )
             }
             AppSession.pairedDevices   = snapshot
-            AppSession.pairedWatchUUID = parsedDevices.first?.uuid.uuidString
+            AppSession.pairedWatchUUID = parsedDevices.first?.uuid?.uuidString
             self.isWatchPreviouslyPaired = !snapshot.isEmpty
             
             logger.info("[ConnectIQ] Registered ConnectIQ devices from callback", metadata: [
@@ -321,22 +323,28 @@ class ConnectIQManager: NSObject {
     /// connected app (rederiveConnectedDevice, restoreSession, handleOpenURL) route
     /// here so `register(forAppMessages:)` is never accidentally skipped.
     func connectToApp(device: IQDevice) {
+        // IQDevice.uuid is an implicitly-unwrapped optional — reading it directly
+        // crashes when the SDK hands back a device without one. Unwrap up front.
+        guard let deviceUUID = device.uuid else {
+            logger.error("[ConnectIQ] Skipped connect — device has no UUID")
+            return
+        }
         guard let app = getIQApp(device: device) else {
             logger.error("[ConnectIQ] Failed to build ConnectIQ app for device")
             return
         }
-        
+
         // Unregister previous app if we are switching to a different device
-        if let previous = targetApp, previous.device?.uuid != device.uuid {
+        if let previous = targetApp, previous.device?.uuid != deviceUUID {
             connectIQ?.unregister(forAppMessages: previous, delegate: self)
         }
-        
+
         targetApp = app
         connectIQ?.register(forAppMessages: app, delegate: self)
-        AppSession.pairedWatchUUID = device.uuid.uuidString
+        AppSession.pairedWatchUUID = deviceUUID.uuidString
         isWatchPreviouslyPaired = true
         logger.info("[ConnectIQ] Registered ConnectIQ app messages", metadata: [
-            "device": "\(device.modelName ?? device.uuid.uuidString)"
+            "device": "\(device.modelName ?? deviceUUID.uuidString)"
         ])
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
