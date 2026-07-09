@@ -51,7 +51,8 @@ final class SettingsViewModel {
 	
 	// MARK: - Update Method (Recommended way to change value)
 	func updateDistanceUnit(_ newUnit: MeasureUnit) {
-		guard newUnit != selectedUnit else { return }
+		// The segmented control's binding already set `selectedUnit`, so a
+		// `!= selectedUnit` guard always short-circuits — just persist the new value.
 		selectedUnit = newUnit
 		saveSubject.send(newUnit)
 	}
