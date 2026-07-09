@@ -10,6 +10,7 @@ import SwiftUI
 struct ProfileScreen: View {
 	
 	@Environment(Router.self) private var router
+	@Environment(ConnectIQManager.self) private var ciqManager
 	@State private var viewModel = ProfileViewModel()
 	
 	var body: some View {
@@ -55,6 +56,8 @@ struct ProfileScreen: View {
 		.environment(viewModel)
 		.onAppear {
 			viewModel.loadUserInfoFromSession()
+			// Ask the watch for its latest settings so gait/height/weight refresh on each visit.
+			ciqManager.requestSettings()
 		}
 		// Live refresh: the AuthManager profile listener updates userDetails when
 		// the watch syncs settings to Firestore — re-sync the view model instantly.

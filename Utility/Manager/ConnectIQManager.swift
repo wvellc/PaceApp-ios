@@ -352,6 +352,8 @@ class ConnectIQManager: NSObject {
             self?.forceResync()
             // Forward any events that failed to sync while the watch was out of range
             Task { await self?.resyncPendingEvents() }
+            // Pull the watch's height/weight to sync gait right after connecting.
+            self?.requestSettings()
         }
     }
     
@@ -837,16 +839,20 @@ class ConnectIQManager: NSObject {
     /// Builds a watch-compatible settings payload from the current user profile in AuthManager.
     /// Keys match the watch's Application.Storage keys exactly.
     /// Source of truth is Firestore (cached in AuthManager.currentUserProfile).
-    func getSettingsPayload() -> [String: Any] {
+    // Pass gaitOverride to send a freshly computed gait without waiting on the Firestore
+    // profile listener (e.g. right after deriving gait from the watch's height).
+    func getSettingsPayload(gaitOverride: GaitUserData? = nil) -> [String: Any] {
         guard let profile = AuthManager.shared.userDetails else { return [:] }
         var settings: [String: Any] = [:]
         settings["vibrate_alert"] = profile.intervalVibrate ?? false
         settings["beep_alert"]    = profile.intervalBeep ?? false
-        if let gait = profile.gait {
+        if let gait = gaitOverride ?? profile.gait {
             settings["walking_gait"]         = gait.walkingData.stepLength
             settings["walking_gait_measure"] = Self.watchGaitUnit(gait.walkingData.unit)
+            settings["walking_step_length"]  = GaitStrideCalculator.millimeters(stepLength: gait.walkingData.stepLength, unit: gait.walkingData.unit)
             settings["running_gait"]         = gait.runningData.stepLength
             settings["running_gait_measure"] = Self.watchGaitUnit(gait.runningData.unit)
+            settings["running_step_length"]  = GaitStrideCalculator.millimeters(stepLength: gait.runningData.stepLength, unit: gait.runningData.unit)
         }
         return settings
     }
@@ -896,12 +902,33 @@ class ConnectIQManager: NSObject {
             }
         }
 
-        // Parse gait fields. The watch sends step length as a string (e.g. "2.5")
-        // and the unit as "ft"/"m", so parse numbers leniently and normalise the
-        // unit to the app's full-word form ("Feet"/"Meters") that the gait segment
-        // control expects. Write when both step lengths are present.
-        if let wl = Self.settingDouble(settings["walking_gait"]),
-           let rl = Self.settingDouble(settings["running_gait"]) {
+        // Persist body metrics the watch reports: height in cm, weight in grams → kg.
+        let watchHeightCm = Self.settingDouble(settings["user_height"])
+        let watchWeightKg = Self.settingDouble(settings["user_weight"]).map { $0 / 1000 }
+        if watchHeightCm != nil || watchWeightKg != nil {
+            Task {
+                try? await UserProfileRepository.shared.updateBodyMetrics(heightCm: watchHeightCm, weightKg: watchWeightKg, userId: userId)
+            }
+        }
+
+        // Derive gait from the watch's height (source of truth) — it arrives in a
+        // request_settings response. Compute stride via the standard factors, save, and
+        // push the computed step lengths back so the watch measures distance correctly.
+        if let heightCm = watchHeightCm, heightCm > 0 {
+            let gait = GaitStrideCalculator.gait(
+                heightCm: heightCm,
+                walkingUnit: Self.appGaitUnit(settings["walking_gait_measure"]),
+                runningUnit: Self.appGaitUnit(settings["running_gait_measure"])
+            )
+            sendSettings(gaitOverride: gait)
+            Task {
+                try? await UserProfileRepository.shared.updateGait(gait, userId: userId)
+            }
+        }
+        // Otherwise apply the gait the watch reports. Step length arrives as a string
+        // (e.g. "2.5") with unit "ft"/"m" — parse leniently, normalise to "Feet"/"Meters".
+        else if let wl = Self.settingDouble(settings["walking_gait"]),
+                let rl = Self.settingDouble(settings["running_gait"]) {
             let gait = GaitUserData(
                 walkingData: GaitData(stepLength: wl, unit: Self.appGaitUnit(settings["walking_gait_measure"])),
                 runningData: GaitData(stepLength: rl, unit: Self.appGaitUnit(settings["running_gait_measure"]))
@@ -918,11 +945,20 @@ class ConnectIQManager: NSObject {
 
     /// Sends all current settings to the watch as a sync_settings command.
     /// Reads from Firestore profile (via getSettingsPayload). Call when a setting changes on phone.
-    func sendSettings() {
+    func sendSettings(gaitOverride: GaitUserData? = nil) {
         sendMessage([
             "command": "sync_settings",
             "source": "phone",
-            "settings": getSettingsPayload()
+            "settings": getSettingsPayload(gaitOverride: gaitOverride)
+        ])
+    }
+
+    /// Asks the watch to reply (via sync_settings) with its full settings, including the
+    /// user's height — sent once after a watch connects to seed gait from height.
+    func requestSettings() {
+        sendMessage([
+            "command": "request_settings",
+            "source": "phone"
         ])
     }
     
@@ -983,7 +1019,7 @@ extension ConnectIQManager: IQAppMessageDelegate {
     /// First tries to dispatch as a sync command; if not recognized,
     /// falls back to treating the message as a raw event record (legacy support).
     func receivedMessage(_ message: Any!, from app: IQApp!) {
-//		logger.info("\(String(describing: message))")
+		logger.info("\(String(describing: message))")
         DispatchQueue.main.async {
             if let str = message as? String {
                 self.receivedMessages.append(str)

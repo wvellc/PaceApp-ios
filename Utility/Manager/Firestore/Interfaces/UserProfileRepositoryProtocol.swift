@@ -20,6 +20,8 @@ protocol UserProfileRepositoryProtocol: AnyObject {
     func updateIntervalVibrate(_ enabled: Bool, userId: String) async throws
     func updateIntervalBeep(_ enabled: Bool, userId: String) async throws
     func updateDistanceUnit(_ unit: MeasureUnit, userId: String) async throws
+    /// Merges body metrics synced from the watch. Writes only the values present.
+    func updateBodyMetrics(heightCm: Double?, weightKg: Double?, userId: String) async throws
 }
 
 enum UserProfileRepository {

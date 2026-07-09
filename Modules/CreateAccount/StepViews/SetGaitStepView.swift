@@ -33,28 +33,29 @@ struct SetGaitStepView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            Text(.setYourWalkingStyleToMatchYourPaceAndMood)
+            Text(.setYourWalkingAndRunningStyleToMatchYourPaceAndMood)
                 .font(.medium20)
                 .foregroundColor(.whiteApp)
                 .lineSpacing(10)
                 .multilineTextAlignment(.leading)
 
             VStack(spacing: 24) {
-                // Running gait selector
-                GaitSelectionView(
-                    type: .running,
-                    gender: gender,
-                    initialData: gaitData.runningData,
-                    onChange: onRunningChange
-                )
-
-                // Walking gait selector
+                
+				// Walking gait selector
                 GaitSelectionView(
                     type: .walking,
                     gender: gender,
                     initialData: gaitData.walkingData,
                     onChange: onWalkingChange
                 )
+				
+				// Running gait selector
+				GaitSelectionView(
+					type: .running,
+					gender: gender,
+					initialData: gaitData.runningData,
+					onChange: onRunningChange
+				)
             }
 
             Spacer()
@@ -124,7 +125,9 @@ struct GaitSelectionView: View {
                 selection: $selectedUnit,
                 segments: units.map { (key: $0, title: $0) }
             )
-            .onChange(of: selectedUnit) { _, _ in
+            .onChange(of: selectedUnit) { oldUnit, newUnit in
+                // Convert the shown value so the measurement stays equivalent across units.
+                selectedStepLength = GaitStrideCalculator.convert(selectedStepLength, fromUnit: oldUnit, toUnit: newUnit)
                 notifyChange()
             }
 

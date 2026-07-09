@@ -51,6 +51,12 @@ struct UserModel: Codable, Equatable {
 	/// Preferred distance unit. Firestore key: `distanceUnit`. Default: .miles.
 	var distanceUnit: MeasureUnit?
 
+	/// Body height in centimeters. Firestore key: `heightCm`. Synced from the watch.
+	var heightCm: Double?
+
+	/// Body weight in kilograms. Firestore key: `weightKg`. Synced from the watch.
+	var weightKg: Double?
+
 	/// Timestamp of last Garmin sync — written by the repository, ignored in the app layer.
 	var lastSyncedAt: Date?
 
@@ -80,6 +86,7 @@ struct UserModel: Codable, Equatable {
 	enum CodingKeys: String, CodingKey {
 		case uuid, firstName, lastName, gender, email, phoneNumber
 		case gait, intervalVibrate, intervalBeep, distanceUnit, lastSyncedAt
+		case heightCm, weightKg
 	}
 
 	// Custom decode: empty strings stored in Firestore become nil, and raw
@@ -95,6 +102,8 @@ struct UserModel: Codable, Equatable {
 		intervalVibrate = try? c.decode(Bool.self, forKey: .intervalVibrate)
 		intervalBeep    = try? c.decode(Bool.self, forKey: .intervalBeep)
 		gait            = try? c.decode(GaitUserData.self, forKey: .gait)
+		heightCm        = try? c.decode(Double.self, forKey: .heightCm)
+		weightKg        = try? c.decode(Double.self, forKey: .weightKg)
 
 		// Gender: raw string "Male"/"Female"/"Other"
 		if let raw = (try? c.decode(String.self, forKey: .gender))?.nilIfEmpty {
@@ -122,6 +131,8 @@ struct UserModel: Codable, Equatable {
 		try c.encodeIfPresent(gait,              forKey: .gait)
 		try c.encodeIfPresent(intervalVibrate,   forKey: .intervalVibrate)
 		try c.encodeIfPresent(intervalBeep,      forKey: .intervalBeep)
+		try c.encodeIfPresent(heightCm,          forKey: .heightCm)
+		try c.encodeIfPresent(weightKg,          forKey: .weightKg)
 		// Write distanceUnit as fullName ("Miles"/"Kilometers") to preserve the existing Firestore shape.
 		try c.encodeIfPresent(distanceUnit?.fullName, forKey: .distanceUnit)
 		// lastSyncedAt is managed exclusively by the repository — never re-encoded from the model.

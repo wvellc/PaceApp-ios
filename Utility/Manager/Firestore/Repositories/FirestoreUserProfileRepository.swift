@@ -118,4 +118,14 @@ final class FirestoreUserProfileRepository: UserProfileRepositoryProtocol {
 			merge: true
 		)
 	}
+
+	/// Merges body metrics (height cm, weight kg) synced from the watch — only the
+	/// values that are present are written, so a missing metric never clears the stored one.
+	func updateBodyMetrics(heightCm: Double?, weightKg: Double?, userId: String) async throws {
+		var data: [String: Any] = [:]
+		if let heightCm { data["heightCm"] = heightCm }
+		if let weightKg { data["weightKg"] = weightKg }
+		guard !data.isEmpty else { return }
+		try await db.collection("users").document(userId).setData(data, merge: true)
+	}
 }

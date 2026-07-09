@@ -32,6 +32,13 @@ Read this first. Where it disagrees with older sections, this wins.
 - **Gait unit/value boundary**: the watch speaks `ft`/`m` and sends step length as a String (`"2.5"`); the app stores full words `Feet`/`Meters` and a `Double`. Convert only at the boundary — `settingDouble` (lenient number), `appGaitUnit` (in), `watchGaitUnit` (out). Internal gait unit is always `"Feet"`/`"Meters"` (matches `AppSegmentedControl` keys).
 - `AuthManager` runs a **live Firestore profile listener** (`startProfileListener`) that keeps `userDetails` current, so watch→Firestore changes appear without relaunch. Screens re-sync their VM on `AuthManager.shared.userDetails` change (see `ProfileScreen`).
 
+### Watch settings request + gait from height
+- **`request_settings`** (`requestSettings()`) asks the watch to reply with a full `sync_settings` payload (its normal syncs omit body metrics). Sent on **watch connect** (in `connectToApp`) and on **every Profile tab appear** (`ProfileScreen.onAppear`).
+- The response carries body-metric keys: `user_height` (cm), `user_weight` (grams), plus `walking_step_length`/`running_step_length` (mm). `applyRemoteSettings` persists `heightCm` + `weightKg` (grams ÷1000) to `UserModel` via `UserProfileRepository.updateBodyMetrics`.
+- **Gait is always derived from `user_height`** (the source of truth) via `GaitStrideCalculator` — walking = height × 0.413, running = height × 0.65 (meters), then converted to the app unit / mm. The watch's `walking_gait`/`running_gait` can be stale, so re-derive whenever `user_height` is present (no one-time gate). Computed step lengths are pushed back to the watch (`sendSettings(gaitOverride:)`) so it measures distance correctly.
+- Trade-off: because gait re-derives from height on each connect / Profile visit, a **manual** Update Gait edit is overwritten. A "manual override" flag would be needed to keep manual edits.
+- `UserModel` now stores `heightCm` / `weightKg` (optional `Double`, metric). Not collected by onboarding yet — currently watch-sourced only.
+
 ### ActivityType carried end-to-end
 - `ActivityType` (`run`/`walking`/`cycling`/`other`) exposes `.title` (header text) and `.icon` (asset). `EventDocument.eventType` is a typed accessor over the stored `activityType` string; `ActivityData.eventType` carries it to the UI (set by `EventDocumentMapper`). Drives the EventDetails title and the Home/History activity-row icons.
 
@@ -720,6 +727,7 @@ Each tab view is held as `@State` to maintain identity across tab switches.
 - **Queries scheme**: `gcm-ciq` in `LSApplicationQueriesSchemes`
 - **Cold launch**: `restoreSessionIfNeeded()` + `resyncPendingEvents()`
 - **Key operations**: `initialize()`, `pairDevice()`, `unpairDevice()`, `sendMessage(_:)`, `handleOpenURL(_:)`
+- **Settings sync**: `sendSettings(gaitOverride:)` (app→watch), `applyRemoteSettings(_:)` (watch→app), `requestSettings()` (ask the watch for its body metrics; see Recent Architecture Notes → Watch settings request + gait from height). Gait math lives in `GaitStrideCalculator` (`Model/`).
 
 ---
 
