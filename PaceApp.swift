@@ -20,6 +20,7 @@ struct PaceApp: App {
 	/// Central router that manages navigation path and destination resolution.
 	@State private var router = Router.shared
 	@State private var ciqManager = ConnectIQManager.shared
+	@State private var stravaManager = StravaManager.shared
 	
 	// MARK: - Initialization
 	
@@ -51,6 +52,7 @@ struct PaceApp: App {
 			.preferredColorScheme(.light)
 			.environment(router)
 			.environment(ciqManager)
+			.environment(stravaManager)
 			.appBackground()
 			.installToast(position: .top)
 			.installAppAlert()
@@ -71,9 +73,15 @@ struct PaceApp: App {
 					return
 				}
 				
-				// Priority 2 — Firebase email sign-in link.
+				// Priority 2 — Strava OAuth callback (native-app handoff).
+				if url.scheme == StravaConst.callbackScheme, url.host == StravaConst.callbackHost {
+					stravaManager.handleOpenURL(url)
+					return
+				}
+
+				// Priority 3 — Firebase email sign-in link.
 				guard AuthManager.shared.isSignIn(withEmailLink: url.absoluteString) else {
-					// Priority 3 — ConnectIQ or other custom schemes.
+					// Priority 4 — ConnectIQ or other custom schemes.
 					ciqManager.handleOpenURL(url)
 					return
 				}

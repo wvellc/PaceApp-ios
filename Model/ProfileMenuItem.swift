@@ -18,6 +18,7 @@ struct ProfileMenuItem: Identifiable {
 
 enum ProfileMenuItemID {
     case manageWatch
+    case stravaIntegration
     case intvlVibrate
     case intvlBeep
     case setGait

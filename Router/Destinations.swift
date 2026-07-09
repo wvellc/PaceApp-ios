@@ -30,5 +30,6 @@ enum Destinations: Hashable, Codable {
 	// MARK: - User settings
 	case updateGait
 	case manageWatch
+	case stravaIntegration
 	case editProfile
 }

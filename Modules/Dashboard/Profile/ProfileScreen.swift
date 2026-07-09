@@ -214,6 +214,8 @@ struct ProfileScreen: View {
 		switch item.id {
 			case .manageWatch:
 				router.navigate(to: .manageWatch)
+			case .stravaIntegration:
+				router.navigate(to: .stravaIntegration)
 			case .setGait:
 				router.navigate(to: .updateGait)
 			default:

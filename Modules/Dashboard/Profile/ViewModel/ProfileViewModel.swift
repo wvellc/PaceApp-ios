@@ -56,6 +56,12 @@ final class ProfileViewModel {
                 type: .navigation
             ),
             ProfileMenuItem(
+                id: .stravaIntegration,
+                icon: .icSync,
+                title: "Connect Strava",
+                type: .navigation
+            ),
+            ProfileMenuItem(
                 id: .intvlVibrate,
                 icon: .icVibrate,
                 title: "Interval Vibrate",
