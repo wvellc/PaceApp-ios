@@ -29,5 +29,11 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.auth.uid == request.resource.data.userId;
     }
+
+    // Strava OAuth tokens — server-only. Cloud Functions (admin SDK) bypass
+    // these rules; clients can never read or write the access/refresh tokens.
+    match /stravaTokens/{userId} {
+      allow read, write: if false;
+    }
   }
 }
