@@ -12,7 +12,8 @@ import Logging
 struct SettingScreen: View {
 	
 	@Environment(Router.self) private var router
-	@State private var viewModel = SettingsViewModel() 
+	@Environment(StravaManager.self) private var strava
+	@State private var viewModel = SettingsViewModel()
 	
 	@State private var selectedMenuItem: SettingsMenuItemID? = nil
 	/// Blocks the whole screen while an account action (delete / logout) runs.
@@ -41,7 +42,10 @@ struct SettingScreen: View {
 					.onChange(of: viewModel.selectedUnit) { _, newValue in
 						viewModel.updateDistanceUnit(newValue)      // Prevents didSet crash + debounced save
 					}
-					
+
+					// Strava connection management
+					stravaSection
+
 					ForEach(viewModel.menuItems) { item in
 						if item.id == .developedBy {
 							DevelopedByView(
@@ -74,6 +78,8 @@ struct SettingScreen: View {
 		}
 		.navigationBarBackButtonHidden(isProcessingAccountAction)
 		.animation(.easeInOut(duration: 0.2), value: isProcessingAccountAction)
+		.animation(.easeInOut(duration: 0.2), value: strava.isConnected)
+		.onAppear { strava.startObserving() }
 		// Phone reauth — enter the OTP sent to the signed-in number, then delete.
 		.sheet(isPresented: $showReauthOTPSheet) {
 			ReauthOTPSheet(phone: reauthContact, verificationID: reauthVerificationID) {
@@ -161,8 +167,75 @@ struct SettingScreen: View {
 		.buttonStyle(.plainSelected())
 	}
 	
+	// MARK: - Strava
+
+	/// Connection status card — connect, reconnect, or disconnect Strava.
+	@ViewBuilder
+	private var stravaSection: some View {
+		VStack(spacing: 14) {
+			HStack(spacing: 16) {
+				Circle()
+					.fill(.neonAquaBlue)
+					.frame(width: 42, height: 42)
+					.overlay {
+						Image(.icSync)
+							.resizable()
+							.renderingMode(.template)
+							.foregroundStyle(.whiteApp)
+							.frame(width: 32, height: 32)
+					}
+
+				VStack(alignment: .leading, spacing: 2) {
+					Text("Strava")
+						.font(.semiBold16)
+						.foregroundStyle(.darkCharcoal)
+					Text(stravaStatusText)
+						.font(.medium14)
+						.foregroundStyle(strava.isConnected ? .fluorescentMint : .fashionGray)
+				}
+				.frame(maxWidth: .infinity, alignment: .leading)
+			}
+
+			if strava.isConnected {
+				HStack(spacing: 12) {
+					stravaActionButton(title: "Reconnect", tint: .radiantBlue) { strava.connect() }
+					stravaActionButton(title: "Disconnect", tint: .redBoho) {
+						Task { await strava.disconnect() }
+					}
+				}
+				// Manual sync — uncomment when needed:
+//				AppButton("Sync recent activities") { Task { await strava.syncRecent() } }
+			} else {
+				AppButton("Connect Strava") { strava.connect() }
+			}
+		}
+		.padding(10)
+		.cardBackground()
+		.disabled(strava.isWorking)
+		.opacity(strava.isWorking ? 0.6 : 1)
+	}
+
+	/// Pill-style secondary action used for Reconnect / Disconnect.
+	private func stravaActionButton(title: String, tint: Color, action: @escaping () -> Void) -> some View {
+		Button(action: action) {
+			Text(title)
+				.font(.semiBold14)
+				.foregroundStyle(tint)
+				.frame(maxWidth: .infinity)
+				.padding(.vertical, 10)
+				.background(tint.opacity(0.12))
+				.clipShape(Capsule())
+		}
+	}
+
+	private var stravaStatusText: String {
+		guard strava.isConnected else { return "Not connected" }
+		if let name = strava.athleteName, !name.isEmpty { return "Connected as \(name)" }
+		return "Connected"
+	}
+
 	// MARK: - Footer
-	
+
 	@ViewBuilder
 	private var footerSection: some View {
 		VStack(spacing: 16) {
@@ -285,4 +358,5 @@ struct SettingScreen: View {
 #Preview {
 	SettingScreen()
 		.environment(Router())
+		.environment(StravaManager.shared)
 }
