@@ -50,6 +50,19 @@ Read this first. Where it disagrees with older sections, this wins.
 ### EventDetails map
 - Show the route map only when `hasRouteData` == **≥ 2 valid, non-`(0,0)` coordinates**. `routeCoordinates` filters invalid/placeholder points the watch/Firebase send; a single point can't draw a polyline.
 
+### Edit propagation (name/location) + live list updates
+- The Firestore write is the source of truth. **`EventUpdateCenter`** broadcasts a name/location edit (mirrors **`EventDeletionCenter`** for deletes); **Home upcoming, History, Favorites, and Event Details** each observe it via `.onChange` and patch the matching row in place — no refetch. History floats the just-edited row to the top (it orders by `updatedAt`).
+- **`ActivityData` uses content-aware `==`** — NOT id-only. SwiftUI `List`/`ForEach` skips re-rendering a row when its value compares equal, so an id-only `==` froze edited/synced rows (title/location never redrew). Keep `Identifiable.id` + `hash(into:)` on `id`, but compare the displayed fields in `==`.
+- **Every event write stamps `updatedAt`** — the mapper's `document(...)` and `updatedDocument(...)` set it to now; `softDelete` uses `serverTimestamp`. History's default (unfiltered) query orders by `userId ASC, status ASC, updatedAt DESC` (composite index required + deployed).
+
+### Account deletion + re-authentication
+- **`AuthManager.deleteAccount()` order matters**: (1) `disconnectFromApp()` FIRST — otherwise live watch sync keeps writing to Firestore mid-deletion and floods `permission denied` once the token is gone; (2) `stopProfileListener()`; (3) **best-effort (`try?`) data cleanup** — a thrown read must never abort before the account is removed; (4) delete the user doc + `user.delete()`; (5) `Auth.auth().signOut()` (clears the keychain session even if delete failed); (6) wipe `userDetails`/`currentUser`/`AppSession`.
+- **Reauth-then-delete, no sign-out**: Firebase `user.delete()` needs a recent login. Settings shows an in-app confirm popup, then reauthenticates inline using the **already signed-in contact** — phone: OTP sheet (`sendReauthOTP` → `reauthenticateWithPhone`); email: link + "check your email" wait sheet, completed in `PaceApp.onOpenURL` gated by `AuthManager.isReauthenticatingForDeletion` (so the returning link is treated as reauth, not a fresh sign-in). `deleteAccount()` runs only after reauth succeeds. Sheets: `Modules/Dashboard/Settings/ReauthDeleteSheets.swift`.
+- **Friendly auth errors**: never surface `error.localizedDescription` to users. Route every auth/sign-in error through **`AuthErrorMapper.message(for:)`** (`Utility/Manager/Auth/`), which maps `AuthErrorCode` + network errors to short non-technical copy.
+
+### Gait unit conversion (Feet ⇄ Meters)
+- `GaitStrideCalculator.convert(_:fromUnit:toUnit:)` converts a step length between `Feet`/`Meters`, snapped to the picker's 1-dp resolution. `GaitSelectionView` calls it on the Meters/Feet segment `.onChange` so the shown value stays the same real measurement — shared by onboarding **SetGaitStepView** and **Profile → UpdateGait** (same component).
+
 ### Working style (owner preferences)
 - **Single-line comments** — one concise `//` line over multi-line blocks; keep structure clean. Still preserve `// MARK: -` sections and author headers.
 - **Example / flow when needed** — add a short inline example or the data flow only where it genuinely aids understanding (e.g. `// watch "2.5" ft → 2.5 Feet`), not on self-explanatory lines.
@@ -837,6 +850,10 @@ Each tab view is held as `@State` to maintain identity across tab switches.
 | **Un-tappable button in a `List` row** | The row swallows the tap. Give buttons `.buttonStyle(.borderless)` / `.plain` so each stays independently tappable. |
 | **`source`/`id` flipping on sync** | `EventDocument.source`, `id`, `createdAt` are write-once. Rely on `FirestoreEventRepository.upsert` preserving them — don't rewrite them from an echoed watch payload. |
 | **Gait unit shows wrong / segment inactive** | Watch sends `ft`/`m` + String numbers; convert with `appGaitUnit`/`watchGaitUnit`/`settingDouble`. App stores `"Feet"`/`"Meters"`. |
+| **Edited list row doesn't refresh** | `ActivityData` id-only `==` makes SwiftUI skip re-rendering the row. Compare displayed fields in `==` (identity/hash stay on `id`). |
+| **`permission denied` flood on account delete** | Firestore writes (watch sync) outlive the auth token. Disconnect the watch + stop writers BEFORE `signOut()`/`user.delete()`; make delete-path reads best-effort so they can't abort. |
+| **`user.delete()` silently fails / account survives** | Firebase needs a recent login. Reauthenticate inline first (`reauthenticateWithPhone` / email link via `isReauthenticatingForDeletion`); don't `try?`-swallow the delete. |
+| **Raw Firebase error shown to user** | Route auth errors through `AuthErrorMapper.message(for:)` — never `error.localizedDescription` in a toast/alert. |
 
 ---
 
