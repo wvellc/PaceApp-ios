@@ -171,6 +171,11 @@ final class AuthManager {
 		guard let user = currentUser else { return }
 		let db  = Firestore.firestore()
 		let uid = user.uid
+
+		//Disconnect the watch first so its live sync can't re-create events or write
+		//to Firestore mid-deletion (which floods "permission denied" once signed out).
+		ConnectIQManager.shared.disconnectFromApp()
+
 		//Events
 		let events    = try await db.collection("events").whereField("userId", isEqualTo: uid).getDocuments()
 		for doc in events.documents    { try? await doc.reference.delete() }
@@ -190,12 +195,11 @@ final class AuthManager {
 		//Guarantee the keychain-persisted auth session is gone even if delete failed
 		try? Auth.auth().signOut()
 
-		//Clear cached profile + all local session, then disconnect the watch
+		//Clear cached profile + all local session
 		stopProfileListener()
 		userDetails = nil
 		currentUser = nil
 		AppSession.removeAllData()
-		ConnectIQManager.shared.disconnectFromApp()
 	}
 	
 	// MARK: - Firestore Sync
