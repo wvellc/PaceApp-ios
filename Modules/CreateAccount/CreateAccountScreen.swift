@@ -56,6 +56,10 @@ struct CreateAccountScreen: View {
 		.onAppear {
 			viewModel.configure(ciqManager: ciqManager)
 		}
+		// Watch reply lands ~0.5s after connect — refresh the gait pickers once it arrives.
+		.onChange(of: AuthManager.shared.userDetails) { _, _ in
+			if viewModel.currentStep == .setGait { viewModel.seedGait() }
+		}
 	}
 	
 	// MARK: - Top Toolbar
@@ -112,6 +116,8 @@ struct CreateAccountScreen: View {
 					onRunningChange: { viewModel.onRunningGaitChange($0) },
 					onWalkingChange: { viewModel.onWalkingGaitChange($0) }
 				)
+				// Re-init the pickers only when gait is re-seeded (entry / watch sync), not on edits.
+				.id(viewModel.gaitSeedToken)
 			// Hidden for now — Connect Strava step disabled.
 //			case .connectStrava:
 //				ConnectStravaStepView(viewModel: viewModel)

@@ -48,8 +48,12 @@ final class CreateAccountViewModel {
     var selectedGait: GaitType = .walking
 
     /// Live gait data being built during onboarding.
-    /// Seeded from gender defaults; updated as the user interacts with SetGaitStepView.
+    /// Seeded from the watch value (height-derived) or gender defaults; updated as the user interacts.
     var gaitData: GaitUserData = Gender.male.defaultGaitData
+
+    /// Bumped only when gait is re-seeded (Set Gait entry / watch sync) so the pickers
+    /// re-init from the new value — user wheel edits don't change it, so scrolling stays smooth.
+    private(set) var gaitSeedToken = 0
 
     // MARK: - Step 6 — Connect Strava
 
@@ -126,6 +130,8 @@ final class CreateAccountViewModel {
         }
 
         if let next = currentStep.next {
+            // Seed gait from the connected watch before Set Gait renders (avoids a flash of defaults).
+            if next == .setGait { seedGait() }
             slideDirection = .forward
             withAnimation(.easeInOut(duration: 0.3)) { currentStep = next }
         } else {
@@ -149,6 +155,7 @@ final class CreateAccountViewModel {
     func onSkip() {
         switch currentStep {
         case .pairWatch, .chooseYourModel:
+            seedGait()
             slideDirection = .forward
             withAnimation(.easeInOut(duration: 0.3)) { currentStep = .setGait }
         default:
@@ -163,6 +170,13 @@ final class CreateAccountViewModel {
 
     private func applyDefaultGaitLengths(for gender: Gender) {
         gaitData = gender.defaultGaitData
+    }
+
+    /// Seeds gait from the watch/Firestore value (height-derived) when available, else
+    /// gender defaults. Called on Set Gait entry and when a live watch sync lands.
+    func seedGait() {
+        gaitData = AuthManager.shared.userDetails?.gait ?? selectedGender.defaultGaitData
+        gaitSeedToken += 1
     }
 
     // MARK: - Validation
