@@ -16,7 +16,8 @@ struct CreateAccountScreen: View {
 	
 	@Environment(Router.self) private var router
 	@Environment(ConnectIQManager.self) private var ciqManager
-	
+	@Environment(StravaManager.self) private var strava
+
 	// MARK: - State
 	
 	@State private var viewModel = CreateAccountViewModel()
@@ -55,10 +56,17 @@ struct CreateAccountScreen: View {
 		}
 		.onAppear {
 			viewModel.configure(ciqManager: ciqManager)
+			strava.startObserving()
 		}
 		// Watch reply lands ~0.5s after connect — refresh the gait pickers once it arrives.
 		.onChange(of: AuthManager.shared.userDetails) { _, _ in
 			if viewModel.currentStep == .setGait { viewModel.seedGait() }
+		}
+		// Finish onboarding automatically once Strava connects on the final step.
+		.onChange(of: strava.isConnected) { _, connected in
+			if connected, viewModel.currentStep == .connectStrava {
+				viewModel.finishOnboarding()
+			}
 		}
 	}
 	
@@ -119,7 +127,7 @@ struct CreateAccountScreen: View {
 				// Re-init the pickers only when gait is re-seeded (entry / watch sync), not on edits.
 				.id(viewModel.gaitSeedToken)
 			case .connectStrava:
-				ConnectStravaStepView(viewModel: viewModel)
+				ConnectStravaStepView()
 		}
 	}
 	

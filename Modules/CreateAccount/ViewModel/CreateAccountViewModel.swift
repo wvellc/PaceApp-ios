@@ -55,10 +55,6 @@ final class CreateAccountViewModel {
     /// re-init from the new value — user wheel edits don't change it, so scrolling stays smooth.
     private(set) var gaitSeedToken = 0
 
-    // MARK: - Step 6 — Connect Strava
-
-    var stravaProfileURL: String = "strava.com/athletes/12345678"
-
     // MARK: - Navigation events
 
     var navigationEvent: NavigationEvent?
@@ -129,6 +125,13 @@ final class CreateAccountViewModel {
             ciqManager?.connectToApp(device: watch)
         }
 
+        if currentStep == .connectStrava {
+            // Same OAuth flow as Profile → Connect Strava. Onboarding completes on
+            // its own once the connection lands (see finishOnboarding).
+            StravaManager.shared.connect()
+            return
+        }
+
         if let next = currentStep.next {
             // Seed gait from the connected watch before Set Gait renders (avoids a flash of defaults).
             if next == .setGait { seedGait() }
@@ -139,6 +142,13 @@ final class CreateAccountViewModel {
             saveGait()
             navigationEvent = .finish
         }
+    }
+
+    /// Persists gait and completes onboarding — called when Strava connects on the
+    /// final step, so the "Connect Strava" tap doesn't need a second "Continue".
+    func finishOnboarding() {
+        saveGait()
+        navigationEvent = .finish
     }
 
     func onBack() {
