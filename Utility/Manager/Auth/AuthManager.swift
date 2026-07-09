@@ -176,19 +176,22 @@ final class AuthManager {
 		//to Firestore mid-deletion (which floods "permission denied" once signed out).
 		ConnectIQManager.shared.disconnectFromApp()
 
-		//Events
-		let events    = try await db.collection("events").whereField("userId", isEqualTo: uid).getDocuments()
-		for doc in events.documents    { try? await doc.reference.delete() }
-		
-		//Favorites
-		let favorites = try await db.collection("favorites").whereField("userId", isEqualTo: uid).getDocuments()
-		for doc in favorites.documents { try? await doc.reference.delete() }
-		
-		//Users (legacy activities subcollection)
-		let legacy    = try await db.collection("users").document(uid).collection("activities").getDocuments()
-		for doc in legacy.documents    { try? await doc.reference.delete() }
+		//Stop the live profile listener so deleting the user doc below doesn't fire it.
+		stopProfileListener()
 
-		//User profile document + Firebase Auth account (delete clears its keychain session)
+		//Best-effort data cleanup — a failed read/write must NOT abort the account
+		//deletion below, else the user doc + Auth account get left behind.
+		if let events = try? await db.collection("events").whereField("userId", isEqualTo: uid).getDocuments() {
+			for doc in events.documents { try? await doc.reference.delete() }
+		}
+		if let favorites = try? await db.collection("favorites").whereField("userId", isEqualTo: uid).getDocuments() {
+			for doc in favorites.documents { try? await doc.reference.delete() }
+		}
+		if let legacy = try? await db.collection("users").document(uid).collection("activities").getDocuments() {
+			for doc in legacy.documents { try? await doc.reference.delete() }
+		}
+
+		//Delete the profile doc, then the Auth account — both while still authenticated.
 		try? await db.collection("users").document(uid).delete()
 		try? await user.delete()
 
@@ -196,7 +199,6 @@ final class AuthManager {
 		try? Auth.auth().signOut()
 
 		//Clear cached profile + all local session
-		stopProfileListener()
 		userDetails = nil
 		currentUser = nil
 		AppSession.removeAllData()
