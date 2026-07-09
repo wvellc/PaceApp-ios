@@ -16,9 +16,8 @@ enum CreateAccountStep: Int, CaseIterable {
 	case chooseYourModel
 	case showConnectedWatch
 	case setGait
-	// Hidden for now — Connect Strava step disabled (setGait is the last step).
-//	case connectStrava
-
+	case connectStrava
+	
 	// MARK: - Navigation helpers
 	
 	/// Returns the next step, or nil when already on the last step.
@@ -41,10 +40,10 @@ enum CreateAccountStep: Int, CaseIterable {
 			case .chooseYourModel:   return "Choose your model"
 			case .showConnectedWatch: return "Pair Watch"
 			case .setGait:           return "Set Gait"
-//			case .connectStrava:     return "Connect Strava"
+			case .connectStrava:     return "Connect Strava"
 		}
 	}
-
+	
 	// MARK: - Footer button
 	/// Label for the primary action button at the bottom of each step.
 	var footerButtonTitle: String {
@@ -54,7 +53,7 @@ enum CreateAccountStep: Int, CaseIterable {
 			case .chooseYourModel:   return "Pair"
 			case .showConnectedWatch: return "Next"
 			case .setGait:           return "Continue"
-//			case .connectStrava:     return "Connect Strava"
+			case .connectStrava:     return "Connect Strava"
 		}
 	}
 	
@@ -63,7 +62,7 @@ enum CreateAccountStep: Int, CaseIterable {
 	
 	var showsSkip: Bool {
 		switch self {
-			case .pairWatch, .chooseYourModel /*, .connectStrava*/: return true
+			case .pairWatch, .chooseYourModel, .connectStrava: return true
 			default: return false
 		}
 	}

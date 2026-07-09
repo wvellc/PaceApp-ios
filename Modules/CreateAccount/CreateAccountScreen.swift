@@ -118,9 +118,8 @@ struct CreateAccountScreen: View {
 				)
 				// Re-init the pickers only when gait is re-seeded (entry / watch sync), not on edits.
 				.id(viewModel.gaitSeedToken)
-			// Hidden for now — Connect Strava step disabled.
-//			case .connectStrava:
-//				ConnectStravaStepView(viewModel: viewModel)
+			case .connectStrava:
+				ConnectStravaStepView(viewModel: viewModel)
 		}
 	}
 	
