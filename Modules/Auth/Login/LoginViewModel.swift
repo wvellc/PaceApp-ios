@@ -87,8 +87,9 @@ final class LoginViewModel {
                 ToastManager.shared.present(.success("Login link sent! Please check your email inbox."))
             }
         } catch {
-            state = .error(error.localizedDescription)
-            ToastManager.shared.present(.error(error.localizedDescription))
+            let message = AuthErrorMapper.message(for: error)
+            state = .error(message)
+            ToastManager.shared.present(.error(message))
         }
     }
 

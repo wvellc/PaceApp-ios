@@ -18,6 +18,12 @@ struct SettingScreen: View {
 	/// Blocks the whole screen while an account action (delete / logout) runs.
 	@State private var isProcessingAccountAction = false
 
+	// Re-authentication (for account deletion) — no sign-out.
+	@State private var showReauthOTPSheet = false
+	@State private var showEmailReauthWait = false
+	@State private var reauthVerificationID = ""
+	@State private var reauthContact = ""
+
 	var body: some View {
 		VStack(spacing: 0) {
 			ScrollView(showsIndicators: false) {
@@ -68,6 +74,19 @@ struct SettingScreen: View {
 		}
 		.navigationBarBackButtonHidden(isProcessingAccountAction)
 		.animation(.easeInOut(duration: 0.2), value: isProcessingAccountAction)
+		// Phone reauth — enter the OTP sent to the signed-in number, then delete.
+		.sheet(isPresented: $showReauthOTPSheet) {
+			ReauthOTPSheet(phone: reauthContact, verificationID: reauthVerificationID) {
+				performDelete()
+			}
+		}
+		// Email reauth — wait while the user taps the link sent to their email.
+		.sheet(isPresented: $showEmailReauthWait) {
+			EmailReauthWaitSheet(email: reauthContact) {
+				AuthManager.shared.isReauthenticatingForDeletion = false
+				showEmailReauthWait = false
+			}
+		}
 	}
 
 	// MARK: - Processing Overlay
@@ -190,12 +209,52 @@ struct SettingScreen: View {
 	}
 	
 	private func handleDeleteAccount() {
+		// In-app popup asks the user to confirm; confirming starts inline re-auth.
 		viewModel.showDeleteAccountAlert {
-			performAccountAction(
-				action: { try await AuthManager.shared.deleteAccount() },
-				errorMessage: "Failed to delete account. Please try again."
-			)
+			beginReauthentication()
 		}
+	}
+
+	/// Verifies it's really the user (OTP for phone, email link for email) before
+	/// deleting — no sign-out. Falls back to a direct delete when the provider is unknown.
+	private func beginReauthentication() {
+		switch AuthManager.shared.authProviderKind {
+		case .phone(let number):
+			isProcessingAccountAction = true
+			Task { @MainActor in
+				defer { isProcessingAccountAction = false }
+				do {
+					reauthVerificationID = try await AuthManager.shared.sendReauthOTP()
+					reauthContact = number
+					showReauthOTPSheet = true
+				} catch {
+					ToastManager.shared.present(.error(AuthErrorMapper.message(for: error)))
+				}
+			}
+
+		case .email(let email):
+			isProcessingAccountAction = true
+			Task { @MainActor in
+				defer { isProcessingAccountAction = false }
+				do {
+					try await AuthManager.shared.sendReauthEmailLink()
+					reauthContact = email
+					showEmailReauthWait = true
+				} catch {
+					ToastManager.shared.present(.error(AuthErrorMapper.message(for: error)))
+				}
+			}
+
+		case .unknown:
+			performDelete()
+		}
+	}
+
+	private func performDelete() {
+		performAccountAction(
+			action: { try await AuthManager.shared.deleteAccount() },
+			errorMessage: "Failed to delete account. Please try again."
+		)
 	}
 	
 	// MARK: - Core Logic

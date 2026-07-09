@@ -78,8 +78,25 @@ struct PaceApp: App {
 					return
 				}
 				
+				// Re-authentication for account deletion — keep the user signed in,
+				// reauthenticate with the link, then delete. No fresh sign-in.
+				if AuthManager.shared.isReauthenticatingForDeletion,
+				   AuthManager.shared.currentUser != nil {
+					Task { @MainActor in
+						do {
+							try await AuthManager.shared.reauthenticateWithEmailLink(link: url.absoluteString)
+							try await AuthManager.shared.deleteAccount()
+							ToastManager.shared.present(.success("Your account has been deleted."))
+						} catch {
+							AuthManager.shared.isReauthenticatingForDeletion = false
+							ToastManager.shared.present(.error(AuthErrorMapper.message(for: error)))
+						}
+					}
+					return
+				}
+
 				let savedEmail = UserDefaults.standard.string(forKey: Keys.emailForSignIn) ?? ""
-				
+
 				guard !savedEmail.isEmpty else {
 					ToastManager.shared.present(
 						.error("Please open this link on the device where you requested it, or request a new login link.")
@@ -117,7 +134,7 @@ struct PaceApp: App {
 						router.setupRootNavigation()
 					} catch {
 						logger.error("Email link sign-in failed: \(error.localizedDescription)")
-						ToastManager.shared.present(.error(error.localizedDescription))
+						ToastManager.shared.present(.error(AuthErrorMapper.message(for: error)))
 						router.setRoot(.auth, forward: false)
 					}
 				}

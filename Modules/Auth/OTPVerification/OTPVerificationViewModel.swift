@@ -96,7 +96,7 @@ final class OTPVerificationViewModel {
                 ToastManager.shared.present(.success("A new code has been sent."))
                 startResendTimer()
             } catch {
-                ToastManager.shared.present(.error(error.localizedDescription))
+                ToastManager.shared.present(.error(AuthErrorMapper.message(for: error)))
             }
             isResending = false
         }
@@ -141,7 +141,7 @@ final class OTPVerificationViewModel {
             } catch {
                 self.isVerifyingOTP = false
                 self.otp = ""
-                ToastManager.shared.present(.error(error.localizedDescription))
+                ToastManager.shared.present(.error(AuthErrorMapper.message(for: error)))
             }
         }
     }

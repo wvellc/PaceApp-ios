@@ -72,10 +72,10 @@ final class SettingsViewModel {
 	func showDeleteAccountAlert(onConfirm: @escaping () -> Void) {
 		AppAlertManager.shared.present(
 			AppAlertModel(
-				title: "Start Fresh?",
-				description: "Create a new Pace App experience anytime. Your next race adventure awaits!",
-				primaryButton: AppAlertButton("Stay With Me"),
-				secondaryButton: AppAlertButton("New Start", action: onConfirm),
+				title: "Delete your account?",
+				description: "Confirm it's you to permanently delete your account. This can't be undone.",
+				primaryButton: AppAlertButton("Cancel"),
+				secondaryButton: AppAlertButton("Delete", action: onConfirm),
 				restrictOutsideTap: false
 			)
 		)

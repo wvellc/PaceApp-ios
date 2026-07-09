@@ -35,6 +35,10 @@ final class AuthManager {
 	
 	/// Held strongly so it isn't released while Firebase awaits reCAPTCHA.
 	private var phoneAuthDelegate: PhoneAuthUIDelegate?
+
+	/// True while an email-link re-authentication (for account deletion) is in flight,
+	/// so the `onOpenURL` handler treats the returning link as reauth, not a fresh sign-in.
+	var isReauthenticatingForDeletion = false
 	
 	var currentUser: User? = Auth.auth().currentUser
 	var userDetails: UserModel?
@@ -166,6 +170,66 @@ final class AuthManager {
 		AppSession.removeAllData() //Clear session from local
 		ConnectIQManager.shared.disconnectFromApp() //Disconnect watch
 	}
+
+	// MARK: - Re-authentication (for account deletion)
+
+	/// How the current user signed in, with the contact used — drives the reauth flow.
+	enum AuthProviderKind: Equatable {
+		case phone(String)
+		case email(String)
+		case unknown
+	}
+
+	var authProviderKind: AuthProviderKind {
+		guard let user = currentUser else { return .unknown }
+		if let phone = user.phoneNumber, !phone.isEmpty { return .phone(phone) }
+		if let email = user.email, !email.isEmpty { return .email(email) }
+		for p in user.providerData {
+			if p.providerID == PhoneAuthProviderID, let ph = p.phoneNumber, !ph.isEmpty { return .phone(ph) }
+			if p.providerID == EmailAuthProviderID, let em = p.email, !em.isEmpty { return .email(em) }
+		}
+		return .unknown
+	}
+
+	/// Sends a fresh OTP to the signed-in user's own phone. Returns the verificationID.
+	func sendReauthOTP() async throws -> String {
+		guard case let .phone(number) = authProviderKind else {
+			throw NSError(domain: "AuthManager", code: -1,
+						  userInfo: [NSLocalizedDescriptionKey: "This account has no phone number to verify."])
+		}
+		return try await sendOTP(phoneNumber: number)
+	}
+
+	/// Re-authenticates the current user with a phone OTP (no sign-out).
+	func reauthenticateWithPhone(verificationID: String, code: String) async throws {
+		guard let user = currentUser else {
+			throw NSError(domain: "AuthManager", code: -1,
+						  userInfo: [NSLocalizedDescriptionKey: "You're not signed in."])
+		}
+		let credential = PhoneAuthProvider.provider().credential(withVerificationID: verificationID, verificationCode: code)
+		try await user.reauthenticate(with: credential)
+	}
+
+	/// Sends a sign-in link to the signed-in user's own email for reauth (no sign-out).
+	func sendReauthEmailLink() async throws {
+		guard case let .email(email) = authProviderKind else {
+			throw NSError(domain: "AuthManager", code: -1,
+						  userInfo: [NSLocalizedDescriptionKey: "This account has no email to verify."])
+		}
+		try await sendEmailLink(email: email)
+		isReauthenticatingForDeletion = true
+	}
+
+	/// Re-authenticates the current user with an email link, then clears the reauth flag.
+	func reauthenticateWithEmailLink(link: String) async throws {
+		guard let user = currentUser, case let .email(email) = authProviderKind else {
+			throw NSError(domain: "AuthManager", code: -1,
+						  userInfo: [NSLocalizedDescriptionKey: "You're not signed in."])
+		}
+		let credential = EmailAuthProvider.credential(withEmail: email, link: link)
+		try await user.reauthenticate(with: credential)
+		isReauthenticatingForDeletion = false
+	}
 	
 	func deleteAccount() async throws {
 		guard let user = currentUser else { return }
@@ -192,8 +256,9 @@ final class AuthManager {
 		}
 
 		//Delete the profile doc, then the Auth account — both while still authenticated.
+		//user.delete() propagates so a rare failure surfaces instead of a silent half-delete.
 		try? await db.collection("users").document(uid).delete()
-		try? await user.delete()
+		try await user.delete()
 
 		//Guarantee the keychain-persisted auth session is gone even if delete failed
 		try? Auth.auth().signOut()
