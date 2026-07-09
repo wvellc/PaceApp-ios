@@ -1,0 +1,11 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "net.paceapp",
+      "sha256_cert_fingerprints":
+        ["CD:6F:DF:8C:A8:98:2E:31:53:12:42:3B:70:27:87:50:62:37:11:A4:D2:60:30:E4:4B:96:97:F4:34:42:52:DC"]
+    }
+  }
+]
