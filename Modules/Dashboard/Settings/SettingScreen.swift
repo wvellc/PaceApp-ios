@@ -15,7 +15,9 @@ struct SettingScreen: View {
 	@State private var viewModel = SettingsViewModel() 
 	
 	@State private var selectedMenuItem: SettingsMenuItemID? = nil
-	
+	/// Blocks the whole screen while an account action (delete / logout) runs.
+	@State private var isProcessingAccountAction = false
+
 	var body: some View {
 		VStack(spacing: 0) {
 			ScrollView(showsIndicators: false) {
@@ -59,6 +61,30 @@ struct SettingScreen: View {
 		.navigationDestination(item: $selectedMenuItem) { item in
 			destinationView(for: item)
 		}
+		// Block interaction + back navigation while deleting/logging out.
+		.disabled(isProcessingAccountAction)
+		.overlay {
+			if isProcessingAccountAction { processingOverlay }
+		}
+		.navigationBarBackButtonHidden(isProcessingAccountAction)
+		.animation(.easeInOut(duration: 0.2), value: isProcessingAccountAction)
+	}
+
+	// MARK: - Processing Overlay
+
+	/// Full-screen dimmer + spinner shown while an account action is in flight.
+	/// The dimmer captures all taps so nothing underneath is interactable.
+	private var processingOverlay: some View {
+		ZStack {
+			Color.black.opacity(0.55)
+				.ignoresSafeArea()
+			ProgressView()
+				.scaleEffect(1.5)
+				.tint(.whiteApp)
+				.padding(28)
+				.background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+		}
+		.transition(.opacity)
 	}
 	
 	// MARK: - Bindings
@@ -179,8 +205,10 @@ struct SettingScreen: View {
 		errorMessage: String
 	) {
 		selectedMenuItem = nil
-		
+		isProcessingAccountAction = true
+
 		Task { @MainActor in
+			defer { isProcessingAccountAction = false }
 			do {
 				try await action()
 				router.setRoot(.auth)

@@ -179,15 +179,22 @@ final class AuthManager {
 		let favorites = try await db.collection("favorites").whereField("userId", isEqualTo: uid).getDocuments()
 		for doc in favorites.documents { try? await doc.reference.delete() }
 		
-		//Users
+		//Users (legacy activities subcollection)
 		let legacy    = try await db.collection("users").document(uid).collection("activities").getDocuments()
 		for doc in legacy.documents    { try? await doc.reference.delete() }
-		
-		//Users
+
+		//User profile document + Firebase Auth account (delete clears its keychain session)
 		try? await db.collection("users").document(uid).delete()
 		try? await user.delete()
-		
-		//Disconnect from users
+
+		//Guarantee the keychain-persisted auth session is gone even if delete failed
+		try? Auth.auth().signOut()
+
+		//Clear cached profile + all local session, then disconnect the watch
+		stopProfileListener()
+		userDetails = nil
+		currentUser = nil
+		AppSession.removeAllData()
 		ConnectIQManager.shared.disconnectFromApp()
 	}
 	
