@@ -22,7 +22,7 @@ enum AnalyticsPeriod: String, CaseIterable, Hashable {
 enum AnalyticsMetricType: String, CaseIterable, Identifiable {
     case pace       = "Avg Pace"
     case heartRate  = "Avg Heart Rate"
-    case percentage = "Avg Efforts"
+    case percentage = "Avg Pace Percentage"
 
     var id: String { rawValue }
 
@@ -60,7 +60,7 @@ enum AnalyticsMetricType: String, CaseIterable, Identifiable {
         switch self {
         case .pace:       return "Avg Pace"
         case .heartRate:  return "Avg Heart Rate"
-        case .percentage: return "Avg Efforts"
+        case .percentage: return "Avg Pace Percentage"
         }
     }
 
@@ -203,7 +203,7 @@ enum AnalyticsDummyData {
         case .percentage:
             return [
                 AnalyticsSummaryCard(
-                    title: "Avg Effort",
+                    title: "Avg Pace Percentage",
                     value: "74",
                     unit: "%",
                     accentColor: AnalyticsMetricType.percentage.accentColor,

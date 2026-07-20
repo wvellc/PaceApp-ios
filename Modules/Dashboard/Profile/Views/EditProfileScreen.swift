@@ -18,7 +18,7 @@ struct EditProfileScreen: View {
 		case lastName
 	}
 
-	var viewModel: ProfileViewModel
+	@State private var viewModel = ProfileViewModel()
 
 	// MARK: - Local edit state
 	@State private var firstName: String = ""
@@ -96,14 +96,20 @@ struct EditProfileScreen: View {
 	
 	@ViewBuilder
 	private var updateButton: some View {
-		
+
 		AppButton(.updateProfile) {
-			viewModel.updateProfile(
-				firstName: firstName,
-				lastName: lastName
-			)
-			
-			dismiss()
+			guard !viewModel.isUpdatingProfile else { return }
+
+			Task {
+				let success = await viewModel.updateProfile(
+					firstName: firstName,
+					lastName: lastName
+				)
+
+				if success {
+					dismiss()
+				}
+			}
 		}
 	}
 }
@@ -111,10 +117,6 @@ struct EditProfileScreen: View {
 // MARK: - Preview
 
 #Preview {
-	
-	@Previewable @State var profileVM = ProfileViewModel()
-
-	EditProfileScreen(viewModel: profileVM)
+	EditProfileScreen()
 		.environment(Router())
-		.environment(ProfileViewModel())
 }
