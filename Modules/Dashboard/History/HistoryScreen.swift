@@ -41,19 +41,29 @@ struct HistoryScreen: View {
 			
 			// Activity List
 			Group {
-				if viewModel.filteredActivities.isEmpty && !viewModel.isLoading {
+				 if viewModel.filteredActivities.isEmpty && (
+					viewModel.isFilterActive || !viewModel.searchText.isEmpty
+				) {
 					Spacer(minLength: 25)
 					NoDataView(
-						icon: .icEmptyHistory,
-						title: .letsGetAfterItPrsAwait,
-						onIconTap: {
-							router.navigate(to: .createRunEvent)
-						}
+						icon: nil,
+						title: .noResultsFound,
+						description: .tryAdjustingYourSearchOrFiltersToFindWhatYoureLookingFor
 					)
 					.transition(.opacity)
 					Spacer(minLength: 25)
 					Spacer()
-				} else if viewModel.isLoading {
+				 } else if viewModel.filteredActivities.isEmpty && !viewModel.isLoading {
+					 Spacer(minLength: 25)
+					 NoDataView(
+						icon: nil,
+						title:.noRunsSoFar,
+						description: .startYourFirstRunToSeeYourProgressHere
+					 )
+					 .transition(.opacity)
+					 Spacer(minLength: 25)
+					 Spacer()
+				 } else if viewModel.isLoading {
 					Spacer()
 					ProgressView()
 						.scaleEffect(1.5)
