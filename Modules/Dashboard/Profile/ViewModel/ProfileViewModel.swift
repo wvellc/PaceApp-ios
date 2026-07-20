@@ -103,21 +103,29 @@ final class ProfileViewModel {
 
     // MARK: - Update Profile Action
 
-    func updateProfile(firstName: String, lastName: String) {
+    var isUpdatingProfile = false
+
+    func updateProfile(firstName: String, lastName: String) async -> Bool {
         let trimmedFirstName = firstName.trimmingCharacters(in: .whitespaces)
         let trimmedLastName  = lastName.trimmingCharacters(in: .whitespaces)
 
-        self.firstName = trimmedFirstName
-        self.lastName  = trimmedLastName
-
-        guard let currentUID = AuthManager.shared.currentUserID else { return }
+        guard let currentUID = AuthManager.shared.currentUserID else { return false }
         var user = AuthManager.shared.userDetails ?? UserModel(uuid: currentUID)
         user.firstName = trimmedFirstName
         user.lastName  = trimmedLastName
-        AuthManager.shared.userDetails = user
 
-        Task {
-            try? await UserProfileRepository.shared.upsertProfile(user, userId: currentUID)
+        isUpdatingProfile = true
+        defer { isUpdatingProfile = false }
+
+        do {
+            try await UserProfileRepository.shared.upsertProfile(user, userId: currentUID)
+            self.firstName = trimmedFirstName
+            self.lastName  = trimmedLastName
+            AuthManager.shared.userDetails = user
+            return true
+        } catch {
+            ToastManager.shared.present(.error("Couldn't update your profile. Please try again."))
+            return false
         }
     }
 

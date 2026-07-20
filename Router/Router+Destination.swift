@@ -76,7 +76,7 @@ extension Router {
 			case .updateGait	: UpdateGaitScreen()
 			case .manageWatch	: ManageWatchScreen()
 			case .stravaIntegration : StravaConnectScreen()
-			case .editProfile	: EditProfileWrapperView()
+			case .editProfile	: EditProfileScreen()
 		}
 	}
 }

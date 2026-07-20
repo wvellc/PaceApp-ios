@@ -52,8 +52,6 @@ struct ProfileScreen: View {
 		}
 		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 		.appBackground()
-		// Inject viewModel for EditProfileWrapperView.
-		.environment(viewModel)
 		.onAppear {
 			viewModel.loadUserInfoFromSession()
 			// Ask the watch for its latest settings so gait/height/weight refresh on each visit.
