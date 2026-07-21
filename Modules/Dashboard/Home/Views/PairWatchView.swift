@@ -54,6 +54,7 @@ struct PairWatchView: View {
                 onGetStarted()
 			}
 			.fadeInUp(isAnimated: $animateContent, delay: 0.42, duration: 0.8, from: 32)
+			.buttonStyle(.plain)
 			
 			VSpace(height: 32)
 		}
