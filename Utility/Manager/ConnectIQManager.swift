@@ -88,9 +88,9 @@ class ConnectIQManager: NSObject {
     var lastWatchSyncDate: Date? = AppSession.lastWatchSyncDate
 
     /// Formatted sync status string for display in the greeting area.
-    /// Returns e.g. "Synced 2 min ago" or "Not Synced Yet!" when nil.
+    /// Returns e.g. "Synced 2 min ago", or a prompt to open the watch app when nil.
     var lastSyncLabel: String {
-        guard let date = lastWatchSyncDate else { return "Not Synced Yet!" }
+        guard let date = lastWatchSyncDate else { return "Open Pace App on your Garmin watch to sync" }
         return "Synced \(date.timeAgoDisplay())"
     }
 
@@ -269,6 +269,7 @@ class ConnectIQManager: NSObject {
     // MARK: - Device discovery
     
     func findDevices() {
+        logger.info("[ConnectIQ] Presenting ConnectIQ device selection")
         connectIQ?.showDeviceSelection()
     }
     
@@ -343,6 +344,11 @@ class ConnectIQManager: NSObject {
         connectIQ?.register(forAppMessages: app, delegate: self)
         AppSession.pairedWatchUUID = deviceUUID.uuidString
         isWatchPreviouslyPaired = true
+
+        // Reset the sync clock on reconnect — the label prompts the user to open
+        // the watch app until a real sync message arrives (lastSyncUpdate).
+        clearLastSyncDate()
+
         logger.info("[ConnectIQ] Registered ConnectIQ app messages", metadata: [
             "device": "\(device.modelName ?? deviceUUID.uuidString)"
         ])
@@ -401,6 +407,7 @@ class ConnectIQManager: NSObject {
     }
     
     func upsertSyncedActivity(_ activity: ActivityData) {
+        logger.info("[ConnectIQ] Upserting synced activity", metadata: ["title": "\(activity.title)"])
         if syncedActivities.contains(where: { existing in
             existing.title == activity.title &&
             existing.date == activity.date &&
@@ -415,10 +422,12 @@ class ConnectIQManager: NSObject {
     }
     
     func upsertSyncedActivity(from payload: [String: Any]) {
+        logger.info("[ConnectIQ] Upserting synced activity from payload", metadata: ["eventId": "\(eventId(from: payload).map(String.init) ?? "nil")"])
         upsertEventPayload(payload, isCompleted: false, syncStatus: "pending")
     }
     
     func deleteSyncedEvent(id: Int) {
+        logger.info("[ConnectIQ] Deleting synced event", metadata: ["eventId": "\(id)"])
         applyDeletedEventId(id)
         sendMessage([
             "command": "delete_event",
@@ -428,6 +437,7 @@ class ConnectIQManager: NSObject {
     }
 
     func updateEventMetadata(eventId targetEventId: Int, name: String, location: String) {
+        logger.info("[ConnectIQ] Updating event metadata", metadata: ["eventId": "\(targetEventId)"])
         var updatedPayload: [String: Any]?
         var isCompleted = false
 
@@ -495,6 +505,12 @@ class ConnectIQManager: NSObject {
 		// persist across restarts
 		lastWatchSyncDate = Date()
 		AppSession.lastWatchSyncDate = lastWatchSyncDate
+	}
+
+	// Clears the sync clock (e.g. on reconnect) so the label prompts to open the watch app.
+	private func clearLastSyncDate() {
+		lastWatchSyncDate = nil
+		AppSession.lastWatchSyncDate = nil
 	}
 
     
@@ -611,6 +627,7 @@ class ConnectIQManager: NSObject {
             return true
 
         default:
+            logger.warning("[ConnectIQ] Received unrecognized sync command", metadata: ["command": "\(command)"])
             return false
         }
 
@@ -650,6 +667,8 @@ class ConnectIQManager: NSObject {
         normalizedPayload["syncStatus"] = syncStatus
         // Remove legacy syncType if present
         normalizedPayload.removeValue(forKey: "syncType")
+
+        logger.info("[ConnectIQ] Upserting event", metadata: ["eventId": "\(id)", "completed": "\(isCompleted)"])
 
         if isCompleted {
             activeEventPayloads.removeAll { eventId(from: $0) == id }
@@ -707,6 +726,7 @@ class ConnectIQManager: NSObject {
     }
 
     private func applyDeletedEventId(_ id: Int) {
+        logger.info("[ConnectIQ] Applying deleted event", metadata: ["eventId": "\(id)"])
         if !deletedEventIds.contains(id) {
             deletedEventIds.append(id)
         }
@@ -890,13 +910,16 @@ class ConnectIQManager: NSObject {
             return
         }
 
-        // Parse vibrate / beep alert booleans
+        // Parse vibrate / beep alert booleans — patch userDetails locally so the
+        // Profile toggles refresh instantly, then persist to Firestore.
         if let vibrate = settings["vibrate_alert"] as? Bool {
+            Task { @MainActor in AuthManager.shared.userDetails?.intervalVibrate = vibrate }
             Task {
                 try? await UserProfileRepository.shared.updateIntervalVibrate(vibrate, userId: userId)
             }
         }
         if let beep = settings["beep_alert"] as? Bool {
+            Task { @MainActor in AuthManager.shared.userDetails?.intervalBeep = beep }
             Task {
                 try? await UserProfileRepository.shared.updateIntervalBeep(beep, userId: userId)
             }

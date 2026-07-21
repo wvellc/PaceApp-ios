@@ -197,14 +197,16 @@ struct HomeScreen: View {
 	private var headerBlock: some View {
 		VStack(alignment: .leading, spacing: 0) {
 
-			// Greeting + sync status
+			// Greeting + sync status — sync label hidden until a watch is paired.
 			VStack(alignment: .leading) {
 				Text(greetingText)
 					.font(.bold28)
 					.foregroundColor(.whiteApp)
-				Text(ciqManager.lastSyncLabel)
-					.font(.medium14)
-					.foregroundColor(.white50)
+				if ciqManager.isWatchPreviouslyPaired {
+					Text(ciqManager.lastSyncLabel)
+						.font(.medium14)
+						.foregroundColor(.white50)
+				}
 			}
 
 			// Home data & Pair watch view
