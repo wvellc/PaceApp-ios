@@ -70,6 +70,7 @@
 		E6C69B732F603EAB00ACED81 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E6C69B722F603EAB00ACED81 /* Colors.xcassets */; };
 		E6D24C132FF7EFBB003A7D30 /* PolylineCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6D24C122FF7EFBB003A7D30 /* PolylineCodec.swift */; };
 		E6F888EF2F9A2FFC00F17F95 /* NoDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6F888EE2F9A2FFC00F17F95 /* NoDataView.swift */; };
+		F75AFF0330122E83009F1DB7 /* SafariView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75AFF0230122E83009F1DB7 /* SafariView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -131,6 +132,7 @@
 		E6C69B722F603EAB00ACED81 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
 		E6D24C122FF7EFBB003A7D30 /* PolylineCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PolylineCodec.swift; sourceTree = "<group>"; };
 		E6F888EE2F9A2FFC00F17F95 /* NoDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoDataView.swift; sourceTree = "<group>"; };
+		F75AFF0230122E83009F1DB7 /* SafariView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -273,6 +275,7 @@
 				E6370ED12F83A70000007CDF /* AppLabel.swift */,
 				E659B8D22FA895990012AC29 /* AppAlert */,
 				E659B8E12FA897FA0012AC29 /* Toasts */,
+				F75AFF0230122E83009F1DB7 /* SafariView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -496,6 +499,7 @@
 				E629AD772FB44F1E00ABF3CD /* Task+Ext.swift in Sources */,
 				18C565AB2F8CE23E007BD365 /* AppDelegate.swift in Sources */,
 				E65D34072FAC5CC4001FB9F4 /* MKCoordinateRegion+Ext.swift in Sources */,
+				F75AFF0330122E83009F1DB7 /* SafariView.swift in Sources */,
 				E6C3328B2F6291C500224AA5 /* Gilroy+Font.swift in Sources */,
 				E6C3328C2F6291C500224AA5 /* AppFonts.swift in Sources */,
 				E6C4BEF82F61849700C17C69 /* LogoWithText.swift in Sources */,

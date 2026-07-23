@@ -27,6 +27,9 @@ struct HomeScreen: View {
 	@Environment(ConnectIQManager.self) private var ciqManager
 	/// Shared navigation state to push destinations from TabBarScreen.
 	@Environment(TabNavigationState.self) private var tabNavState
+
+	/// Presents the FAQ page in an in-app Safari sheet (SFSafariViewController).
+	@State private var showFAQSafari = false
 	
 	// MARK: - Body
 	
@@ -35,7 +38,16 @@ struct HomeScreen: View {
 			VStack(alignment: .leading, spacing: 0) {
 
 				// MARK: Navigation bar
-				AppNavigation()
+                AppNavigation(trailing: {
+                    // MARK: Questions banner — attention-getting entry point to the FAQ.
+                    Button {
+                        showFAQSafari = true
+                    } label: {
+                        Image(systemName: "questionmark.circle")
+                            .font(.title3)
+                            .foregroundStyle(.yellow)
+                    }
+                    .buttonStyle(.plain)                })
 
 				// MARK: Scrollable content — native List for smooth scroll + swipe.
 				upCommingActivityList
@@ -79,6 +91,11 @@ struct HomeScreen: View {
 		.onChange(of: EventUpdateCenter.shared.lastUpdate) { _, update in
 			guard let update else { return }
 			viewModel.applyMetadataUpdate(eventId: update.eventId, name: update.name, location: update.location)
+		}
+		// FAQ — opens in Safari rather than the in-app WebView.
+		.sheet(isPresented: $showFAQSafari) {
+			SafariView(url: URL(string: NetworkConst.WebUrl.faq)!)
+				.ignoresSafeArea()
 		}
 	}
 	

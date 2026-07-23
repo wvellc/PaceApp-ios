@@ -22,7 +22,8 @@ final class SettingsViewModel {
 		SettingsMenuItem(id: .privacyPolicy,   icon: .icPrivacy,           title: .privacyPolicy),
 		SettingsMenuItem(id: .termsConditions, icon: .icTerms,             title: .termsOfService),
 		SettingsMenuItem(id: .licenses,        icon: .icLicense,           title: .licenses),
-		SettingsMenuItem(id: .developedBy,     icon: .icDeveloper,         title: .developedBy),
+        SettingsMenuItem(id: .faq,             icon: .icInfo,              title: .faqs ),
+		SettingsMenuItem(id: .developedBy,     icon: .icDeveloper,         title: .developedBy),	
 	]
 	
 	// MARK: - Combine

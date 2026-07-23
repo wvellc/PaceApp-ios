@@ -220,6 +220,9 @@
     "Event Type" : {
       "extractionState" : "manual"
     },
+    "FAQs" : {
+      "extractionState" : "manual"
+    },
     "Favorite Run" : {
       "extractionState" : "manual",
       "localizations" : {

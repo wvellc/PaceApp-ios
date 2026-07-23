@@ -24,6 +24,9 @@ struct SettingScreen: View {
 	@State private var reauthVerificationID = ""
 	@State private var reauthContact = ""
 
+	/// Presents the FAQ page in an in-app Safari sheet (SFSafariViewController).
+	@State private var showFAQSafari = false
+
 	var body: some View {
 		VStack(spacing: 0) {
 			ScrollView(showsIndicators: false) {
@@ -86,6 +89,11 @@ struct SettingScreen: View {
 				AuthManager.shared.isReauthenticatingForDeletion = false
 				showEmailReauthWait = false
 			}
+		}
+		// FAQ — opens in Safari rather than the in-app WebView.
+		.sheet(isPresented: $showFAQSafari) {
+			SafariView(url: URL(string: NetworkConst.WebUrl.faq)!)
+				.ignoresSafeArea()
 		}
 	}
 
@@ -194,6 +202,8 @@ struct SettingScreen: View {
 				withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
 					viewModel.isDevelopedByExpanded.toggle()
 				}
+			case .faq:
+				showFAQSafari = true
 			case .privacyPolicy, .termsConditions, .licenses:
 				selectedMenuItem = item.id
 		}
