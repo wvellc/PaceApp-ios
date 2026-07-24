@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # PaceApp iOS — Project Intelligence
 
+> Last verified against the codebase on 2026-07-24 (branch `Firebase-Integration`).
+
 ## Overview
 
 **PaceApp** is a native iOS running/walking pace-tracking app built with **SwiftUI** (iOS 17+). It pairs with **Garmin ConnectIQ** watches to sync real-time activity data (segments, heart rate, pace, distance) and persists everything to **Firebase** (Auth, Firestore). The app uses a light-mode-only, dark-themed design system built around the **Gilroy** font family and a neon-aqua-on-navy color palette.
@@ -21,37 +23,46 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Read this first. Where it disagrees with older sections, this wins.
 
 ### Events — one embedded document, no subcollection
-- The event model is **`EventDocument`** (`Model/EventDocument.swift`), stored as a single doc at `events/{id}`. **Segments are an embedded `[RunSegment]` array on the document — there is no `events/{id}/segments` subcollection.** Route GPS is one encoded `routePolyline` string (`PolylineCodec`).
-- Key fields: `status` (`active`/`completed`/`deleted` → `EventStatus`), `syncStatus` (`pending`/`synced`), `source` (`phone`/`watch`), `activityType`, `createdAt`.
-- Repository: **`FirestoreEventRepository.shared`** (protocol namespace: `EventRepository.shared`). The single parse path for raw ConnectIQ `[String: Any]` payloads is **`EventDocumentMapper`** — never parse event dicts anywhere else.
+- The event model is **`EventDocument`** (`Model/EventDocument.swift`, previously named `FirestoreEventDocument`), stored as a single doc at `events/{id}`. **Segments are an embedded `[RunSegment]` array on the document — there is no `events/{id}/segments` subcollection.** Route GPS is one encoded `routePolyline` string (`PolylineCodec`, `Utility/Extensions/PolylineCodec.swift`).
+- Key fields: `status` (`active`/`completed`/`deleted` → `EventStatus`, defined in the same file), `syncStatus` (`pending`/`synced` — plain String, no enum), `source` (`phone`/`watch`), `activityType`, `createdAt`. Variable-shape watch data uses `FirestoreFlexibleValue` (`completedSegments`).
+- Repository: **`FirestoreEventRepository.shared`** (accessor: `EventRepository.shared` enum). The single parse path for raw ConnectIQ `[String: Any]` payloads is **`EventDocumentMapper`** — never parse event dicts anywhere else.
 - **Immutable on sync**: `id` (doc key), `source`, and `createdAt` are set once at creation and must never be rewritten by a later app⇄watch sync. `FirestoreEventRepository.upsert` reloads the existing doc and preserves them. App-created payloads tag `source: "phone"`; a source-less payload arriving through the sync layer is treated as `"watch"`.
 - **Active events ignore date**: `observeActiveEvents` has NO `scheduledAt >= today` filter, so a past-due but still-active event stays visible on Home instead of being orphaned.
 
+### Tab navigation — `TabNavigationState` above the lazy TabView
+- **`TabBarScreen` holds the four tab *screens* (not ViewModels) as `@State`** (`homeScreen`, `historyScreen`, `analyticsScreen`, `profileScreen`) so each screen keeps its identity — and therefore its own `@State` ViewModel — across tab switches. Each screen owns its VM (e.g. `HomeScreen` has `@State private var viewModel = HomeViewModel()`).
+- **`TabNavigationState`** (`Modules/Dashboard/TabNavigationState.swift`, `@Observable`) lifts tab-child routing out of the lazy `TabView`: children write `selectedActivity` / `duplicateActivity` / `selectedMetric` (+ `analyticsViewModel`), and `TabBarScreen` declares the matching `.navigationDestination(item:)` modifiers **outside the TabView**. Event Details, Duplicate Run, and Analytics Detail are pushed this way — they are **not** `Destinations` cases.
+- `PaceTab` cases are `.home`, `.history`, `.stats`, `.profile` (the Analytics tab is `.stats`).
+
 ### ConnectIQ ⇄ app settings sync
 - Two-way: watch→Firestore via `applyRemoteSettings`; app→watch via `sendSettings()` / `getSettingsPayload()` (message `sync_settings`). Call `sendSettings()` after any app-side settings mutation.
+- **Reply echoes in-payload alerts**: when `applyRemoteSettings` answers a height-carrying payload (gait derivation), it builds the `sync_settings` reply from `getSettingsPayload(gaitOverride:)` and **overlays the `vibrate_alert`/`beep_alert` values from the incoming payload** — Firestore may not have persisted them yet, so re-reading the profile would race and echo stale values back to the watch.
 - **Gait unit/value boundary**: the watch speaks `ft`/`m` and sends step length as a String (`"2.5"`); the app stores full words `Feet`/`Meters` and a `Double`. Convert only at the boundary — `settingDouble` (lenient number), `appGaitUnit` (in), `watchGaitUnit` (out). Internal gait unit is always `"Feet"`/`"Meters"` (matches `AppSegmentedControl` keys).
 - `AuthManager` runs a **live Firestore profile listener** (`startProfileListener`) that keeps `userDetails` current, so watch→Firestore changes appear without relaunch. Screens re-sync their VM on `AuthManager.shared.userDetails` change (see `ProfileScreen`).
 
 ### Watch settings request + gait from height
 - **`request_settings`** (`requestSettings()`) asks the watch to reply with a full `sync_settings` payload (its normal syncs omit body metrics). Sent on **watch connect** (in `connectToApp`) and on **every Profile tab appear** (`ProfileScreen.onAppear`).
 - The response carries body-metric keys: `user_height` (cm), `user_weight` (grams), plus `walking_step_length`/`running_step_length` (mm). `applyRemoteSettings` persists `heightCm` + `weightKg` (grams ÷1000) to `UserModel` via `UserProfileRepository.updateBodyMetrics`.
-- **Gait is always derived from `user_height`** (the source of truth) via `GaitStrideCalculator` — walking = height × 0.413, running = height × 0.65 (meters), then converted to the app unit / mm. The watch's `walking_gait`/`running_gait` can be stale, so re-derive whenever `user_height` is present (no one-time gate). Computed step lengths are pushed back to the watch (`sendSettings(gaitOverride:)`) so it measures distance correctly.
+- **Gait is always derived from `user_height`** (the source of truth) via `GaitStrideCalculator` (`Model/GaitStrideCalculator.swift`) — walking = height × 0.413, running = height × 0.65 (meters), then converted to the app unit / mm. The watch's `walking_gait`/`running_gait` can be stale, so re-derive whenever `user_height` is present (no one-time gate). Computed step lengths are pushed back to the watch so it measures distance correctly.
 - Trade-off: because gait re-derives from height on each connect / Profile visit, a **manual** Update Gait edit is overwritten. A "manual override" flag would be needed to keep manual edits.
-- `UserModel` now stores `heightCm` / `weightKg` (optional `Double`, metric). Not collected by onboarding yet — currently watch-sourced only.
+- `UserModel` stores `heightCm` / `weightKg` (optional `Double`, metric). Not collected by onboarding — currently watch-sourced only.
 
 ### ActivityType carried end-to-end
-- `ActivityType` (`run`/`walking`/`cycling`/`other`) exposes `.title` (header text) and `.icon` (asset). `EventDocument.eventType` is a typed accessor over the stored `activityType` string; `ActivityData.eventType` carries it to the UI (set by `EventDocumentMapper`). Drives the EventDetails title and the Home/History activity-row icons.
+- `ActivityType` (`run`/`walking`/`cycling`/`other`, defined in `Modules/Dashboard/Home/NewRun/ViewModel/ActivityType.swift`) exposes `.title` (header text) and `.icon` (asset). `EventDocument.eventType` is a typed accessor over the stored `activityType` string; `ActivityData.eventType` carries it to the UI (set by `EventDocumentMapper`). Drives the EventDetails title and the Home/History activity-row icons.
 
 ### Home is a single native `List`
 - Home is one `List` — a self-sizing header row + upcoming events as rows with native `.swipeActions`. This replaced a `ScrollView` + custom gesture row. History uses the same `List` + `.swipeActions` pattern (the reference for smooth scroll + swipe).
 - **Never put a `GeometryReader` inside a `List`/collection cell** — the unstable self-sizing height crashes with `UICollectionView … recursive layout loop`. Size deterministically (e.g. from `UIScreen.main.bounds.width`).
 - **Buttons inside a `List` row need `.buttonStyle(.borderless)` / `.plain`**, otherwise the row swallows the tap (this is why `runActionGrid` and the metric capsules set an explicit button style).
 
+### In-app FAQ via SafariView
+- **`SafariView`** (`DesignSystem/Components/SafariView.swift`) wraps `SFSafariViewController`. The FAQ opens from the Home nav bar (yellow `questionmark.circle` in `AppNavigation`'s trailing slot) and from a Settings row. URLs live in **`NetworkConst.WebUrl`** (`Utility/Constant/Network.swift`): `privacyPolicy`, `termsOfService`, `licences`, `faq`, `wvelabs`.
+
 ### EventDetails map
 - Show the route map only when `hasRouteData` == **≥ 2 valid, non-`(0,0)` coordinates**. `routeCoordinates` filters invalid/placeholder points the watch/Firebase send; a single point can't draw a polyline.
 
 ### Edit propagation (name/location) + live list updates
-- The Firestore write is the source of truth. **`EventUpdateCenter`** broadcasts a name/location edit (mirrors **`EventDeletionCenter`** for deletes); **Home upcoming, History, Favorites, and Event Details** each observe it via `.onChange` and patch the matching row in place — no refetch. History floats the just-edited row to the top (it orders by `updatedAt`).
+- The Firestore write is the source of truth. **`EventUpdateCenter`** broadcasts a name/location edit (mirrors **`EventDeletionCenter`** for deletes — both in `Utility/Manager/`); **Home upcoming, History, Favorites, and Event Details** each observe it via `.onChange` and patch the matching row in place — no refetch. History floats the just-edited row to the top (it orders by `updatedAt`).
 - **`ActivityData` uses content-aware `==`** — NOT id-only. SwiftUI `List`/`ForEach` skips re-rendering a row when its value compares equal, so an id-only `==` froze edited/synced rows (title/location never redrew). Keep `Identifiable.id` + `hash(into:)` on `id`, but compare the displayed fields in `==`.
 - **Every event write stamps `updatedAt`** — the mapper's `document(...)` and `updatedDocument(...)` set it to now; `softDelete` uses `serverTimestamp`. History's default (unfiltered) query orders by `userId ASC, status ASC, updatedAt DESC` (composite index required + deployed).
 
@@ -119,47 +130,53 @@ The app uses a **singleton `Router`** (`@Observable`, `@MainActor`) injected via
 |---|---|
 | **Push navigation** | `NavigationStack(path: $router.path)` with `Destinations` enum |
 | **Root switching** | `router.setRoot(_:)` swaps the entire root flow with a `CATransition` on the key window |
-| **Root flows** | `RootFlow` enum: `.splash`, `.welcome`, `.auth`, `.authenticating`, `.accountCreation`, `.dashboard` |
+| **Root flows** | `RootFlow` enum (nested in `extension Router`): `.splash`, `.welcome`, `.auth`, `.authenticating`, `.accountCreation`, `.dashboard` |
 | **Duplicate protection** | `isNavigating` flag prevents rapid double-tap pushes (400ms cooldown) |
 | **Back navigation** | `router.pop()` or `router.popToRoot()` |
+| **Tab-child detail pushes** | Go through `TabNavigationState` + `.navigationDestination(item:)` on `TabBarScreen`, NOT `Destinations` (see Recent Architecture Notes) |
 
 > **Important**: Never instantiate a new `Router` — always use `Router.shared`. Views access it via `@Environment(Router.self)`.
 
-**Destinations Enum** (all push-navigable screens):
+**Destinations Enum** (all push-navigable screens; `Hashable, Codable`):
 ```swift
-enum Destinations: Hashable {
-    case verify(AuthViewModel)
-    case newRun
-    case editEvent(ActivityData)
-    case favorites
-    case eventDetail(ActivityData)
-    case analyticsDetail(AnalyticsSummary)
-    case editProfile
+enum Destinations: Hashable, Codable {
+    case login
+    case verifyOTP(phoneNumber: String, verificationID: String)
+    case accountCreated
+    case createRunEvent
+    case favoritesRun
+    case notifications
+    case settings
+    case termsOfService
+    case privacyPolicy
+    case licenses
     case updateGait
     case manageWatch
-    case settings
-    case terms
-    case privacy
-    case about
-    case notifications
+    case editProfile
 }
 ```
 Each destination maps to its screen in `Router+Destination.swift` via `@ViewBuilder func destinationView(for:)`.
 
+> Event Details, Duplicate Run, and Analytics Detail are pushed via `TabNavigationState`, not `Destinations`.
+
 ### Singleton Graph
 
-All singletons are `@Observable @MainActor`:
+Core singletons (most are `@Observable @MainActor`):
 
 | Singleton | Purpose |
 |---|---|
 | `Router.shared` | Navigation state |
-| `AuthManager.shared` | Firebase Auth + profile fetch |
-| `UserProfileRepository.shared` | Firestore `users` CRUD |
-| `EventRepository.shared` | Firestore `events` CRUD + real-time listeners |
-| `FavoriteRepository.shared` | Firestore `favorites` CRUD |
+| `AuthManager.shared` | Firebase Auth + live profile listener (`userDetails`) |
+| `UserProfileRepository.shared` | Accessor to `FirestoreUserProfileRepository` — `users` CRUD |
+| `EventRepository.shared` | Accessor enum to `FirestoreEventRepository` — `events` CRUD + listeners |
+| `FavoritesRepository.shared` | Accessor enum to `FirestoreFavoritesRepository` — favorites |
+| `AnalyticsRepository.shared` | Analytics reads (direct Firestore, see Analytics note) |
 | `ConnectIQManager.shared` | Garmin watch communication |
 | `ToastManager.shared` | Global toast notifications |
+| `AppAlertManager` | Global alert overlay |
 | `AppSessionManager.shared` | UserDefaults wrapper |
+| `EventUpdateCenter.shared` / `EventDeletionCenter.shared` | In-app broadcast of event edits/deletes for live list patching |
+| `HapticManager` | Haptic feedback |
 
 ---
 
@@ -169,61 +186,55 @@ All singletons are `@Observable @MainActor`:
 PaceApp-ios/
 ├── PaceApp.swift                 # @main entry
 ├── AppDelegate.swift             # Firebase + APNs + font registration
-├── Router/                       # Navigation (Router, Destinations, RootFlow)
-│   ├── Router.swift              # Singleton, NavigationStack path, root switching
-│   ├── Destinations.swift        # Push destinations enum
-│   ├── Router+Destination.swift  # Destination → Screen mapping
-│   └── Router+Roots.swift        # RootFlow enum + rootView()
+├── Router/                       # Router.swift, Destinations.swift, Router+Destination.swift, Router+Roots.swift
 ├── Model/                        # Domain models
-│   ├── UserModel.swift           # User profile (computed: fullName, isProfileCompleted, contactInfo)
-│   ├── ActivityData.swift        # Event/run (computed: formattedGoalTime, totalGoalSeconds)
+│   ├── UserModel.swift           # User profile (computed: isProfileCompleted, contactInfo; heightCm/weightKg watch-synced)
+│   ├── ActivityData.swift        # UI-layer event model (pre-formatted display strings; content-aware ==)
+│   ├── EventDocument.swift       # Codable Firestore event doc + EventStatus + FirestoreFlexibleValue
 │   ├── RunSegment.swift          # Segment with HR/pace/cadence arrays
 │   ├── RunInterval.swift         # Walk/run interval config
-│   ├── GaitUserData.swift        # Gait metrics (pace + cadence per gait type)
-│   ├── EventDocument.swift       # Event document helpers
+│   ├── GaitUserData.swift        # Gait metrics (step length + unit per gait type)
+│   ├── GaitStrideCalculator.swift # Height→stride derivation + Feet⇄Meters conversion
 │   ├── HomeMetric.swift          # Dashboard metric display
 │   ├── NotificationItem.swift    # Push notification model
 │   ├── ProfileMenuItem.swift     # Profile menu item model
 │   ├── SettingsMenuItem.swift    # Settings menu item model
 │   ├── WatchDevice.swift         # Garmin device model
-│   └── Enums/                    # All enums (see Enums section)
-├── Modules/                      # Feature screens
-│   ├── Auth/                     # Authentication flow
-│   ├── CreateAccount/            # Multi-step onboarding wizard
-│   └── Dashboard/                # Main app (TabBarScreen + tabs)
-│       ├── Home/                 # Events list, NewRun, EditEvent, Favorites
-│       ├── History/              # Completed events, EventDetail
-│       ├── Analytics/            # Charts, trends, stats (own Models + Repository)
-│       ├── Profile/              # User profile, ManageWatch, UpdateGait, EditProfile
-│       ├── Settings/             # App settings, Terms, Privacy, About
+│   └── Enums/                    # 14 enums (see Enums section)
+├── Modules/
+│   ├── Auth/                     # Splash/, Welcome/, Login/, OTPVerification/, Authenticating/, Complation/
+│   ├── CreateAccount/            # CreateAccountScreen.swift + StepViews/ + ViewModel/ (watch-pairing onboarding wizard)
+│   └── Dashboard/                # TabBarScreen.swift + TabNavigationState.swift + tabs
+│       ├── Home/                 # HomeScreen, NewRun/ (CreateRunEventScreen), EditEvent/, EventDetails/, Favorites/, MetricsPopup/
+│       ├── History/              # HistoryScreen + ViewModel + Views
+│       ├── Analytics/            # AnalyticsScreen + Components/Models/Repository/ViewModel
+│       ├── Profile/              # ProfileScreen, ManageWatch/, UpdateGait/, Views/
+│       ├── Settings/             # SettingScreen, SettingsViewModel, ReauthDeleteSheets, AppWebViewScreen
 │       └── Notifications/        # Push notification UI
-├── DesignSystem/                 # Shared UI layer
-│   ├── AppGradients.swift        # Background, border, button gradients
-│   ├── Components/               # AppButton, AppTextField, AppAlert, Toasts, etc.
-│   ├── Font/                     # Gilroy font registration + AppFonts type scale
+├── DesignSystem/
+│   ├── AppGradients.swift
+│   ├── Components/               # AppButton, AppTextField, AppNavigation, SafariView, … + AppAlert/, AppBackground/, Toasts/
+│   ├── Font/                     # AppFonts.swift, Gilroy+Font.swift, GilroyFontModifier.swift
 │   └── Styles/                   # ButtonGlassStyle, PlainSelectedButtonStyle
 ├── Utility/
-│   ├── Constant/                 # AppConstant, Keys, GarminConfig, NetworkURLs
-│   ├── Extensions/               # View, Color, String, Date, Double, Font, Binding, Collection
+│   ├── Constant/                 # AppConstant.swift, Keys.swift, Garmin.swift, Network.swift, typeAlias.swift
+│   ├── Extensions/               # Array, CGFloat, Color, Date, MKCoordinateRegion, PolylineCodec, String, Task, ToolBar, UIWindow, View
 │   ├── Helpers/                  # Logger, Debouncer, ValidationProvider
 │   ├── Manager/
-│   │   ├── Auth/                 # AuthManager + PhoneAuthUIDelegate
-│   │   ├── Firestore/            # Full repository pattern (see Data Layer)
-│   │   ├── App Session/          # AppSessionManager + AppSessionKey (UserDefaults)
-│   │   └── ConnectIQ/            # ConnectIQManager (Garmin watch SDK)
+│   │   ├── Auth/                 # AuthManager.swift, AuthErrorMapper.swift
+│   │   ├── Firestore/            # Interfaces/, Repositories/, Mappers/ (see Data Layer)
+│   │   ├── App Session/          # AppSessionManager.swift, AppSessionKey.swift
+│   │   ├── ConnectIQManager.swift        # (loose file — no ConnectIQ/ subdir)
+│   │   ├── EventUpdateCenter.swift
+│   │   ├── EventDeletionCenter.swift
+│   │   ├── HapticManager.swift
+│   │   └── ImagePickerManager.swift
 │   └── Modifier/                 # Animations (Shake, SlideTransition, Pulse)
-├── Resources/
-│   ├── Assets.xcassets           # Images
-│   ├── Colors.xcassets           # Named colors
-│   ├── Fonts/                    # Gilroy .ttf files
-│   └── Localizable.xcstrings    # Localization
-├── firebase-hosting/             # Email sign-in landing page
-│   └── public/
-│       ├── index.html            # Deep link redirect back to app
-│       └── 404.html
+├── Resources/                    # Assets.xcassets, Colors.xcassets, Fonts/, Localizable.xcstrings
+├── firebase-hosting/public/      # index.html, emailSignIn/index.html, .well-known/ (AASA + assetlinks.json)
 ├── firestore.rules               # Security rules (owner-only access)
-├── firestore.indexes.json        # Composite indexes
-├── firebase.json                 # Firebase config
+├── firestore.indexes.json        # Composite indexes (5, all on events)
+├── firebase.json                 # Firebase config (firestore + hosting)
 └── GoogleService-Info.plist      # Firebase credentials
 ```
 
@@ -234,151 +245,88 @@ PaceApp-ios/
 ### Architecture
 
 ```
-View → ViewModel → Repository (Protocol) → Repository (Singleton) → Mapper → Firestore Document Model → Firestore
+View → ViewModel → Accessor (EventRepository.shared) → FirestoreEventRepository → EventDocumentMapper → EventDocument (Codable) → Firestore
 ```
 
-### Repository Structure
+### Repository Structure (actual)
 
 ```
 Utility/Manager/Firestore/
-├── Interfaces/                        # Protocol definitions
-│   ├── EventRepositoryProtocol.swift
+├── Interfaces/
+│   ├── EventRepositoryProtocol.swift        # + EventRepository accessor enum + ListenerRegistrationToken
 │   ├── UserProfileRepositoryProtocol.swift
-│   └── FavoriteRepositoryProtocol.swift
-├── Repositories/                      # Concrete implementations (singletons)
-│   ├── EventRepository.swift
-│   ├── UserProfileRepository.swift
-│   └── FavoriteRepository.swift
-├── Models/                            # Firestore document structs (Codable)
-│   ├── FirestoreEventDocument.swift
-│   ├── FirestoreUserDocument.swift
-│   ├── EventSegmentDocument.swift
-│   └── FirestoreFavoriteDocument.swift
-├── Mappers/                           # Bidirectional domain ↔ Firestore conversion
-│   ├── EventMapper.swift
-│   ├── UserProfileMapper.swift
-│   ├── SegmentMapper.swift
-│   └── FavoriteMapper.swift
-└── FirestoreCollections.swift         # Collection path constants
+│   └── FavoritesRepositoryProtocol.swift    # + FavoritesRepository accessor enum
+├── Repositories/
+│   ├── FirestoreEventRepository.swift
+│   ├── FirestoreUserProfileRepository.swift
+│   └── FirestoreFavoritesRepository.swift
+└── Mappers/
+    └── EventDocumentMapper.swift            # THE single ConnectIQ/Firestore parse path
 ```
+
+> Document models live in top-level `Model/` (`EventDocument.swift`, `UserModel.swift`, `RunSegment.swift`) — there is no `Firestore/Models/` content and no `FirestoreCollections.swift`.
 
 ### Collection Paths
 
 | Collection | Path | Purpose |
 |---|---|---|
-| `users` | `users/{uid}` | User profiles + gait data (nested `gait` map) + settings (flat fields) |
-| `events` | `events/{eventId}` | Run/walk events; **segments are embedded on the doc**, plus `routePolyline`, `status`, `syncStatus`, `source` (see Recent Architecture Notes) |
-| ~~`segments`~~ | ~~`events/{eventId}/segments`~~ | **Deprecated** — segments now live as an embedded `[RunSegment]` array on the event document (single-doc write) |
+| `users` | `users/{uid}` | User profile + nested `gait` map + flat settings fields |
+| `events` | `events/{eventId}` | Run/walk events; **segments embedded on the doc**, plus `routePolyline`, `status`, `syncStatus`, `source` |
+| ~~`segments`~~ | ~~`events/{eventId}/segments`~~ | **Deprecated** — segments are an embedded `[RunSegment]` array (a leftover subcollection rule still exists in `firestore.rules`) |
 | `favorites` | `favorites/{favoriteId}` | User favorited events |
 
-### Repository Interfaces
+### Repository APIs (actual)
 
-**EventRepositoryProtocol:**
-```swift
-protocol EventRepositoryProtocol {
-    func createEvent(_ event: ActivityData) async throws
-    func updateEvent(_ event: ActivityData) async throws
-    func deleteEvent(_ eventId: String) async throws
-    func fetchEvents(for userId: String) async throws -> [ActivityData]
-    func listenToEvents(for userId: String, onChange: @escaping ([ActivityData]) -> Void) -> ListenerRegistration
-    func fetchEventSegments(eventId: String) async throws -> [RunSegment]
-    func saveEventSegments(eventId: String, segments: [RunSegment]) async throws
-}
-```
+**`EventRepositoryProtocol`** (implemented by `FirestoreEventRepository`):
+- `observeActiveEvents(userId:onChange:) -> ListenerRegistrationToken`
+- `fetchActiveEvents(userId:)` / `fetchCompletedEvents(userId:limit:cursor:)`
+- `fetchFilteredCompletedEvents(userId:pageSize:cursor:distanceMin:distanceMax:date:location:)`
+- `upsert(from:isCompleted:syncStatus:source:userId:)` — preserves `id`/`source`/`createdAt` on existing docs
+- `updateMetadata(eventId:userId:name:location:)` — name/location edits
+- `softDelete(eventId:userId:)` — sets `status: deleted` + `deletedAt` server timestamp
+- `fetchEvents(byIds:)` / `fetchAllEventPayloads(userId:)`
 
-**UserProfileRepositoryProtocol:**
-```swift
-protocol UserProfileRepositoryProtocol {
-    func createUserProfile(user: UserModel) async throws
-    func fetchUserProfile(userId: String) async throws -> UserModel?
-    func updateUserProfile(_ user: UserModel) async throws
-    func deleteUserProfile(userId: String) async throws
-    func listenToUserProfile(userId: String, onChange: @escaping (UserModel?) -> Void) -> ListenerRegistration
-}
-```
+**`UserProfileRepositoryProtocol`** (implemented by `FirestoreUserProfileRepository`):
+- `fetchProfile`, `upsertProfile`, `listenToProfile`
+- `updateGait`, `updateIntervalVibrate`, `updateIntervalBeep`, `updateDistanceUnit`, `updateBodyMetrics(heightCm:weightKg:userId:)`
 
-**FavoriteRepositoryProtocol:**
-```swift
-protocol FavoriteRepositoryProtocol {
-    func toggleFavorite(eventId: String, userId: String) async throws
-    func fetchFavorites(userId: String) async throws -> [ActivityData]
-    func listenToFavorites(userId: String, onChange: @escaping ([ActivityData]) -> Void) -> ListenerRegistration
-}
-```
+**`FavoritesRepositoryProtocol`** (implemented by `FirestoreFavoritesRepository`):
+- `isFavorited(userId:eventId:)`, `toggleFavorite(userId:eventId:)`, `fetchFavoriteEventIds(userId:)`
 
-### Mapper Pattern
+### EventDocument (Codable, `Model/EventDocument.swift`)
 
-Each mapper has static `toDocument(_:)` and `toDomain(_:)` methods:
-- **EventMapper**: Maps `ActivityData ↔ FirestoreEventDocument`, handles optional `intervals` array
-- **UserProfileMapper**: Maps `UserModel ↔ FirestoreUserDocument`, handles nested `gait` map + optional fields
-- **SegmentMapper**: Maps `RunSegment ↔ EventSegmentDocument`, handles HR/pace/cadence/distance arrays
-- **FavoriteMapper**: Maps favorites with event data
+Key fields: `id: Int` (doc key), `userId`, `status`, `name`, `location`, `scheduledAt`, `completedAt?`, `activityType`, `distanceValue`, `measure`, `goalTimeSeconds`, `lookBackIntervals`, `avgPaceSeconds?`, `avgHeartRate?`, `elevationGain?`, `effortPercentage?`, `actualTimeSeconds?`, `actualDistance?`, `timeVarianceSeconds?`, `paces: [Int]?`, `completedSegments: [[String: FirestoreFlexibleValue]]?`, `syncStatus`, `source`, `createdAt`, `updatedAt`, `deletedAt?`, `segments: [RunSegment]?`, `routePolyline: String?`.
 
-> **Type conversions handled**: `Date ↔ Timestamp`, `enum ↔ String`, `Optional` fields, nested maps.
+### UserModel (`Model/UserModel.swift`)
 
-### Firestore Document Models
+`uuid`, `firstName?`, `lastName?`, `gender?`, `email?`, `phoneNumber?`, `gait: GaitUserData?`, `intervalVibrate?`, `intervalBeep?`, `distanceUnit: MeasureUnit?`, `heightCm?`, `weightKg?`, `lastSyncedAt?`. Computed: `contactInfo`, `isProfileCompleted`.
 
-**FirestoreEventDocument:**
-```swift
-struct FirestoreEventDocument: Codable {
-    var eventId: String
-    var userId: String
-    var eventName: String
-    var date: Timestamp
-    var distance: Double
-    var distanceUnit: String
-    var goalHours: Int
-    var goalMinutes: Int
-    var goalSeconds: Int
-    var syncType: String          // "scheduled", "inProgress", "completed", "synced"
-    var intervals: [FirestoreIntervalDocument]?
-    var createdAt: Timestamp
-    var updatedAt: Timestamp
-}
-```
+### EventDocumentMapper
 
-**FirestoreUserDocument:**
-```swift
-struct FirestoreUserDocument: Codable {
-    var userId: String
-    var firstName: String
-    var lastName: String
-    var email: String?
-    var phone: String?
-    var gender: String
-    var dateOfBirth: Timestamp?
-    var weight: Double
-    var weightUnit: String
-    var heightFeet: Int?
-    var heightInches: Int?
-    var heightCM: Double?
-    var heightUnit: String
-    var gait: FirestoreGaitDocument?
-    var distanceUnit: String
-    var profileCompleted: Bool
-    var createdAt: Timestamp
-    var updatedAt: Timestamp
-}
-```
+Static-only. Key methods: `document(...) -> (EventDocument, [RunSegment])`, `updatedDocument(...)`, `activityData(...)` (→ UI model), `connectIQPayload(from:)` (app→watch), `analyticsRecord(from:) -> EventAnalyticsRecord?`, plus lenient parse helpers (`parseConnectIQDate`, `parseTimeString`, `parseSignedTimeVariance`, `mapActivityType`/`reverseMapActivityType`, `computeEffortPercentage`, …). Uses `PolylineCodec` for `routePolyline`.
 
 ### Firestore Security Rules
 
 ```
-users/{userId}      → read/write: auth.uid == userId
-events/{eventId}    → read/write: auth.uid == resource.data.userId
-                       create: auth.uid == request.resource.data.userId
-  segments/{segId}  → read/write: authenticated
-favorites/{favId}   → read/write: auth.uid == resource.data.userId
-                       create: auth.uid == request.resource.data.userId
+users/{userId} (+ subdocs)   → read/write: auth.uid == userId
+events/{eventId}             → read/update/delete: auth.uid == resource.data.userId
+                                create: auth.uid == request.resource.data.userId
+  segments/{segId}           → leftover rule (owner check via parent get()) — subcollection no longer written
+favorites/{favId}            → read/delete: auth.uid == resource.data.userId
+                                create: auth.uid == request.resource.data.userId
 ```
 
-### Composite Indexes
+### Composite Indexes (deployed, `firestore.indexes.json`)
 
-| Collection | Fields | Purpose |
-|---|---|---|
-| `events` | `userId` ASC + `date` DESC | User's events by date |
-| `events` | `userId` ASC + `syncType` ASC + `date` DESC | Filtered events (e.g., completed only) |
-| `favorites` | `userId` ASC + `createdAt` DESC | User's favorites by recency |
+All on `events`:
+
+| Fields | Purpose |
+|---|---|
+| `userId` ASC + `status` ASC + `scheduledAt` ASC | Active/upcoming events |
+| `userId` ASC + `status` ASC + `completedAt` DESC | History (newest first) |
+| `userId` ASC + `status` ASC + `updatedAt` DESC | History default order (recently touched first) |
+| `userId` ASC + `status` ASC + `completedAt` ASC | Analytics date-range reads |
+| `userId` ASC + `status` ASC + `distanceValue` ASC + `completedAt` DESC | Filtered history (distance range) |
 
 ---
 
@@ -395,18 +343,21 @@ favorites/{favId}   → read/write: auth.uid == resource.data.userId
 
 1. `configure()` — called from AppDelegate
 2. Registers `addStateDidChangeListener` on `Auth.auth()`
-3. On auth state change: fetches Firestore user profile (creates if new user)
+3. On auth state change: fetches Firestore user profile (creates if new user), starts the live profile listener
 4. Calls `router.setupRootNavigation()` to set appropriate root flow
 5. `autoLogin()` — checks `Auth.auth().currentUser`, restores session
 
-### Auth Flow Screens
+### Auth Flow Screens (`Modules/Auth/`)
 
 ```
-SplashScreen → (autoLogin) → Dashboard OR Welcome
-WelcomeScreen → AuthScreen (Phone/Email tabs)
-AuthScreen → VerifyScreen (Phone OTP) OR "check email" toast (Email)
-VerifyScreen → AuthenticatingScreen → Dashboard OR CreateAccount
+SplashScreen → (autoLogin) → Dashboard OR WelcomeScreen
+WelcomeScreen → LoginScreen (LoginViewModel; Phone/Email tabs)
+LoginScreen → OTPVerificationScreen (phone; OTPVerificationViewModel + OTPState machine)
+           → "check your email" (email link)
+→ AuthenticatingScreen → ComplationScreen (.otpVerified / .accountCreation) → Dashboard OR CreateAccount
 ```
+
+> Screen names: `SplashScreen`, `WelcomeScreen`, `LoginScreen`, `OTPVerificationScreen`, `AuthenticatingScreen`, `ComplationScreen` (folder/typo spelling "Complation" is intentional in the codebase). Only Login and OTPVerification have their own ViewModels.
 
 ### Key Auth Rules
 
@@ -414,122 +365,43 @@ VerifyScreen → AuthenticatingScreen → Dashboard OR CreateAccount
 - **Email link different device**: If `Keys.emailForSignIn` is empty when link arrives, show error and redirect to `.auth`
 - **`continueURL`**: Must be path-qualified (`https://thepaceapp.firebaseapp.com/emailSignIn`), not bare domain root
 - **`linkDomain`**: Must not be set for `.firebaseapp.com` domains
+- **Friendly errors**: route all auth errors through `AuthErrorMapper.message(for:)` — never `error.localizedDescription`
 
 ---
 
-## Dynamic Forms System
+## Onboarding — CreateAccount Wizard
 
-### Overview
+The CreateAccount flow is a **watch-pairing onboarding wizard**, not a body-metrics form. Steps are driven by the **`CreateAccountStep`** enum (`Model/Enums/CreateAccountStep.swift`, `Int, CaseIterable`):
 
-The app uses two form patterns:
-1. **Multi-step wizard** (CreateAccount) — indexed steps with per-step validation
-2. **Single-page forms** (NewRun, EditEvent, EditProfile, UpdateGait) — standard form with centralized validation
-
-### Form Component Stack
-
-| Component | Purpose | Location |
+| Step | View (`Modules/CreateAccount/StepViews/`) | Purpose |
 |---|---|---|
-| `AppTextField` | Text input with floating label, error state, validation styling | `DesignSystem/Components/` |
-| `AppSegmentedControl` | Generic enum-based toggle/selection with glass styling | `DesignSystem/Components/` |
-| `AppButton` | Primary CTA with gradient, loading, disabled states | `DesignSystem/Components/` |
-| `GlassButton` | Secondary CTA with translucent glass effect | `DesignSystem/Components/` |
-| `OTPTextField` | 6-digit OTP with individual character boxes, auto-advance | `DesignSystem/Components/` |
-| `ProgressStepIndicator` | Multi-step progress bar with step markers | `DesignSystem/Components/` |
-| `DatePicker` | Native wheel picker for date selection | SwiftUI native |
-| `GaitInputCard` | Specialized card for gait metrics input | `Profile/Components/` |
+| `.profile` | `ProfileStepView` | Name / basic profile |
+| `.pairWatch` | `PairWatchStepView` | Start Garmin pairing |
+| `.chooseYourModel` | `ChooseDevicesStepView` | Pick the watch model |
+| `.showConnectedWatch` | `ConnectWatchStepView` | Confirm connected watch |
+| `.setGait` | `SetGaitStepView` | Step length (shared `GaitSelectionView` with Profile → UpdateGait) |
+
+- A `connectStrava` case (+ `ConnectStravaStepView`) exists but is **commented out** of the enum.
+- Container: `CreateAccountScreen.swift` (module root — no `Screen/` subdir). State: `CreateAccountViewModel` with `var currentStep: CreateAccountStep = .profile`; advancement via the enum's computed `next` / `previous` (no `totalSteps` property).
+- The enum provides per-step `title`, `footerButtonTitle`, `showsBack`/`showsSkip`.
+- `ManageWatchStep` (`currentConnected`, `pairWatch`, `chooseYourModel`) mirrors the pairing steps for Profile → Manage Watch.
+
+---
+
+## Forms & Validation
 
 ### Validation Stack
 
-```
-ValidationProvider (static utility)  →  ViewModel.isValid (computed)  →  AppTextField.errorMessage (UI)
-                                                                     →  ShakeModifier (animation)
-                                                                     →  ToastManager (global errors)
-```
+Validation is driven by the **`ValidationType`** enum (`Model/Enums/ValidationType.swift`), not per-rule methods:
 
-**ValidationProvider methods:**
-| Method | Purpose |
-|---|---|
-| `isValidEmail(_:)` | Regex email validation |
-| `isValidPhone(_:)` | US phone format |
-| `isNotEmpty(_:)` | Trimmed non-empty |
-| `isValidNumber(_:)` | Numeric string |
-| `isValidDecimal(_:)` | Decimal number |
-| `isInRange(_:min:max:)` | Numeric range check |
-| `isValidName(_:)` | Alphabetic, min 2 chars |
-| `isValidWeight(_:unit:)` | Unit-aware (lbs: 50-500, kg: 20-230) |
-| `isValidHeight(feet:inches:)` | Feet/inches range |
-| `isValidHeightCM(_:)` | CM range (50-250) |
-| `isValidPace(_:)` | MM:SS format |
-| `isValidCadence(_:)` | 50-250 spm |
-| `isValidGoalTime(hours:minutes:seconds:)` | At least one non-zero |
-
-### Multi-Step Wizard — CreateAccount
-
-**Files:**
-```
-CreateAccount/
-├── Screen/CreateAccountScreen.swift      # Step container + progress indicator + nav buttons
-├── ViewModel/CreateAccountViewModel.swift # All form state + validation + save
-└── StepView/                             # Individual step views
-    ├── FullNameStepView.swift             # Step 0: firstName, lastName
-    ├── GenderStepView.swift              # Step 1: Gender enum selection
-    ├── DOBStepView.swift                 # Step 2: Date wheel picker
-    ├── WeightStepView.swift              # Step 3: weight + unit toggle (lbs/kg)
-    ├── HeightStepView.swift              # Step 4: ft+in OR cm (dynamic based on unit)
-    ├── GaitStepView.swift                # Step 5: 3×2 grid (walk/jog/run × pace/cadence)
-    └── PaceGoalStepView.swift            # Step 6: goal time (H:M:S) + distance + unit
-```
-
-**Pattern:**
-- `CreateAccountViewModel` holds all form fields as `@Observable` properties
-- `currentStep: Int` (0-6) tracks progress, `totalSteps: 7`
-- `isCurrentStepValid: Bool` — computed per-step validation using `ValidationProvider`
-- `next()` / `previous()` for step navigation (linear, no skipping)
-- `createAccount()` — assembles `UserModel`, saves via `UserProfileRepository.shared.createUserProfile(user:)`, navigates to `.dashboard`
-- Unit toggles dynamically change form layout (height: ft/in ↔ cm)
-- Each `StepView` takes `@Bindable var viewModel` for two-way binding
-
-**ViewModel Fields:**
 ```swift
-// Step 0 — Name
-firstName: String, lastName: String
-
-// Step 1 — Gender
-selectedGender: Gender?
-
-// Step 2 — DOB
-dateOfBirth: Date?
-
-// Step 3 — Weight
-weight: String, weightUnit: WeightUnit (.lbs/.kg)
-
-// Step 4 — Height
-heightFeet: String, heightInches: String, heightUnit: HeightUnit (.feetInches/.cm), heightCM: String
-
-// Step 5 — Gait
-walkPace: String, jogPace: String, runPace: String
-walkCadence: String, jogCadence: String, runCadence: String
-
-// Step 6 — Goal
-goalHours: String, goalMinutes: String, goalSeconds: String
-goalDistance: String, distanceUnit: DistanceUnit (.miles/.km)
+// ValidationProvider (Utility/Helpers/) — single public entry point
+ValidationProvider.isValid(text: vm.email, type: .email)
 ```
 
-### Single-Page Forms
-
-**NewRun / EditEvent:**
-- Fields: event name, date, time, distance, goal pace, interval settings
-- `IntervalSettingsView` for configuring walk/run intervals
-- NewRun: saves via `EventRepository.shared.createEvent(_:)`
-- EditEvent: pre-populates from existing `ActivityData`, updates via `EventRepository.shared.updateEvent(_:)`
-
-**EditProfile:**
-- Same fields as CreateAccount but pre-populated from current `UserModel`
-- Updates via `UserProfileRepository.shared.updateUserProfile(_:)`
-
-**UpdateGait:**
-- Walk/jog/run pace + cadence grid using `GaitInputCard` components
-- Saves gait data to Firestore user document's nested `gait` map
+- `ValidationType` cases: `name`, `location`, `email`, `password`, `confirmPassword(new:)`, `phoneNumber`, `alphanumeric`, `custom(regex:)`, `none` — each exposes an `errorMessage`.
+- Flow: `ValidationProvider.isValid` → ViewModel computed `isValid` → `AppTextField.errorMessage` (inline) / `ShakeModifier` (animation) / `ToastManager` (global).
+- `Constant.Config` holds `validPasswordLength` (8) and `OTPLength` (6).
 
 ### Form Best Practices (Follow These)
 
@@ -539,10 +411,9 @@ goalDistance: String, distanceUnit: DistanceUnit (.miles/.km)
 4. **Use `AppSegmentedControl`** for enum-based selections
 5. **Use `@Bindable var viewModel`** in step/sub views for binding, but **never declare `@Bindable` inside `body`**
 6. **Keyboard types** must be set per field (`.numberPad`, `.decimalPad`, `.default`)
-7. **Unit toggles** should dynamically change layout when applicable
-8. **Save operations** always go through repository layer, never raw Firestore calls
-9. **Error display**: Use `AppTextField.errorMessage` for inline errors, `ToastManager` for global errors
-10. **Loading state**: Use `AppButton.isLoading` during async save operations
+7. **Save operations** always go through repository layer, never raw Firestore calls
+8. **Error display**: `AppTextField.errorMessage` for inline errors, `ToastManager` for global errors
+9. **Loading state**: `AppButton.isLoading` during async save operations
 
 ---
 
@@ -554,8 +425,9 @@ goalDistance: String, distanceUnit: DistanceUnit (.miles/.km)
 |---|---|
 | `.darkSeaBlue` | Primary background dark |
 | `.traditionalNavyBlue` | Background gradient end |
-| `.neonAquaBlue` | Accent / highlight |
-| `.fluorescentMint` | Secondary accent |
+| `.neonAquaBlue` | Accent / highlight (tab tint) |
+| `.fluorescentMint` | Secondary accent / "ahead of goal" delta |
+| `.redBoho` | "Behind goal" delta / destructive accents |
 | `.radiantBlue` | App tint, active states |
 | `.slateGrey` | Muted text, dividers |
 | `.pureWhite` | Primary text |
@@ -571,77 +443,55 @@ goalDistance: String, distanceUnit: DistanceUnit (.miles/.km)
 
 ### Typography — Gilroy Font System
 
-Registered via `FontRegistration.registerFonts()` in AppDelegate.
+Registered in AppDelegate. Files: `DesignSystem/Font/AppFonts.swift` (tokens), `Gilroy+Font.swift` (weight enum), `GilroyFontModifier.swift`.
 
-**Font Tokens** (via `Font` extension):
-```
-.light12 … .light20
-.regular12 … .regular20
-.medium12 … .medium20
-.semiBold12 … .semiBold24
-.bold14 … .bold34
-.extraBold24 … .extraBold48
-```
+**Font tokens** are `weight + size` statics on `Font` (e.g. `.semiBold16` = `Gilroy.semiBold.size(16)`), spanning light/regular/medium/semiBold/bold/extraBold.
 
 > **Never** use `Font.system(...)` or `Font.custom("Gilroy-...", size:)` directly. Always use tokens.
 
-### UI Constants (`Constant`)
+### UI Constants (`Constant`, in `Utility/Constant/AppConstant.swift`)
 
 | Constant | Value |
 |---|---|
-| `Constant.UI.defaultCornerRadius` | 12pt |
-| `Constant.UI.cornerRadius16` | 16pt |
-| `Constant.UI.buttonHeight` | 52pt |
-| `Constant.UI.textFieldHeight` | 48pt |
-| `Constant.UI.cardPadding` | 16pt |
-| `Constant.UI.screenHorizontalPadding` | 20pt |
-| `Constant.Animation.defaultDuration` | 0.3s |
-| `Constant.Animation.springDamping` | 0.8 |
-| `Constant.Animation.toastDuration` | 3.0s |
+| `Constant.UI.animationDuration` | 0.3 |
+| `Constant.UI.glassBlurRadius` | 20 |
+| `Constant.UI.listRowSpacing` | 12 |
+| `Constant.UI.spacing16` | 16 |
+| `Constant.UI.defaultCornerRadius` / `cardCornerRadius` | 12 |
+| `Constant.UI.cornerRadius16` | 16 |
+| `Constant.UI.defaultBorderWidth` | 1 |
+| `Constant.UI.defaultPadding` | 16 |
+| `Constant.UI.padding12` | 12 |
+| `Constant.UI.disabledOpacity` | 0.5 |
+| `Constant.UI.defaultKeyboardToolBarHeight` | 44 |
+| `Constant.Config.validPasswordLength` | 8 |
+| `Constant.Config.OTPLength` | 6 |
 
-### Components API Reference
+### Components (`DesignSystem/Components/`)
 
-**AppButton:**
+| Component | Purpose |
+|---|---|
+| `AppButton` | Primary CTA with gradient, loading, disabled states |
+| `GlassButton` | Secondary CTA with translucent glass effect |
+| `AppTextField` | Text input with floating label, error state |
+| `AppSegmentedControl` | Generic enum-based toggle with glass styling |
+| `AppNavigation` | Custom nav bar with leading/trailing slots |
+| `AppLabel` / `LabelNewRun` | Styled labels |
+| `OTPFieldView` | 6-digit OTP boxes with auto-advance |
+| `DatePickerField` / `DatePickerSheet` | Date input + wheel sheet |
+| `DualRangeSlider` | Two-thumb range slider (History distance filter) |
+| `SafariView` | `SFSafariViewController` wrapper (FAQ) |
+| `WebView` | WKWebView wrapper (`AppWebViewScreen` for terms/privacy/licenses) |
+| `NoDataView` | Empty-state placeholder |
+| `LogoWithText`, `ProfilePhotoShape`, `Spacing` | Misc shared UI |
+| `AppAlert/` | `AppAlertManager` + `AppAlertModel` + `AppAlertView` + `InstallAppAlert` |
+| `AppBackground/` | `AppBackground`, `AppCardBackground`, `BackgroundContainer` |
+| `Toasts/` | `ToastManager`, `ToastView`, `ToastContainerView`, `InstallToast`, `ToastValue` |
+
+**Usage examples:**
 ```swift
-AppButton(title: "Continue", isLoading: vm.isLoading, isEnabled: vm.isValid) {
-    vm.submit()
-}
-```
-
-**AppTextField:**
-```swift
-AppTextField(
-    title: "First Name",           // Floating label
-    text: $vm.firstName,
-    placeholder: "Enter first name",
-    keyboardType: .default,
-    errorMessage: vm.firstNameError // nil = no error, String = error shown
-)
-```
-
-**AppSegmentedControl:**
-```swift
-AppSegmentedControl(
-    selection: $vm.selectedGender,
-    options: Gender.allCases
-)
-```
-
-**ToastManager:**
-```swift
+AppButton(title: "Continue", isLoading: vm.isLoading, isEnabled: vm.isValid) { vm.submit() }
 ToastManager.shared.present(.error("Something went wrong"))
-ToastManager.shared.present(.success("Profile updated"))
-ToastManager.shared.present(.info("Check your email"))
-```
-
-**AppAlert:**
-```swift
-AppAlert(
-    title: "Delete Account",
-    message: "This action cannot be undone.",
-    primaryButton: AlertButton(title: "Delete", role: .destructive) { vm.deleteAccount() },
-    secondaryButton: AlertButton(title: "Cancel", role: .cancel) { }
-)
 ```
 
 ### View Modifiers
@@ -656,41 +506,52 @@ AppAlert(
 | `.shimmer()` | Loading shimmer |
 | `.onFirstAppear(_:)` | Execute only on first appearance |
 
-### Animation Modifiers
+### Animation Modifiers (`Utility/Modifier/`)
 
 | Modifier | Purpose |
 |---|---|
 | `ShakeModifier` | Horizontal shake on validation error (bound to `Bool`) |
-| `SlideTransitionModifier` | Slide transition for screen changes (configurable direction) |
+| `SlideTransitionModifier` | Slide transition for screen changes |
 | `PulseModifier` | Repeating pulse/glow for active indicators |
 
 ### Button Styles
 
-| Style | Purpose |
-|---|---|
-| `ButtonGlassStyle` | Glass effect with blur + gradient border |
-| `PlainSelectedButtonStyle` | Selected/unselected states for tabs/filters |
+`ButtonGlassStyle` (glass blur + gradient border), `PlainSelectedButtonStyle` (selected/unselected tabs/filters).
 
 ---
 
 ## Enums Reference
 
-Enums live in `Model/Enums/` (conformances vary — check the file; not all are `Codable`/`CustomStringConvertible`):
+`Model/Enums/` contains exactly these (conformances vary — check the file):
 
-| Enum | Cases | Usage |
+| Enum | Cases / Purpose |
+|---|---|
+| `GaitType` | `.walking` (`"Walking"`), `.running` (`"Running"`); `.label` = "Walk"/"Run" |
+| `Gender` | `.male`, `.female`, `.other`, `.preferNotToSay` |
+| `LoginType` | `.phoneNumber`, `.email` |
+| `PaceTab` | `.home`, `.history`, `.stats`, `.profile` |
+| `CreateAccountStep` | Onboarding steps (see Onboarding section) |
+| `CreateEventType` | `.new`, `.duplicate` — event editor mode |
+| `ManageWatchStep` | `.currentConnected`, `.pairWatch`, `.chooseYourModel` |
+| `OTPState` | Phone-auth state machine: `.idle`, `.sending`, `.otpSent(verificationID:)`, `.verifying`, `.success`, `.error(String)` |
+| `ComplationScreenType` | `.otpVerified`, `.accountCreation` — completion screen variant |
+| `LoadingState` | `.show`, `.hide` |
+| `MetricType` | `.bpm`, `.hrs`, `.pace`, `.time`, `.minMile` |
+| `EventDetailsStepViewField` | Focus fields `.eventName`, `.location` |
+| `ProfileMenuItemType` | `.navigation`, `.toggle(binding:value:)` |
+| `ValidationType` | Validation kinds (see Forms & Validation) |
+
+**Enums defined elsewhere** (not in Model/Enums/):
+
+| Enum | Location | Cases |
 |---|---|---|
-| `GaitType` | `.walking` (`"Walking"`), `.running` (`"Running"`) | Gait mode; `.label` = "Walk"/"Run", `.title` = "Walking"/"Running" |
-| `ActivityType` | `.run`, `.walking`, `.cycling`, `.other` | Event activity; `.title` (header), `.icon` (asset), `.watchString` (wire) |
-| `EventStatus` | `.active`, `.completed`, `.deleted` | Event lifecycle (the `status` field on `EventDocument`) |
-| `PaceTab` | `.home`, `.history`, `.analytics`, `.profile` | Tab bar tabs |
-| `Gender` | `.male`, `.female`, `.other`, `.preferNotToSay` | User profile |
-| `LoginType` | `.phoneNumber`, `.email` | Auth method toggle |
-| `WeightUnit` | `.lbs`, `.kg` | Weight display/input |
-| `HeightUnit` | `.feetInches`, `.cm` | Height display/input |
-| `DistanceUnit` / `MeasureUnit` | miles/km | Distance display/input |
-| `RootFlow` | `.splash`, `.welcome`, `.auth`, `.authenticating`, `.accountCreation`, `.dashboard` | Root navigation states |
+| `ActivityType` | `Modules/Dashboard/Home/NewRun/ViewModel/ActivityType.swift` | `.run`, `.walking`, `.cycling`, `.other` (+ `.title`, `.icon`, `.watchString`) |
+| `MeasureUnit` | `Modules/Dashboard/Home/NewRun/ViewModel/MeasureUnit.swift` | `.km = "Kms"`, `.miles = "Miles"` — THE distance-unit type (there is no `DistanceUnit`/`WeightUnit`/`HeightUnit` type) |
+| `EventStatus` | `Model/EventDocument.swift` | `.active`, `.completed`, `.deleted` |
+| `RootFlow` | `Router/Router+Roots.swift` (nested in `extension Router`) | `.splash`, `.welcome`, `.auth`, `.authenticating`, `.accountCreation`, `.dashboard` |
+| `CreateRunStep` | `Modules/Dashboard/Home/NewRun/ViewModel/CreateRunStep.swift` | New-run form steps |
 
-> Gait step-length unit is stored as the full word `"Feet"`/`"Meters"` (not `ft`/`m` — that's only the watch wire format; see Recent Architecture Notes).
+> There is no `SyncStatus` enum — `EventDocument.syncStatus` is a plain String (`"pending"`/`"synced"`). Gait step-length unit is stored as the full word `"Feet"`/`"Meters"` (not `ft`/`m` — that's only the watch wire format).
 
 ---
 
@@ -698,81 +559,88 @@ Enums live in `Model/Enums/` (conformances vary — check the file; not all are 
 
 ### TabBarScreen Structure
 
-4 tabs: **Home** → **History** → **Analytics (Stats)** → **Profile**
+4 tabs: **Home** → **History** → **Stats (Analytics)** → **Profile**
 
 ```swift
-// Tab ViewModels lifted to TabBarScreen as @State to prevent re-creation
-@State private var homeVM = HomeViewModel()
-@State private var historyVM = HistoryViewModel()
-@State private var analyticsVM = AnalyticsViewModel()
+// TabBarScreen holds the SCREENS as @State — each screen owns its own ViewModel.
+@State private var tabNavState = TabNavigationState()
+@State private var homeScreen      = HomeScreen()
+@State private var historyScreen   = HistoryScreen()
+@State private var analyticsScreen = AnalyticsScreen()
+@State private var profileScreen   = ProfileScreen()
 ```
 
-Each tab view is held as `@State` to maintain identity across tab switches.
+Holding the screen structs as `@State` preserves each screen's identity — and therefore its `@State` ViewModel — across tab switches. `TabNavigationState` is injected via `.environment(tabNavState)` and its `.navigationDestination(item:)` modifiers sit on the TabView (never inside it).
 
-> **Never construct ViewModels inline in `body` or inside tab views** — they will reinitialize on every tab switch or NavigationStack path change.
+> **Never construct ViewModels inline in `body`** — they will reinitialize on every tab switch or NavigationStack path change.
 
 ### Module → ViewModel → Repository Flow
 
-| Module | ViewModel | Repository | Operations |
+| Module | Screen / ViewModel | Repository | Operations |
 |---|---|---|---|
-| Home | `HomeViewModel` | `EventRepository.shared` | Fetch events, real-time listener, delete, toggle favorite |
-| Home/NewRun | `NewRunViewModel` | `EventRepository.shared` | Create event with validation |
-| Home/EditEvent | `EditEventViewModel` | `EventRepository.shared` | Update event (pre-populated) |
-| Home/Favorites | `FavoritesViewModel` | `FavoriteRepository.shared` | Fetch/toggle favorites |
-| History | `HistoryViewModel` | `EventRepository.shared` | Fetch completed events, group by date |
-| History/Detail | `EventDetailsViewModel` | `FirestoreEventRepository.shared` / `FirestoreFavoritesRepository.shared` | Show event + embedded segments; toggle favorite; map gated on `hasRouteData` |
-| Analytics | `AnalyticsViewModel` | `AnalyticsRepository` | Aggregate data by period (week/month/year/all) |
-| Analytics/Detail | `AnalyticsDetailViewModel` | `AnalyticsRepository` | Detailed trends and charts |
-| Profile | `ProfileViewModel` | `UserProfileRepository.shared` | Fetch user profile |
-| Profile/Edit | `EditProfileViewModel` | `UserProfileRepository.shared` | Update profile (pre-populated form) |
-| Profile/Gait | `UpdateGaitViewModel` | `UserProfileRepository.shared` | Update gait data |
-| Profile/Watch | `ManageWatchViewModel` | `ConnectIQManager.shared` | Pair/unpair Garmin devices |
-| Settings | `SettingsViewModel` | `AuthManager.shared`, `UserProfileRepository.shared` | Logout, delete account, toggle settings |
-| Notifications | `NotificationViewModel` | — | Push notification display |
+| Home | `HomeScreen` / `HomeViewModel` | `EventRepository.shared` | Active events listener, delete, favorite |
+| Home/NewRun | `CreateRunEventScreen` / `CreateRunEventViewModel` | `EventRepository.shared` | Create event (`CreateEventType.new` / `.duplicate`) |
+| Home/EditEvent | `EditEventScreen` | `EventRepository.shared` | Update name/location (`updateMetadata`) |
+| Home/EventDetails | `EventDetailsScreen` / `EventDetailsViewModel` | `FirestoreEventRepository` / `FirestoreFavoritesRepository` | Event + embedded segments; favorite; map gated on `hasRouteData` |
+| Home/Favorites | `FavoritesRunScreen` / `FavoritesViewModel` | `FavoritesRepository.shared` | Fetch/toggle favorites |
+| History | `HistoryScreen` / `HistoryViewModel` | `EventRepository.shared` | Completed events, paging, filters |
+| Analytics | `AnalyticsScreen` / `AnalyticsViewModel` | `AnalyticsRepository.shared` | Aggregate by period (week/month/year/all) |
+| Analytics/Detail | `AnalyticsDetailScreen` | (shares `AnalyticsViewModel` via `tabNavState`) | Detailed trends and charts |
+| Profile | `ProfileScreen` / `ProfileViewModel` | `UserProfileRepository.shared` | Profile display, watch re-sync on appear |
+| Profile/Edit | `EditProfileScreen` / VM | `UserProfileRepository.shared` | Update profile |
+| Profile/Gait | `UpdateGaitScreen` / `UpdateGaitViewModel` | `UserProfileRepository.shared` | Update gait |
+| Profile/Watch | `ManageWatchScreen` / `ManageWatchViewModel` | `ConnectIQManager.shared` | Pair/unpair Garmin devices |
+| Settings | `SettingScreen` / `SettingsViewModel` | `AuthManager.shared`, `UserProfileRepository.shared` | Logout, delete account, toggles, FAQ |
+| Notifications | `Notifications/` module | — | Push notification display |
+
+> **Analytics exception**: `AnalyticsRepository` (`Modules/Dashboard/Analytics/Repository/`) talks to Firestore **directly** (`fetchCompletedEvents(userId:from:to:)` → `EventDocumentMapper.analyticsRecord`), bypassing the protocol layer. Keep new event reads/writes in `FirestoreEventRepository` unless extending analytics.
 
 ---
 
 ## ConnectIQ / Garmin Integration
 
-- `ConnectIQManager.shared` — handles all watch communication via Garmin ConnectIQ SDK
+- `ConnectIQManager.shared` (`Utility/Manager/ConnectIQManager.swift`) — handles all watch communication via Garmin ConnectIQ SDK
 - **Background mode**: `bluetooth-central` in `UIBackgroundModes`
 - **URL scheme**: `connect://` registered for ConnectIQ callbacks
 - **Queries scheme**: `gcm-ciq` in `LSApplicationQueriesSchemes`
 - **Cold launch**: `restoreSessionIfNeeded()` + `resyncPendingEvents()`
 - **Key operations**: `initialize()`, `pairDevice()`, `unpairDevice()`, `sendMessage(_:)`, `handleOpenURL(_:)`
-- **Settings sync**: `sendSettings(gaitOverride:)` (app→watch), `applyRemoteSettings(_:)` (watch→app), `requestSettings()` (ask the watch for its body metrics; see Recent Architecture Notes → Watch settings request + gait from height). Gait math lives in `GaitStrideCalculator` (`Model/`).
+- **Settings sync**: `sendSettings(gaitOverride:)` (app→watch), `applyRemoteSettings(_:)` (watch→app; echoes in-payload `vibrate_alert`/`beep_alert` when replying), `requestSettings()` (ask the watch for its body metrics). Gait math lives in `GaitStrideCalculator` (`Model/`).
 
 ---
 
-## Extensions Reference
+## Extensions Reference (`Utility/Extensions/`)
 
-| File | Key Extensions |
+| File | Purpose |
 |---|---|
 | `View+Ext.swift` | `.appBackground()`, `.dismissKeyboardOnTap()`, `.installToast()`, `.installAppAlert()`, `.cardStyle()`, `.shimmer()`, `.onFirstAppear(_:)` |
-| `Color+Ext.swift` | Named color accessors (`.darkSeaBlue`, `.neonAquaBlue`, `.radiantBlue`, etc.) |
-| `String+Ext.swift` | `.trimmed`, `.isBlank`, `.toPhoneFormat()`, `.formattedPace()` |
-| `Date+Ext.swift` | `.formatted(as:)`, `.timeAgo()`, `.startOfDay`, `.endOfDay`, `.isToday`, `.isThisWeek` |
-| `Double+Ext.swift` | `.formattedDistance(unit:)`, `.formattedPace()`, `.formattedDuration()`, `.roundedTo(_:)` |
-| `Font+Ext.swift` | All Gilroy font tokens (`.light12` through `.extraBold48`) |
-| `Binding+Ext.swift` | Binding transform helpers |
-| `Collection+Ext.swift` | Safe subscript and grouping helpers |
+| `Color+Ext.swift` | Named color accessors (`.darkSeaBlue`, `.neonAquaBlue`, …) |
+| `String+Ext.swift` | Trimming, formatting helpers |
+| `Date+Ext.swift` | Date formatting/comparison helpers |
+| `Array+Ext.swift` / `CGFloat+Ext.swift` | Collection / numeric helpers |
+| `MKCoordinateRegion+Ext.swift` | Map region fitting for the route map |
+| `PolylineCodec.swift` | Google encoded-polyline encode/decode (route GPS ↔ `routePolyline`) |
+| `Task+Ext.swift` | Task convenience helpers |
+| `ToolBar+Ext.swift` | Keyboard toolbar helpers |
+| `UIWindow+Ext.swift` | Key-window access (root transitions) |
+
+> Font tokens live in `DesignSystem/Font/AppFonts.swift`, not in an Extensions file.
 
 ---
 
 ## Session Management
 
-**AppSessionManager** (`UserDefaults` wrapper):
-- `hasCompletedOnboarding: Bool`
-- `lastSyncDate: Date?`
-- `selectedTabIndex: Int`
+**`AppSessionManager`** (`Utility/Manager/App Session/`, UserDefaults wrapper) — keys are the **`AppSessionKey`** enum:
+- `isUserCanViewMetricsPopUp` → `canShowMetricsOnboarding: Bool`
+- `pairedWatchUUID` → `pairedWatchUUID: String?`
+- `pairedDevices` → `pairedDevices: [PersistedDevice]`
+- `lastWatchSyncDate` → `lastWatchSyncDate: Date?`
 
-**Keys** (static string constants):
-- `Keys.emailForSignIn` — stored email for email link auth completion
-- `Keys.verificationID` — phone auth verification ID
-- `Keys.hasCompletedOnboarding` — onboarding completion flag
-- `Keys.lastSyncDate` — last Garmin sync timestamp
+`removeAllData()` wipes everything except `ignoreKeyList` (`.isUserCanViewMetricsPopUp`).
 
-> **User settings** (gait, units, preferences) are stored on the **Firestore user document**, NOT in UserDefaults.
+**`Keys`** (`Utility/Constant/Keys.swift`, raw UserDefaults string keys): `accessToken`, `garminAccessToken`, `userProfile`, `onboardingComplete`, `emailForSignIn` (email-link auth completion).
+
+> **User settings** (gait, units, alert toggles) are stored on the **Firestore user document**, NOT in UserDefaults.
 
 ---
 
@@ -792,17 +660,16 @@ Each tab view is held as `@State` to maintain identity across tab switches.
 | Element | Convention | Example |
 |---|---|---|
 | Screens | `*Screen` suffix | `HomeScreen`, `SettingScreen` |
-| ViewModels | `*ViewModel` in `ViewModel/` subdirectory | `HomeViewModel`, `SettingsViewModel` |
-| Enums | PascalCase, in `Model/Enums/` | `GaitType`, `PaceTab` |
+| ViewModels | `*ViewModel`, usually in `ViewModel/` subdirectory | `HomeViewModel`, `CreateRunEventViewModel` |
+| Enums | PascalCase, mostly in `Model/Enums/` | `GaitType`, `PaceTab` |
 | Font tokens | `weight + size` | `.semiBold16`, `.bold24` |
 | Color assets | camelCase named colors | `.darkSeaBlue`, `.neonAquaBlue` |
 | Constants | `Constant.Config.*`, `Constant.UI.*` | `Constant.UI.defaultCornerRadius` |
-| Storage keys | `Keys.*` static strings | `Keys.emailForSignIn` |
+| Storage keys | `Keys.*` statics / `AppSessionKey` enum | `Keys.emailForSignIn` |
 | Gradients | `AppGradients.*` | `AppGradients.background` |
-| Repositories | `*Repository` singleton | `EventRepository.shared` |
+| Repositories | `Firestore*Repository` class + accessor enum | `FirestoreEventRepository` via `EventRepository.shared` |
 | Protocols | `*Protocol` suffix | `EventRepositoryProtocol` |
-| Firestore docs | `Firestore*Document` | `FirestoreEventDocument` |
-| Mappers | `*Mapper` with static methods | `EventMapper.toDocument(_:)` |
+| Mappers | `*Mapper` with static methods | `EventDocumentMapper.document(...)` |
 
 ---
 
@@ -812,8 +679,8 @@ Each tab view is held as `@State` to maintain identity across tab switches.
 2. **Never create new Router instances** — always use `Router.shared` and `@Environment(Router.self)`.
 3. **Always use tab indentation** — match the existing codebase style.
 4. **Preserve all `// MARK: -` sections** and file header comments. Never remove inline comments or block comments.
-5. **Firestore operations must go through the Repository layer** — never write raw Firestore calls in ViewModels or Views.
-6. **New screens** must follow the `*Screen` naming convention and be added to both `Destinations` enum and `Router+Destination.swift`.
+5. **Firestore operations must go through the Repository layer** — never write raw Firestore calls in ViewModels or Views (known exception: `AnalyticsRepository`).
+6. **New screens** must follow the `*Screen` naming convention and be added to both `Destinations` enum and `Router+Destination.swift` (or, for tab-child details, to `TabNavigationState` + `TabBarScreen`'s destinations).
 7. **New root flows** must be added to `RootFlow` enum in `Router+Roots.swift` and handled in `Router.rootView()`.
 8. **Colors**: Use named color assets from `Colors.xcassets` — never hardcode hex values inline.
 9. **Fonts**: Always use the `Font` extension tokens (`.semiBold16`, etc.) — never use `Font.custom("Gilroy-...", size:)` directly in views.
@@ -821,12 +688,12 @@ Each tab view is held as `@State` to maintain identity across tab switches.
 11. **Keyboard dismissal**: Applied globally via `.dismissKeyboardOnTap()` at the NavigationStack level — don't add per-screen.
 12. **Firestore cache**: 500 MB persistent cache configured in AppDelegate — don't reconfigure elsewhere.
 13. **Never declare `@Bindable var viewModel` inside `body`** — always derive `Binding<T>` from a `@State` property to prevent @Observable re-registration feedback loops.
-14. **`navigationDestination` placement** — must never be placed inside lazy containers (`TabView`, `List`, `LazyVStack`, `ScrollView`). Must be above the `TabView` boundary.
+14. **`navigationDestination` placement** — must never be placed inside lazy containers (`TabView`, `List`, `LazyVStack`, `ScrollView`). Must be above the `TabView` boundary (this is exactly what `TabNavigationState` + `TabBarScreen` implement).
 15. **ActivityData stable IDs** — never use `let id = UUID()` on model types in lists. Use stable, deterministic IDs (Firestore document ID or sync ID).
 16. **Timer and `@Observable`** — `Timer.scheduledTimer` fires off MainActor. Mutations to `@Observable` state must be dispatched to `@MainActor` explicitly.
 17. **Firestore user settings** — use flat fields + nested map on the user document, not subcollections. Avoids doubling Firestore read costs on launch.
 18. **`continueURL` for Firebase email link** — must be path-qualified (e.g., `https://thepaceapp.firebaseapp.com/emailSignIn`), not a bare domain root.
-19. **Form validation** — always centralize in ViewModel, never inline in views. Use `ValidationProvider` methods.
+19. **Form validation** — always centralize in ViewModel, never inline in views. Use `ValidationProvider.isValid(text:type:)`.
 20. **New forms** — use `AppTextField` and `AppSegmentedControl` from the design system. Never create ad-hoc form components.
 21. **Comment discipline** — write **single-line** `//` comments; include a short example or flow only when it genuinely helps (e.g. `// watch "2.5" ft → 2.5 Feet`); **never stack more than two comment lines together** in one place (`// MARK: -` headers are exempt). If a block needs more, simplify the code. Preserve existing `// MARK: -` sections and author headers.
 22. **Sole-author commits** — commits always have a single author (the git logged-in user). **Never** add a `Co-Authored-By:` trailer or any second author.
@@ -837,37 +704,36 @@ Each tab view is held as `@State` to maintain identity across tab switches.
 
 | Pitfall | Fix |
 |---|---|
-| **TabBarScreen ViewModel loop** | Tab screens held as `@State`. ViewModels owned at `TabBarScreen` scope as `@State` and injected — never constructed inline. |
+| **Tab ViewModel re-init loop** | Tab **screens** held as `@State` on `TabBarScreen`; each screen owns its VM as `@State`. Never construct either inline in `body`. |
 | **`@Bindable` feedback loop** | Never use `@Bindable var viewModel` inside `body`. Use stable `Binding<T>` computed properties derived from `@State`. |
 | **Double navigation** | `Router.navigate(to:)` has 400ms debounce guard — don't bypass it. |
 | **reCAPTCHA delegate lifetime** | `PhoneAuthUIDelegate` must be held strongly on `AuthManager` during `verifyPhoneNumber`. |
 | **Email link different device** | If `Keys.emailForSignIn` is empty when email link arrives, show error and redirect to `.auth`. |
 | **ActivityData UUID identity** | Using `let id = UUID()` causes SwiftUI to destroy/rebuild every list row on Firestore snapshot. Use stable IDs. |
 | **Timer threading** | `Timer.scheduledTimer` fires off `@MainActor`. Wrap mutations in `Task { @MainActor in ... }`. |
-| **Mapper field loss** | When editing mappers, ensure computed fields (`formattedGoalTime`, `totalGoalSeconds`, `isProfileCompleted`, `contactInfo`) are preserved — they're easily silently dropped. |
-| **Form field loss on tab switch** | ViewModel must be owned at parent scope (`@State`) and injected. Never constructed inline in views. |
+| **Mapper field loss** | When editing `EventDocumentMapper`/`UserModel` coding, preserve derived fields (`isProfileCompleted`, `contactInfo`, `ActivityData`'s pre-formatted display strings) — they're easily silently dropped. |
 | **`GeometryReader` in a `List` cell** | Crashes at launch: `UICollectionView … recursive layout loop`. Size deterministically (e.g. `UIScreen.main.bounds.width`), never via `GeometryReader` inside a self-sizing row. |
 | **Un-tappable button in a `List` row** | The row swallows the tap. Give buttons `.buttonStyle(.borderless)` / `.plain` so each stays independently tappable. |
 | **`source`/`id` flipping on sync** | `EventDocument.source`, `id`, `createdAt` are write-once. Rely on `FirestoreEventRepository.upsert` preserving them — don't rewrite them from an echoed watch payload. |
 | **Gait unit shows wrong / segment inactive** | Watch sends `ft`/`m` + String numbers; convert with `appGaitUnit`/`watchGaitUnit`/`settingDouble`. App stores `"Feet"`/`"Meters"`. |
 | **Edited list row doesn't refresh** | `ActivityData` id-only `==` makes SwiftUI skip re-rendering the row. Compare displayed fields in `==` (identity/hash stay on `id`). |
+| **Watch echoes stale alert toggles** | When replying to a settings payload, overlay the incoming `vibrate_alert`/`beep_alert` onto `getSettingsPayload()` — Firestore persistence races the reply. |
 | **`permission denied` flood on account delete** | Firestore writes (watch sync) outlive the auth token. Disconnect the watch + stop writers BEFORE `signOut()`/`user.delete()`; make delete-path reads best-effort so they can't abort. |
 | **`user.delete()` silently fails / account survives** | Firebase needs a recent login. Reauthenticate inline first (`reauthenticateWithPhone` / email link via `isReauthenticatingForDeletion`); don't `try?`-swallow the delete. |
 | **Raw Firebase error shown to user** | Route auth errors through `AuthErrorMapper.message(for:)` — never `error.localizedDescription` in a toast/alert. |
 
 ---
 
-## Dependencies (Swift Packages)
+## Dependencies (Swift Packages, from `Package.resolved`)
 
-| Package | Modules | Purpose |
+| Package | Version | Purpose |
 |---|---|---|
-| **Firebase** | `FirebaseAuth`, `FirebaseFirestore`, `FirebaseCore` | Auth + database |
-| **ConnectIQ** | `ConnectIQ` | Garmin Connect IQ iOS SDK |
-| **FITSwiftSDK** | `FITSwiftSDK` | Garmin FIT file parsing (pre-existing unresolved build error) |
-| **swift-log** | `Logging` | Structured logging (`Logger.app`) |
-| **CountryPicker** | `CountryPicker` | Country/dial-code picker for phone auth (SURYAKANTSHARMA/CountryPicker) |
+| **firebase-ios-sdk** | 12.14.0 | `FirebaseAuth`, `FirebaseFirestore`, `FirebaseCore` |
+| **connectiq-companion-app-sdk-ios** (Garmin) | 1.8.0 | ConnectIQ watch SDK |
+| **swift-log** (apple) | 1.13.1 | Structured logging (`Logger.app`) |
+| **CountryPicker** (SURYAKANTSHARMA) | 5.0.2 | Country/dial-code picker for phone auth |
 
-> All dependencies are Swift Package Manager. SPM repos: `firebase/firebase-ios-sdk`, `garmin/connectiq-companion-app-sdk-ios`, `apple/swift-log`, `SURYAKANTSHARMA/CountryPicker`.
+Plus Firebase's transitive deps (abseil, gRPC, GoogleAppMeasurement, GoogleUtilities, leveldb, nanopb, promises, app-check, …). **FITSwiftSDK has been removed** — older notes referencing it are obsolete.
 
 ---
 
@@ -875,8 +741,12 @@ Each tab view is held as `@State` to maintain identity across tab switches.
 
 ```
 firebase-hosting/public/
-├── index.html    # Email sign-in deep link landing page (redirects back to app)
-└── 404.html      # Custom 404
+├── index.html                       # Landing page
+├── emailSignIn/index.html           # Email sign-in deep link (redirects back to app)
+├── 404.html                         # Custom 404
+└── .well-known/
+    ├── apple-app-site-association   # iOS universal links (served with correct Content-Type via firebase.json)
+    └── assetlinks.json              # Android app links (net.paceapp, 3 SHA-256 fingerprints)
 ```
 
 **APNs**: Required for silent push phone verification.
@@ -894,23 +764,13 @@ firebase-hosting/public/
 
 ### Adding a New Feature Checklist
 
-1. Create screen in `Modules/{Feature}/Screen/` following `*Screen` naming
-2. Create ViewModel in `Modules/{Feature}/ViewModel/` following `*ViewModel` naming
-3. If new Firestore data: add Protocol → Repository → Document Model → Mapper
-4. Add destination to `Destinations` enum and `Router+Destination.swift`
+1. Create screen in `Modules/{Feature}/` following `*Screen` naming
+2. Create ViewModel following `*ViewModel` naming (own as `@State` at the right scope)
+3. If new Firestore data: add Protocol (Interfaces/) → Repository (Repositories/) → Codable model (`Model/`) → Mapper
+4. Add destination to `Destinations` + `Router+Destination.swift` — or to `TabNavigationState` + `TabBarScreen` if it's a tab-child detail push
 5. Use `AppTextField`, `AppSegmentedControl`, `AppButton` from DesignSystem
-6. Add validation methods to `ValidationProvider` if new field types
+6. Add a `ValidationType` case if a new field kind needs validation
 7. Apply `.appBackground()` and use font tokens
-
-### Adding a New Form Checklist
-
-1. Create ViewModel with all form fields as `@Observable` properties
-2. Add `isValid` computed property using `ValidationProvider`
-3. Create screen using `AppTextField` + `AppSegmentedControl` from DesignSystem
-4. Own ViewModel as `@State` in the screen (or parent for multi-step)
-5. Pass `@Bindable` to sub-views for two-way binding
-6. Save via appropriate repository singleton
-7. Show loading via `AppButton.isLoading`, errors via `ToastManager`
 
 ### Build Verification
 
@@ -918,7 +778,7 @@ After each batch of file writes: `BuildProject` → `GetBuildLog` with `severity
 
 ### Git Commits
 
-Conventional commits style — **sole author, no `Co-Authored-By:` trailer**:
+Conventional commits style — **sole author, no `Co-Authored-By:` trailer**; summary is non-technical and user-facing:
 ```
 feat(scope): impactful non-technical summary
 
@@ -928,27 +788,12 @@ feat(scope): impactful non-technical summary
 
 ---
 
-## In-Progress & On the Horizon
+## Known Gaps & On the Horizon
 
-### Model Consolidation (In Progress)
-
-| Firestore Document | App Model | Status |
-|---|---|---|
-| `EventSegmentDocument` | `RunSegment` | Pending |
-| `FirestoreEventDocument` | `ActivityData` | Pending |
-| `FirestoreUserDocument` | `UserModel` | Pending |
-
-> **⚠️ Critical**: During consolidation, these computed/derived fields must be preserved:
-> - `formattedGoalTime`, `totalGoalSeconds`, `isProfileCompleted`, `contactInfo`
-
-### Analytics & History Firestore Wiring
-
-Full MVVM Firestore wiring with `AnalyticsRepository`, period bucketing, and composite index on `userId + syncType + date` — **verify status** before assuming complete.
-
-### Firestore Security Rules
-
-Rules are functional. Ongoing refinement needed as new collections/subcollections are added.
-
-### User Settings Migration
-
-User settings (gait data, interval toggles, preferred distance unit) migrated from `UserDefaults` to Firestore — stored as nested `gait` map + flat scalar fields on user document.
+- **Leftover `segments` subcollection rule** in `firestore.rules` — segments are embedded now; the rule is harmless but dead.
+- **`AnalyticsRepository` bypasses the protocol layer** — reads Firestore directly; acceptable for read-only aggregation, but don't copy the pattern for writes.
+- **Manual gait edits are overwritten** by height-derived gait on each watch connect / Profile visit — a "manual override" flag would be needed to preserve them.
+- **`heightCm`/`weightKg` are watch-sourced only** — onboarding doesn't collect them.
+- **`connectStrava` onboarding step** exists but is commented out (`ConnectStravaStepView` retained).
+- **No test target** — verification is build-only.
+- **Localization** — copy lives in `Resources/Localizable.xcstrings`; keep user-facing strings localized.
