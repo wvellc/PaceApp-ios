@@ -99,29 +99,12 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 		// Only add the range clause when it differs from defaults.
 		let isDistanceFiltered = effectiveMin > defaultMin || effectiveMax < defaultMax
 
-		// When both date and distance filters are active, Firestore cannot do range
-		// inequalities on two fields. Apply distance server-side and date client-side
-		// over-fetch scenario. When only distance is active, apply it server-side.
+		// Distance is always filtered client-side: stored distanceValue is unit-mixed
+		// (miles or km per event's measure), so a server range can't compare correctly.
 		let hasDateFilter = date != nil
 
-		if isDistanceFiltered && !hasDateFilter {
-			// Distance-only: server-side range + completedAt ordering.
-			query = query
-				.whereField("distanceValue", isGreaterThanOrEqualTo: effectiveMin)
-				.whereField("distanceValue", isLessThanOrEqualTo: effectiveMax)
-				.order(by: "distanceValue", descending: false)
-				.order(by: "scheduledAt", descending: true)
-		} else if hasDateFilter && !isDistanceFiltered {
-			// Date-only: server-side completedAt window.
-			let start = calendar.startOfDay(for: date!)
-			let end   = calendar.date(byAdding: .day, value: 1, to: start) ?? start
-			query = query
-				.whereField("scheduledAt", isGreaterThanOrEqualTo: Timestamp(date: start))
-				.whereField("scheduledAt", isLessThan: Timestamp(date: end))
-				.order(by: "scheduledAt", descending: true)
-		} else if hasDateFilter && isDistanceFiltered {
-			// Both active: date server-side (range on completedAt), distance client-side.
-			// Over-fetch to compensate for client-side distance trimming.
+		if hasDateFilter {
+			// Date: server-side scheduledAt window.
 			let start = calendar.startOfDay(for: date!)
 			let end   = calendar.date(byAdding: .day, value: 1, to: start) ?? start
 			query = query
@@ -129,14 +112,14 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 				.whereField("scheduledAt", isLessThan: Timestamp(date: end))
 				.order(by: "scheduledAt", descending: true)
 		} else {
-			// No date or distance filter — newest activity first: order by last update
+			// No date filter — newest activity first: order by last update
 			// so a freshly edited or synced event jumps to the top of History.
 			query = query.order(by: "updatedAt", descending: true)
 		}
 
 		// ── Pagination ─────────────────────────────────────────────────────────
 		// Over-fetch when distance will be applied client-side.
-		let fetchSize = (hasDateFilter && isDistanceFiltered) ? pageSize * 3 : pageSize
+		let fetchSize = isDistanceFiltered ? pageSize * 3 : pageSize
 		query = query.limit(to: fetchSize)
 
 		if let lastDoc = cursor as? DocumentSnapshot {
@@ -154,8 +137,8 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 
 		var activities = mapDocuments(snapshot.documents)
 
-		// ── Client-side distance filter (when both date + distance active) ────
-		if hasDateFilter && isDistanceFiltered {
+		// ── Client-side distance filter (unit-aware, miles-denominated range) ──
+		if isDistanceFiltered {
 			activities = activities.filter { activity in
 				let miles = Self.parseMilesFromDisplay(activity.distance)
 				return miles >= effectiveMin && miles <= effectiveMax
@@ -175,13 +158,15 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 		return (events: activities, nextCursor: nextCursor)
 	}
 
-	/// Parses miles from display strings like "5.00 mi" or "10.00 km".
+	/// Parses miles from display strings like "5.00 mi" or "10.00 km" — km values convert to miles.
 	private static func parseMilesFromDisplay(_ display: String) -> Double {
+		let isKm = display.contains(" km")
 		let cleaned = display
 			.replacingOccurrences(of: " mi", with: "")
 			.replacingOccurrences(of: " km", with: "")
 			.trimmingCharacters(in: .whitespaces)
-		return Double(cleaned) ?? 0
+		let value = Double(cleaned) ?? 0
+		return isKm ? value * 0.621371 : value
 	}
 
 	// MARK: - Write
@@ -201,22 +186,23 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 			source: source
 		)
 
-		// Immutable-on-sync fields. The same event round-trips app ⇄ watch many
-		// times; each pass rebuilds a full document and `merge: true` would rewrite
-		// every field. `source` (who created it) and `createdAt` (when) are set once
-		// at creation and must never change afterwards — otherwise a phone-created
-		// event echoed back by the watch could flip to "watch". `id` is the document
-		// key, so it is inherently immutable. Carry the stored values forward.
+		// Write-once fields (source/createdAt/completedAt) must survive every app ⇄ watch
+		// round-trip — carry the stored values forward instead of the freshly stamped ones.
 		let ref = eventRef(eventId: document.id)
-		if let existing = try? await ref.getDocument(source: .default),
-		   existing.exists,
-		   let current = try? existing.data(as: EventDocument.self) {
-			document.source    = current.source
-			document.createdAt = current.createdAt
+		let snapshot = try? await ref.getDocument(source: .default)
+		if let snapshot, snapshot.exists, let current = try? snapshot.data(as: EventDocument.self) {
+			document.source      = current.source
+			document.createdAt   = current.createdAt
+			document.completedAt = current.completedAt ?? document.completedAt
+			try await write(document: document, merge: true)
+		} else if let snapshot, !snapshot.exists {
+			// Confirmed new document — full write, including the write-once fields.
+			try await write(document: document, merge: true)
+		} else {
+			// Read failed (offline, cold cache) or stored doc didn't decode — merge without
+			// the write-once fields so a possibly existing doc is never blindly rewritten.
+			try await writeSkippingImmutableFields(document)
 		}
-
-		// Segments are embedded in document.segments — single document write, no subcollection.
-		try await write(document: document, merge: true)
 	}
 
 	func updateMetadata(eventId: Int, userId: String, name: String, location: String) async throws {
@@ -253,6 +239,15 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 	private func write(document: EventDocument, merge: Bool) async throws {
 		let ref = eventRef(eventId: document.id)
 		try ref.setData(from: document, merge: merge)
+	}
+
+	// Merge-write that strips the write-once keys — used when the stored copy is unreadable.
+	private func writeSkippingImmutableFields(_ document: EventDocument) async throws {
+		var data = try Firestore.Encoder().encode(document)
+		data.removeValue(forKey: "source")
+		data.removeValue(forKey: "createdAt")
+		data.removeValue(forKey: "completedAt")
+		try await eventRef(eventId: document.id).setData(data, merge: true)
 	}
 
 	/// Maps Firestore documents to ActivityData — segments are read from the embedded

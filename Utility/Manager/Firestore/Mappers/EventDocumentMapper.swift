@@ -250,25 +250,25 @@ enum EventDocumentMapper {
 		return nil
 	}
 
-	// Cached — DateFormatter is expensive to allocate.
-	private static let connectIQDateFormatter: DateFormatter = {
+	// One immutable cached formatter per wire format — reassigning dateFormat on a
+	// shared formatter is not thread-safe and concurrent parses could mis-parse dates.
+	private static let connectIQDateFormatters: [DateFormatter] = ["MMM/d/yyyy", "MMM/dd/yyyy", "yyyy-MM-dd"].map { format in
 		let f = DateFormatter()
 		f.locale = Locale(identifier: "en_US_POSIX")
+		f.dateFormat = format
 		return f
-	}()
+	}
 
 	static func parseConnectIQDate(_ value: String?) -> Date? {
 		guard let value else { return nil }
-		for format in ["MMM/d/yyyy", "MMM/dd/yyyy", "yyyy-MM-dd"] {
-			connectIQDateFormatter.dateFormat = format
-			if let date = connectIQDateFormatter.date(from: value) { return date }
+		for formatter in connectIQDateFormatters {
+			if let date = formatter.date(from: value) { return date }
 		}
 		return nil
 	}
 
 	static func connectIQDateString(from date: Date) -> String {
-		connectIQDateFormatter.dateFormat = "MMM/d/yyyy"
-		return connectIQDateFormatter.string(from: date)
+		connectIQDateFormatters[0].string(from: date)
 	}
 
 	static func parseTimeString(_ value: String) -> Int {
