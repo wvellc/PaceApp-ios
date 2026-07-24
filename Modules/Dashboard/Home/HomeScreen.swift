@@ -46,9 +46,9 @@ struct HomeScreen: View {
 					Button {
 						showFAQSafari = true
 					} label: {
-						Image(systemName: "questionmark.circle")
-							.font(.title3)
-							.foregroundStyle(.yellow)
+						Image(.icQuestion)
+							.resizable()
+							.frame(width: 32, height: 32, alignment: .center)
 					}
 					.buttonStyle(.plain)
 				})
