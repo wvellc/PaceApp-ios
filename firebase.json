@@ -29,6 +29,14 @@
       {
         "source": "/emailSignIn/**",
         "destination": "/emailSignIn/index.html"
+      },
+      {
+        "source": "/stravaCallback",
+        "destination": "/stravaCallback/index.html"
+      },
+      {
+        "source": "/stravaCallback/**",
+        "destination": "/stravaCallback/index.html"
       }
     ]
   }
