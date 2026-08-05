@@ -74,9 +74,17 @@ final class StravaManager: NSObject {
 		UIApplication.shared.open(url)
 	}
 
-	/// Native-app callback path. Routed here from `PaceApp.onOpenURL`; self-guards on scheme+host.
+	/// True for both callback forms — the paceapp://strava-callback deep link and the
+	/// universal link https://thepaceapp.web.app/stravaCallback/ iOS hands us directly.
+	static func isStravaCallback(_ url: URL) -> Bool {
+		if url.scheme == StravaConst.callbackScheme, url.host == StravaConst.callbackHost { return true }
+		let relayHost = URL(string: StravaConst.redirectURI)?.host
+		return url.scheme == "https" && url.host == relayHost && url.path.hasPrefix("/stravaCallback")
+	}
+
+	/// Callback entry point. Routed here from `PaceApp.onOpenURL`; self-guards on form.
 	func handleOpenURL(_ url: URL) {
-		guard url.scheme == StravaConst.callbackScheme, url.host == StravaConst.callbackHost else { return }
+		guard Self.isStravaCallback(url) else { return }
 		handleCallback(url)
 	}
 

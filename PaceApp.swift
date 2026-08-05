@@ -73,8 +73,8 @@ struct PaceApp: App {
 					return
 				}
 				
-				// Priority 2 — Strava OAuth callback (native-app handoff).
-				if url.scheme == StravaConst.callbackScheme, url.host == StravaConst.callbackHost {
+				// Priority 2 — Strava OAuth callback (paceapp:// deep link or universal link).
+				if StravaManager.isStravaCallback(url) {
 					stravaManager.handleOpenURL(url)
 					return
 				}
