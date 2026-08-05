@@ -16,9 +16,9 @@ struct StravaConst {
 	static let callbackHost   = "strava-callback"           // final relayed deep link: paceapp://strava-callback
 	static let scope          = "activity:write"            // upload-only — required for POST /activities
 
-	// Strava requires a real callback DOMAIN, so it redirects to this hosted page,
-	// which relays to the existing paceapp://strava-callback deep link (firebase-hosting/.../stravaCallback).
-	// Trailing slash serves the page directly (no hosting 301); host must match the Strava callback domain.
+	// Strava requires a real callback DOMAIN, so it redirects here — the `stravaCallback`
+	// function 302-redirects to the existing paceapp://strava-callback deep link.
+	// Host must match the Strava app's "Authorization Callback Domain".
 	static let redirectURI    = "https://thepaceapp.web.app/stravaCallback/"
 
 	// strava:// opens the installed Strava app; https:// is the web fallback.

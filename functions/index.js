@@ -172,6 +172,19 @@ async function syncEvent(uid, eventRef, event) {
 
 // MARK: - Endpoints
 
+/**
+ * OAuth callback relay. Strava redirects here (a real https domain, as it requires),
+ * and this 302-redirects to the app's paceapp://strava-callback deep link, forwarding
+ * the query (code/scope/error) unchanged. A *server* redirect is followed by
+ * ASWebAuthenticationSession and in-app browsers, which block a page's JavaScript
+ * from auto-navigating to a custom scheme without a tap.
+ */
+exports.stravaCallback = onRequest((req, res) => {
+  const query = req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : "";
+  res.set("Location", "paceapp://strava-callback" + query);
+  res.status(302).send();
+});
+
 /** Exchange an OAuth code for tokens and connect the account. */
 exports.stravaExchange = onRequest({ secrets: [STRAVA_CLIENT_SECRET] }, async (req, res) => {
   const uid = await requireUid(req, res);

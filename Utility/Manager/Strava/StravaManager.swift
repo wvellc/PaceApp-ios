@@ -6,7 +6,6 @@
 //
 
 import UIKit
-import AuthenticationServices
 import FirebaseAuth
 import FirebaseFirestore
 import Logging
@@ -31,7 +30,6 @@ final class StravaManager: NSObject {
 	var isWorking = false
 
 	// MARK: - Private
-	@ObservationIgnored private var authSession: ASWebAuthenticationSession?
 	@ObservationIgnored private var listener: ListenerRegistration?
 	@ObservationIgnored private let log = Logger(label: "strava.manager")
 
@@ -66,14 +64,14 @@ final class StravaManager: NSObject {
 
 	// MARK: - Connect (OAuth authorize)
 
-	/// Prefers the installed Strava app for a native handoff; falls back to a web sheet.
+	/// Opens Strava for authorization — the installed app if present, otherwise the
+	/// external browser (same pattern as the Firebase auth redirect). The callback
+	/// returns via paceapp://strava-callback (onOpenURL) after the stravaCallback
+	/// function 302-redirects to it.
 	func connect() {
-		if isStravaAppInstalled, let url = authorizeURL(base: StravaConst.appAuthorizeURL) {
-			// Callback returns via the app's URL scheme → handleOpenURL(_:).
-			UIApplication.shared.open(url)
-		} else if let url = authorizeURL(base: StravaConst.webAuthorizeURL) {
-			startWebAuth(url)
-		}
+		let base = isStravaAppInstalled ? StravaConst.appAuthorizeURL : StravaConst.webAuthorizeURL
+		guard let url = authorizeURL(base: base) else { return }
+		UIApplication.shared.open(url)
 	}
 
 	/// Native-app callback path. Routed here from `PaceApp.onOpenURL`; self-guards on scheme+host.
@@ -136,26 +134,7 @@ final class StravaManager: NSObject {
 		return components?.url
 	}
 
-	private func startWebAuth(_ url: URL) {
-		let session = ASWebAuthenticationSession(
-			url: url,
-			callbackURLScheme: StravaConst.callbackScheme
-		) { [weak self] callbackURL, error in
-			guard let self else { return }
-			if let callbackURL {
-				self.handleCallback(callbackURL)
-			} else if let error {
-				self.reportAuthError(error)
-			}
-			self.authSession = nil
-		}
-		session.presentationContextProvider = self
-		session.prefersEphemeralWebBrowserSession = false
-		authSession = session
-		session.start()
-	}
-
-	/// Shared callback parser for both the native-app and web-sheet paths.
+	/// Parses the OAuth callback (paceapp://strava-callback) and starts the token exchange.
 	private func handleCallback(_ url: URL) {
 		let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems
 
@@ -191,24 +170,7 @@ final class StravaManager: NSObject {
 
 	// MARK: - Private — Errors
 
-	private func reportAuthError(_ error: Error) {
-		// The user closing the sheet isn't an error worth surfacing.
-		if (error as? ASWebAuthenticationSessionError)?.code == .canceledLogin { return }
-		reportError("Couldn't connect to Strava. Please try again.")
-	}
-
 	private func reportError(_ message: String) {
 		Task { @MainActor in ToastManager.shared.present(.error(message)) }
-	}
-}
-
-// MARK: - ASWebAuthenticationPresentationContextProviding
-
-extension StravaManager: ASWebAuthenticationPresentationContextProviding {
-	func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-		UIApplication.shared.connectedScenes
-			.compactMap { $0 as? UIWindowScene }
-			.flatMap { $0.windows }
-			.first { $0.isKeyWindow } ?? ASPresentationAnchor()
 	}
 }

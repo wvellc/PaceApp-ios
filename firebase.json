@@ -36,11 +36,11 @@
       },
       {
         "source": "/stravaCallback",
-        "destination": "/stravaCallback/index.html"
+        "function": { "functionId": "stravaCallback", "region": "us-central1" }
       },
       {
         "source": "/stravaCallback/**",
-        "destination": "/stravaCallback/index.html"
+        "function": { "functionId": "stravaCallback", "region": "us-central1" }
       }
     ]
   }

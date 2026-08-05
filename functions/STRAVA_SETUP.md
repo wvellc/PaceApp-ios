@@ -7,8 +7,8 @@ and activity upload all live in Cloud Functions**. The device never holds a Stra
 <https://www.strava.com/settings/api>
 
 - **Authorization Callback Domain**: `thepaceapp.web.app`
-  (Strava requires a real domain; it redirects to the hosted relay page at
-  `/stravaCallback`, which forwards to `paceapp://strava-callback`.)
+  (Strava requires a real domain; it redirects to `/stravaCallback`, a Cloud Function
+  that 302-redirects to the `paceapp://strava-callback` deep link.)
 - Note your **Client ID** and **Client Secret**.
 
 ## 2. Fill the iOS config
@@ -21,7 +21,7 @@ and activity upload all live in Cloud Functions**. The device never holds a Stra
   `paceapp://strava-callback` deep link, which `PaceApp.onOpenURL` already handles.
 
 The `paceapp` URL scheme and `strava` query scheme are already in `PaceApp-Info.plist`.
-The relay page + its rewrite already exist in `firebase-hosting/` and `firebase.json`.
+The `/stravaCallback` rewrite → `stravaCallback` function already exists in `firebase.json`.
 
 ## 3. Configure the Functions secrets
 ```bash
@@ -34,7 +34,7 @@ echo "STRAVA_CLIENT_ID=<your client id>" > .env       # not secret; also ships i
 ```bash
 firebase deploy --only functions,firestore:rules,hosting
 ```
-> Cloud Functions require the **Blaze** plan. `hosting` publishes the `/stravaCallback` relay page.
+> Cloud Functions require the **Blaze** plan. `hosting` wires `/stravaCallback` to the redirect function.
 
 ## Endpoints (called by the app with the Firebase ID token)
 | Function | Trigger | Purpose |
