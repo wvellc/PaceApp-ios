@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- App Privacy Manifest (PrivacyInfo.xcprivacy) -->
+
+    <!-- Tracking: Set to true only if your app or third-party SDKs track users across apps and websites. -->
+    <key>NSPrivacyTracking</key>
+    <false/>
+
+    <!-- Data Collection: List of data categories your app collects and whether they are linked to the user and used for tracking. -->
+    <!-- Since we don't have specifics, this is an empty array (no data collected). Add entries as needed. -->
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array>
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeName</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+            </array>
+        </dict>
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeEmailAddress</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+            </array>
+        </dict>
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypePhoneNumber</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+            </array>
+        </dict>
+    </array>
+    <!-- Optional: Data sharing with third parties (if applicable). Leave empty unless you share data. -->
+    <key>NSPrivacySharedDataTypes</key>
+    <array/>
+
+    <!-- Optional: Privacy nutrition labels for third-party SDKs that don’t ship their own manifests (rare). -->
+    <key>NSPrivacyThirdPartyDataTypes</key>
+    <array>
+        <!-- Garmin Connect IQ Companion App SDK (Swift Package) -->
+        <dict>
+            <key>NSPrivacyThirdPartyIdentifier</key>
+            <string>com.garmin.connectiq.companion</string>
+            <key>NSPrivacyThirdPartyDataTypesList</key>
+            <array>
+                <!-- No additional data types declared by this package. Add entries here if you configure it to collect data. -->
+            </array>
+        </dict>
+        <!-- CountryPicker (Swift Package) -->
+        <dict>
+            <key>NSPrivacyThirdPartyIdentifier</key>
+            <string>com.github.suryakantsharma.countrypicker</string>
+            <key>NSPrivacyThirdPartyDataTypesList</key>
+            <array>
+                <!-- No additional data types declared by this package. Add entries here if you configure it to collect data. -->
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

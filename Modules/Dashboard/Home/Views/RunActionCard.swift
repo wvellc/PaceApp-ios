@@ -1,0 +1,48 @@
+//
+//  RunActionCard.swift
+//  PaceApp
+//
+//  Created by FURKAN VIJAPURA on 4/2/26.
+//
+
+import SwiftUI
+
+struct RunActionCard: View {
+    @State private var isUserTapped = false
+
+    let action: RunAction
+
+    var body: some View {
+		
+		VStack(alignment: .leading, spacing: 0) {
+			Image(action.symbol)
+				.frame(width: 70, height: 70)
+			
+			Spacer(minLength: 10)
+			
+			Text(action.title)
+				.font(.semiBold17)
+				.foregroundStyle(.darkCharcoal)
+				.multilineTextAlignment(.leading)
+		}
+		.padding(16)
+		.frame(maxWidth: .infinity, alignment: .topLeading)
+		.background(.whiteApp, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+		.overlay(alignment: .bottomTrailing) {
+			Image(.isRunPlaceholder)
+				.resizable()
+				.scaledToFit()
+				.frame(width: 85.93, height: 102)
+				.offset(x: 3, y: 12)
+		}
+        .scaleEffect(isUserTapped ? 0.92 : 1)
+        .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isUserTapped)
+    }
+}
+
+struct RunAction: Identifiable {
+	let id = UUID()
+	let title: LocalizedStringResource
+	let symbol: String
+	let rout: Destinations
+}

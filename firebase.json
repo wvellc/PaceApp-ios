@@ -1,0 +1,47 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs20"
+  },
+  "hosting": {
+    "public": "firebase-hosting/public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "/.well-known/apple-app-site-association",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "/emailSignIn",
+        "destination": "/emailSignIn/index.html"
+      },
+      {
+        "source": "/emailSignIn/**",
+        "destination": "/emailSignIn/index.html"
+      },
+      {
+        "source": "/stravaCallback",
+        "function": { "functionId": "stravaCallback", "region": "us-central1" }
+      },
+      {
+        "source": "/stravaCallback/**",
+        "function": { "functionId": "stravaCallback", "region": "us-central1" }
+      }
+    ]
+  }
+}

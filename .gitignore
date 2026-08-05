@@ -126,8 +126,13 @@ playground.xcworkspace
 *.sqlite-shm
 
 # Firebase/GoogleService files (uncomment if you keep secrets out of VCS)
-# GoogleService-Info.plist
+GoogleService-Info.plist
 
 # Secrets (uncomment or adjust to your setup)
-# .env
-# .env.*
+.env
+.env.*
+
+# Firebase deploy cache
+.firebase/
+/PaceApp.xcodeproj/project.xcworkspace/xcuserdata
+/PaceApp.xcodeproj/xcshareddata

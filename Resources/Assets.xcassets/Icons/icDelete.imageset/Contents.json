@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "icDelete.svg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

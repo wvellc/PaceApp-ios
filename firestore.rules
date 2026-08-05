@@ -1,0 +1,43 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /events/{eventId} {
+      // resource == null lets gets/listens on not-yet-created docs return a clean
+      // "not found" instead of permission-denied (no data exists to protect).
+      allow read: if request.auth != null
+        && (resource == null || request.auth.uid == resource.data.userId);
+      allow update, delete: if request.auth != null
+        && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.userId;
+    }
+
+    match /events/{eventId}/segments/{segmentId} {
+      allow read, write: if request.auth != null
+        && get(/databases/$(database)/documents/events/$(eventId)).data.userId == request.auth.uid;
+    }
+
+    match /favorites/{favoriteId} {
+      allow read, delete: if request.auth != null
+        && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.userId;
+    }
+
+    // Strava OAuth tokens — server-only. Cloud Functions (admin SDK) bypass
+    // these rules; clients can never read or write the access/refresh tokens.
+    match /stravaTokens/{userId} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,16 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "net.paceapp",
+      "sha256_cert_fingerprints": [
+        "5F:7B:DD:D0:9C:82:3F:43:DA:C3:46:F4:7A:A9:63:E4:7F:6A:C7:38:D4:EB:81:1E:58:A3:BA:78:94:E3:0C:2F",
+        "CD:6F:DF:8C:A8:98:2E:31:53:12:42:3B:70:27:87:50:62:37:11:A4:D2:60:30:E4:4B:96:97:F4:34:42:52:DC",
+        "68:FE:72:B0:C9:B4:5A:13:FF:B8:FB:E8:22:69:B6:E4:CE:4D:9C:53:4E:C2:60:CA:B9:69:B3:F3:88:F6:04:C9"
+      ]
+    }
+  }
+]

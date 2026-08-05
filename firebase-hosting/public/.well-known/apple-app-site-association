@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "6LK9SH63JD.net.paceapp",
+        "paths": [
+          "/__/auth/action*",
+          "/emailSignIn*",
+          "/*"
+        ]
+      }
+    ]
+  }
+}
