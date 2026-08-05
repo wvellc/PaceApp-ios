@@ -14,7 +14,7 @@ struct StravaConst {
 	static let clientId       = "269660"				// Strava app "Client ID"
 	static let callbackScheme = "paceapp"                   // ASWebAuthenticationSession scheme
 	static let callbackHost   = "strava-callback"           // final relayed deep link: paceapp://strava-callback
-	static let scope          = "activity:write,read"       // write = uploads, read = read back
+	static let scope          = "activity:write"            // upload-only — required for POST /activities
 
 	// Strava requires a real callback DOMAIN, so it redirects to this hosted page,
 	// which relays to the existing paceapp://strava-callback deep link (firebase-hosting/.../stravaCallback).
