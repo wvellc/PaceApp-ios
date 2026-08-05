@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # PaceApp iOS — Project Intelligence
 
-> Last verified against the codebase on 2026-07-24 (branch `Firebase-Integration`).
+> Last verified against the codebase on 2026-08-05 (branch `strava-integration`).
 
 ## Overview
 
@@ -67,12 +67,27 @@ Read this first. Where it disagrees with older sections, this wins.
 - **Every event write stamps `updatedAt`** — the mapper's `document(...)` and `updatedDocument(...)` set it to now; `softDelete` uses `serverTimestamp`. History's default (unfiltered) query orders by `userId ASC, status ASC, updatedAt DESC` (composite index required + deployed).
 
 ### Account deletion + re-authentication
-- **`AuthManager.deleteAccount()` order matters**: (1) `disconnectFromApp()` FIRST — otherwise live watch sync keeps writing to Firestore mid-deletion and floods `permission denied` once the token is gone; (2) `stopProfileListener()`; (3) **best-effort (`try?`) data cleanup** — a thrown read must never abort before the account is removed; (4) delete the user doc + `user.delete()`; (5) `Auth.auth().signOut()` (clears the keychain session even if delete failed); (6) wipe `userDetails`/`currentUser`/`AppSession`.
+- **`AuthManager.deleteAccount()` order matters**: (1) `disconnectFromApp()` FIRST — otherwise live watch sync keeps writing to Firestore mid-deletion and floods `permission denied` once the token is gone; (2) `stopProfileListener()` + `StravaManager.shared.stopObserving()`; (3) **best-effort data cleanup** via `deleteDocuments(matching:label:)` — never aborts the deletion, but logs skipped cleanups; (4) delete the user doc + `user.delete()`; (5) `Auth.auth().signOut()` (clears the keychain session even if delete failed); (6) wipe `userDetails`/`currentUser`/`AppSession`.
 - **Reauth-then-delete, no sign-out**: Firebase `user.delete()` needs a recent login. Settings shows an in-app confirm popup, then reauthenticates inline using the **already signed-in contact** — phone: OTP sheet (`sendReauthOTP` → `reauthenticateWithPhone`); email: link + "check your email" wait sheet, completed in `PaceApp.onOpenURL` gated by `AuthManager.isReauthenticatingForDeletion` (so the returning link is treated as reauth, not a fresh sign-in). `deleteAccount()` runs only after reauth succeeds. Sheets: `Modules/Dashboard/Settings/ReauthDeleteSheets.swift`.
 - **Friendly auth errors**: never surface `error.localizedDescription` to users. Route every auth/sign-in error through **`AuthErrorMapper.message(for:)`** (`Utility/Manager/Auth/`), which maps `AuthErrorCode` + network errors to short non-technical copy.
 
 ### Gait unit conversion (Feet ⇄ Meters)
 - `GaitStrideCalculator.convert(_:fromUnit:toUnit:)` converts a step length between `Feet`/`Meters`, snapped to the picker's 1-dp resolution. `GaitSelectionView` calls it on the Meters/Feet segment `.onChange` so the shown value stays the same real measurement — shared by onboarding **SetGaitStepView** and **Profile → UpdateGait** (same component).
+
+### Strava integration (client OAuth + Cloud Functions)
+- Split responsibility: the app does the OAuth **authorize** step only; **Cloud Functions** (`functions/index.js`) hold the client secret, exchange/refresh tokens, and upload summary activities (`POST /activities`). The device never stores a Strava token.
+- iOS pieces: **`StravaConst`** (`Utility/Constant/Strava.swift` — clientId, scope `activity:write`, redirect), **`StravaManager`** (`Utility/Manager/Strava/`, `@Observable` singleton — connect/disconnect/syncRecent + Firestore state listener), **`StravaAPI`** (URLSession client calling the HTTPS functions with the Firebase ID token — deliberately no `FirebaseFunctions` SPM product), **`StravaConnectScreen`** (`Modules/Dashboard/Profile/Strava/`).
+- `connect()` opens the Strava app (`strava://oauth/mobile/authorize`) or the external browser — never `ASWebAuthenticationSession` (it stalls on the custom-scheme return). `redirectURI` is `https://thepaceapp.web.app/stravaCallback/` (Strava requires a real callback domain).
+- **The return leg is a universal link** — applinks + wildcard AASA mean iOS opens the app directly with the **https** URL. `StravaManager.isStravaCallback` accepts BOTH forms (`paceapp://strava-callback` and the https link); the `stravaCallback` function 302-redirects to the deep link as the Safari fallback.
+- Functions: `stravaExchange` (code→tokens), `stravaSync` (one event), `stravaBackfill` (recent unsynced), `stravaDisconnect`, `onEventCompleted` (Firestore trigger — auto-upload on the active→completed transition). Secret via `firebase functions:secrets:set STRAVA_CLIENT_SECRET`; client id in `functions/.env`.
+- State: server-only tokens in `stravaTokens/{uid}` (rules deny all client access); client-readable summary at `users/{uid}.strava` `{connected, athleteName}` mirrored by `startObserving()`/`stopObserving()` (stopped on logout + account delete). Synced events get stamped `stravaActivityId` (dedupe) + `stravaSyncedAt` / `stravaSyncError`.
+- **Upload honesty**: distance = `actualDistance`, else the sum of `completedSegments.completed_distance`, omitted entirely when nothing was covered — never report the planned `distanceValue`. Start time = `completedAt − actualTimeSeconds`. Event `measure` is `"Miles"`/`"Kilometers"` — functions treat anything ≠ `"Miles"` as km.
+- Entry points: Profile menu row → `.stravaIntegration`; Settings card (Connect when disconnected; **Resync + Disconnect** when connected); onboarding `connectStrava` step (footer flips to **Next** once connected). Backlog + Strava's connected-athlete quota limitation (403 on authorize) live in `STRAVA_TODO.md` / `functions/STRAVA_SETUP.md`.
+
+### Cross-account watch sync (foreign events)
+- The watch keeps its full event list across app accounts, so after an account delete/switch it replays deletes for docs the new uid can't touch → `permission denied` flood. `applyDeletedEventId` records such ids in **`AppSession.foreignEventIds`** on the first denial and skips them on every later replay (list cleared on logout).
+- `firestore.rules` events **read** allows `resource == null`, so gets/listens on not-yet-created docs return a clean "not found" instead of permission-denied (upsert preloads and fresh-event listeners rely on this).
+- `deleteAccount()` cleanup goes through `deleteDocuments(matching:label:)` — still best-effort, but a skipped cleanup now logs a warning instead of silently orphaning docs.
 
 ### Working style (owner preferences)
 - **Single-line comments** — one concise `//` line over multi-line blocks; keep structure clean. Still preserve `// MARK: -` sections and author headers.
@@ -101,7 +116,8 @@ xcodebuild -project PaceApp.xcodeproj -scheme PaceApp \
 **Firebase deploy** (requires `firebase-cli`, from repo root):
 ```bash
 firebase deploy --only firestore:rules,firestore:indexes   # security rules + composite indexes
-firebase deploy --only hosting                              # email sign-in landing page
+firebase deploy --only functions                            # Strava Cloud Functions (Blaze plan + STRAVA_CLIENT_SECRET secret)
+firebase deploy --only hosting                              # email sign-in page + /stravaCallback function rewrite
 ```
 
 **Dependencies** are resolved by Xcode via SPM automatically. To resolve from CLI:
@@ -120,7 +136,7 @@ xcodebuild -resolvePackageDependencies -project PaceApp.xcodeproj -scheme PaceAp
 | `PaceApp.swift` | `@main` SwiftUI `App` struct. Sets up `Router`, toast/alert overlays, keyboard dismissal, `onOpenURL` handler chain |
 | `AppDelegate.swift` | `@UIApplicationDelegateAdaptor`. Configures Firebase, registers Gilroy fonts, sets up AuthManager, initializes ConnectIQ, configures 500MB Firestore persistent cache, sets up swift-log |
 
-**`onOpenURL` handler priority chain**: (1) Firebase reCAPTCHA → (2) Email sign-in link → (3) ConnectIQ `connect://` scheme.
+**`onOpenURL` handler priority chain**: (1) Firebase reCAPTCHA → (2) Strava callback (`paceapp://strava-callback` OR the https universal link — `StravaManager.isStravaCallback`) → (3) Email sign-in link → (4) ConnectIQ `connect://` scheme.
 
 ### Navigation — Router Pattern
 
@@ -152,6 +168,7 @@ enum Destinations: Hashable, Codable {
     case licenses
     case updateGait
     case manageWatch
+    case stravaIntegration
     case editProfile
 }
 ```
@@ -172,6 +189,7 @@ Core singletons (most are `@Observable @MainActor`):
 | `FavoritesRepository.shared` | Accessor enum to `FirestoreFavoritesRepository` — favorites |
 | `AnalyticsRepository.shared` | Analytics reads (direct Firestore, see Analytics note) |
 | `ConnectIQManager.shared` | Garmin watch communication |
+| `StravaManager.shared` | Strava OAuth + connection state (client half; Cloud Functions do uploads) |
 | `ToastManager.shared` | Global toast notifications |
 | `AppAlertManager` | Global alert overlay |
 | `AppSessionManager.shared` | UserDefaults wrapper |
@@ -208,7 +226,7 @@ PaceApp-ios/
 │       ├── Home/                 # HomeScreen, NewRun/ (CreateRunEventScreen), EditEvent/, EventDetails/, Favorites/, MetricsPopup/
 │       ├── History/              # HistoryScreen + ViewModel + Views
 │       ├── Analytics/            # AnalyticsScreen + Components/Models/Repository/ViewModel
-│       ├── Profile/              # ProfileScreen, ManageWatch/, UpdateGait/, Views/
+│       ├── Profile/              # ProfileScreen, ManageWatch/, UpdateGait/, Strava/ (StravaConnectScreen), Views/
 │       ├── Settings/             # SettingScreen, SettingsViewModel, ReauthDeleteSheets, AppWebViewScreen
 │       └── Notifications/        # Push notification UI
 ├── DesignSystem/
@@ -217,13 +235,14 @@ PaceApp-ios/
 │   ├── Font/                     # AppFonts.swift, Gilroy+Font.swift, GilroyFontModifier.swift
 │   └── Styles/                   # ButtonGlassStyle, PlainSelectedButtonStyle
 ├── Utility/
-│   ├── Constant/                 # AppConstant.swift, Keys.swift, Garmin.swift, Network.swift, typeAlias.swift
+│   ├── Constant/                 # AppConstant.swift, Keys.swift, Garmin.swift, Strava.swift, Network.swift, typeAlias.swift
 │   ├── Extensions/               # Array, CGFloat, Color, Date, MKCoordinateRegion, PolylineCodec, String, Task, ToolBar, UIWindow, View
 │   ├── Helpers/                  # Logger, Debouncer, ValidationProvider
 │   ├── Manager/
 │   │   ├── Auth/                 # AuthManager.swift, AuthErrorMapper.swift
 │   │   ├── Firestore/            # Interfaces/, Repositories/, Mappers/ (see Data Layer)
 │   │   ├── App Session/          # AppSessionManager.swift, AppSessionKey.swift
+│   │   ├── Strava/               # StravaManager.swift (OAuth + state), StravaAPI.swift (functions client)
 │   │   ├── ConnectIQManager.swift        # (loose file — no ConnectIQ/ subdir)
 │   │   ├── EventUpdateCenter.swift
 │   │   ├── EventDeletionCenter.swift
@@ -232,9 +251,11 @@ PaceApp-ios/
 │   └── Modifier/                 # Animations (Shake, SlideTransition, Pulse)
 ├── Resources/                    # Assets.xcassets, Colors.xcassets, Fonts/, Localizable.xcstrings
 ├── firebase-hosting/public/      # index.html, emailSignIn/index.html, .well-known/ (AASA + assetlinks.json)
+├── functions/                    # Cloud Functions (Strava) — index.js, STRAVA_SETUP.md, .env (client id)
+├── STRAVA_TODO.md                # Strava backlog + known limitations (athlete quota)
 ├── firestore.rules               # Security rules (owner-only access)
 ├── firestore.indexes.json        # Composite indexes (5, all on events)
-├── firebase.json                 # Firebase config (firestore + hosting)
+├── firebase.json                 # Firebase config (firestore + functions + hosting)
 └── GoogleService-Info.plist      # Firebase credentials
 ```
 
@@ -274,6 +295,7 @@ Utility/Manager/Firestore/
 | `events` | `events/{eventId}` | Run/walk events; **segments embedded on the doc**, plus `routePolyline`, `status`, `syncStatus`, `source` |
 | ~~`segments`~~ | ~~`events/{eventId}/segments`~~ | **Deprecated** — segments are an embedded `[RunSegment]` array (a leftover subcollection rule still exists in `firestore.rules`) |
 | `favorites` | `favorites/{favoriteId}` | User favorited events |
+| `stravaTokens` | `stravaTokens/{uid}` | Strava OAuth tokens — **server-only** (rules deny all; Cloud Functions read/write via admin SDK) |
 
 ### Repository APIs (actual)
 
@@ -309,11 +331,13 @@ Static-only. Key methods: `document(...) -> (EventDocument, [RunSegment])`, `upd
 
 ```
 users/{userId} (+ subdocs)   → read/write: auth.uid == userId
-events/{eventId}             → read/update/delete: auth.uid == resource.data.userId
+events/{eventId}             → read: owner OR resource == null (clean "not found" for missing docs)
+                                update/delete: auth.uid == resource.data.userId
                                 create: auth.uid == request.resource.data.userId
   segments/{segId}           → leftover rule (owner check via parent get()) — subcollection no longer written
 favorites/{favId}            → read/delete: auth.uid == resource.data.userId
                                 create: auth.uid == request.resource.data.userId
+stravaTokens/{userId}        → all client access denied (Cloud Functions admin SDK only)
 ```
 
 ### Composite Indexes (deployed, `firestore.indexes.json`)
@@ -380,8 +404,9 @@ The CreateAccount flow is a **watch-pairing onboarding wizard**, not a body-metr
 | `.chooseYourModel` | `ChooseDevicesStepView` | Pick the watch model |
 | `.showConnectedWatch` | `ConnectWatchStepView` | Confirm connected watch |
 | `.setGait` | `SetGaitStepView` | Step length (shared `GaitSelectionView` with Profile → UpdateGait) |
+| `.connectStrava` | `ConnectStravaStepView` | Link Strava via the shared `StravaManager` flow (Skip available) |
 
-- A `connectStrava` case (+ `ConnectStravaStepView`) exists but is **commented out** of the enum.
+- `connectStrava` is the **active final step** (re-enabled). The step view reads `StravaManager` from the environment; `CreateAccountScreen` overrides the footer title to **"Next"** when `strava.isConnected`, and the footer tap then calls `finishOnboarding()` instead of relaunching OAuth.
 - Container: `CreateAccountScreen.swift` (module root — no `Screen/` subdir). State: `CreateAccountViewModel` with `var currentStep: CreateAccountStep = .profile`; advancement via the enum's computed `next` / `previous` (no `totalSteps` property).
 - The enum provides per-step `title`, `footerButtonTitle`, `showsBack`/`showsSkip`.
 - `ManageWatchStep` (`currentConnected`, `pairWatch`, `chooseYourModel`) mirrors the pairing steps for Profile → Manage Watch.
@@ -590,7 +615,7 @@ Holding the screen structs as `@State` preserves each screen's identity — and 
 | Profile/Edit | `EditProfileScreen` / VM | `UserProfileRepository.shared` | Update profile |
 | Profile/Gait | `UpdateGaitScreen` / `UpdateGaitViewModel` | `UserProfileRepository.shared` | Update gait |
 | Profile/Watch | `ManageWatchScreen` / `ManageWatchViewModel` | `ConnectIQManager.shared` | Pair/unpair Garmin devices |
-| Settings | `SettingScreen` / `SettingsViewModel` | `AuthManager.shared`, `UserProfileRepository.shared` | Logout, delete account, toggles, FAQ |
+| Settings | `SettingScreen` / `SettingsViewModel` | `AuthManager.shared`, `UserProfileRepository.shared`, `StravaManager.shared` | Logout, delete account, toggles, FAQ, Strava card (Connect / Resync + Disconnect) |
 | Notifications | `Notifications/` module | — | Push notification display |
 
 > **Analytics exception**: `AnalyticsRepository` (`Modules/Dashboard/Analytics/Repository/`) talks to Firestore **directly** (`fetchCompletedEvents(userId:from:to:)` → `EventDocumentMapper.analyticsRecord`), bypassing the protocol layer. Keep new event reads/writes in `FirestoreEventRepository` unless extending analytics.
@@ -601,8 +626,8 @@ Holding the screen structs as `@State` preserves each screen's identity — and 
 
 - `ConnectIQManager.shared` (`Utility/Manager/ConnectIQManager.swift`) — handles all watch communication via Garmin ConnectIQ SDK
 - **Background mode**: `bluetooth-central` in `UIBackgroundModes`
-- **URL scheme**: `connect://` registered for ConnectIQ callbacks
-- **Queries scheme**: `gcm-ciq` in `LSApplicationQueriesSchemes`
+- **URL scheme**: `connect://` registered for ConnectIQ callbacks (`paceapp://` is registered separately for the Strava callback)
+- **Queries schemes**: `gcm-ciq` + `strava` in `LSApplicationQueriesSchemes`
 - **Cold launch**: `restoreSessionIfNeeded()` + `resyncPendingEvents()`
 - **Key operations**: `initialize()`, `pairDevice()`, `unpairDevice()`, `sendMessage(_:)`, `handleOpenURL(_:)`
 - **Settings sync**: `sendSettings(gaitOverride:)` (app→watch), `applyRemoteSettings(_:)` (watch→app; echoes in-payload `vibrate_alert`/`beep_alert` when replying), `requestSettings()` (ask the watch for its body metrics). Gait math lives in `GaitStrideCalculator` (`Model/`).
@@ -635,6 +660,7 @@ Holding the screen structs as `@State` preserves each screen's identity — and 
 - `pairedWatchUUID` → `pairedWatchUUID: String?`
 - `pairedDevices` → `pairedDevices: [PersistedDevice]`
 - `lastWatchSyncDate` → `lastWatchSyncDate: Date?`
+- `foreignEventIds` → `foreignEventIds: [Int]` (event ids owned by a previous account — watch replays are skipped)
 
 `removeAllData()` wipes everything except `ignoreKeyList` (`.isUserCanViewMetricsPopUp`).
 
@@ -721,6 +747,10 @@ Holding the screen structs as `@State` preserves each screen's identity — and 
 | **`permission denied` flood on account delete** | Firestore writes (watch sync) outlive the auth token. Disconnect the watch + stop writers BEFORE `signOut()`/`user.delete()`; make delete-path reads best-effort so they can't abort. |
 | **`user.delete()` silently fails / account survives** | Firebase needs a recent login. Reauthenticate inline first (`reauthenticateWithPhone` / email link via `isReauthenticatingForDeletion`); don't `try?`-swallow the delete. |
 | **Raw Firebase error shown to user** | Route auth errors through `AuthErrorMapper.message(for:)` — never `error.localizedDescription` in a toast/alert. |
+| **Strava callback silently ignored** | The return arrives as `paceapp://strava-callback` OR the https universal link. Route both via `StravaManager.isStravaCallback` in `onOpenURL` — matching only the custom scheme drops the universal-link form with no error. |
+| **Fractional watch values truncated to 0** | `EventDocumentMapper.mapGenericDicts` must check `Double` BEFORE `NSNumber` — the NSNumber branch's `.intValue` stored `0.25` as `0` (broke `completedSegments` distances). |
+| **Foreign-event `permission denied` flood** | The watch replays deletes for another account's docs on every connect. First denial records the id in `AppSession.foreignEventIds`; later replays skip it. |
+| **Strava shows planned distance / absurd pace** | Never upload `distanceValue` as covered distance — use `actualDistance` or the `completed_distance` sum, and omit the field when 0 (functions `coveredDistance`). |
 
 ---
 
@@ -745,9 +775,11 @@ firebase-hosting/public/
 ├── emailSignIn/index.html           # Email sign-in deep link (redirects back to app)
 ├── 404.html                         # Custom 404
 └── .well-known/
-    ├── apple-app-site-association   # iOS universal links (served with correct Content-Type via firebase.json)
+    ├── apple-app-site-association   # iOS universal links (wildcard /* — also the Strava OAuth return path)
     └── assetlinks.json              # Android app links (net.paceapp, 3 SHA-256 fingerprints)
 ```
+
+> `/stravaCallback` is **not** a static page — a `firebase.json` rewrite routes it to the `stravaCallback` Cloud Function (302 → `paceapp://strava-callback`, the Safari fallback when the universal link doesn't fire).
 
 **APNs**: Required for silent push phone verification.
 **Reversed client ID**: `app-1-652638681487-ios-0bf0155356db81a4d6f3fa` (URL scheme for reCAPTCHA).
@@ -794,6 +826,6 @@ feat(scope): impactful non-technical summary
 - **`AnalyticsRepository` bypasses the protocol layer** — reads Firestore directly; acceptable for read-only aggregation, but don't copy the pattern for writes.
 - **Manual gait edits are overwritten** by height-derived gait on each watch connect / Profile visit — a "manual override" flag would be needed to preserve them.
 - **`heightCm`/`weightKg` are watch-sourced only** — onboarding doesn't collect them.
-- **`connectStrava` onboarding step** exists but is commented out (`ConnectStravaStepView` retained).
+- **Strava uploads are summary-only** — no GPX/route (no per-point timestamps are stored) and no HR trace; new-API-app athlete quota applies (403 "limit of connected athletes" until Strava grants an increase). Remaining work — official "Connect with Strava" button asset, `stravaSyncStatus` field on events, deauthorization webhook — is tracked in `STRAVA_TODO.md`.
 - **No test target** — verification is build-only.
 - **Localization** — copy lives in `Resources/Localizable.xcstrings`; keep user-facing strings localized.
