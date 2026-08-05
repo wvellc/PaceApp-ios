@@ -206,13 +206,13 @@ struct SettingScreen: View {
 
 			if strava.isConnected {
 				HStack(spacing: 12) {
-					stravaActionButton(title: "Reconnect", tint: .radiantBlue) { strava.connect() }
+					stravaActionButton(title: "Resync", tint: .radiantBlue) {
+						Task { await strava.syncRecent() }
+					}
 					stravaActionButton(title: "Disconnect", tint: .redBoho) {
 						Task { await strava.disconnect() }
 					}
 				}
-				// Manual sync — uncomment when needed:
-//				AppButton("Sync recent activities") { Task { await strava.syncRecent() } }
 			} else {
 				AppButton("Connect Strava") { strava.connect() }
 			}
