@@ -122,20 +122,30 @@ function metersFor(distance, measure) {
   return measure === "Miles" ? distance * 1609.34 : distance * 1000;
 }
 
+/** Distance actually covered — actualDistance, else the sum of per-segment completed_distance. */
+function coveredDistance(event) {
+  if (event.actualDistance > 0) return event.actualDistance;
+  const segments = Array.isArray(event.completedSegments) ? event.completedSegments : [];
+  return segments.reduce((total, s) => total + (parseFloat(s.completed_distance) || 0), 0);
+}
+
 /** Builds the form body for POST /activities from a PaceApp event document. */
 function activityForm(event) {
-  const distance = event.actualDistance || event.distanceValue || 0;
+  const distance = coveredDistance(event);
   const elapsed = event.actualTimeSeconds || event.goalTimeSeconds || 0;
-  const startTs = event.completedAt || event.scheduledAt;
-  const startISO = startTs && startTs.toDate ? startTs.toDate().toISOString() : new Date().toISOString();
+  // completedAt marks the finish — subtract elapsed so Strava gets the real start.
+  const endTs = event.completedAt || event.scheduledAt;
+  const endMs = endTs && endTs.toDate ? endTs.toDate().getTime() : Date.now();
+  const startISO = new Date(endMs - (event.actualTimeSeconds ? elapsed * 1000 : 0)).toISOString();
 
   const form = new URLSearchParams({
     name: event.name || "PaceApp Activity",
     sport_type: SPORT_BY_ACTIVITY[event.activityType] || "Workout",
     start_date_local: startISO,
     elapsed_time: String(Math.max(0, Math.round(elapsed))),
-    distance: String(Math.round(metersFor(distance, event.measure))),
   });
+  // Never report the planned distance as covered — omit when nothing was actually covered.
+  if (distance > 0) form.append("distance", String(Math.round(metersFor(distance, event.measure))));
   form.append("description", event.avgHeartRate
     ? `Avg HR ${event.avgHeartRate} bpm • Synced from PaceApp`
     : "Synced from PaceApp");

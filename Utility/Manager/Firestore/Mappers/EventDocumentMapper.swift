@@ -365,8 +365,12 @@ enum EventDocumentMapper {
 			for (key, value) in dict {
 				if let v = value as? String        { mapped[key] = .string(v) }
 				else if let v = value as? Int      { mapped[key] = .int(v) }
-				else if let v = value as? NSNumber { mapped[key] = .int(v.intValue) }
 				else if let v = value as? Double   { mapped[key] = .double(v) }
+				else if let v = value as? NSNumber {
+					// Fractional NSNumbers must stay Double — intValue truncated 0.25 → 0.
+					let d = v.doubleValue
+					mapped[key] = d.truncatingRemainder(dividingBy: 1) == 0 ? .int(v.intValue) : .double(d)
+				}
 			}
 			return mapped
 		}
