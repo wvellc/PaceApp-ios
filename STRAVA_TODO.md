@@ -12,6 +12,7 @@ and refresh tokens, and upload summary activities).
 - [ ] Upgrade the Firebase project to the **Blaze** plan (Cloud Functions require it)
 - [ ] `firebase deploy --only functions,firestore:rules,hosting` (hosting publishes the relay page)
 - [ ] Confirm the `events (userId + status)` composite index is deployed (used by backfill)
+- [ ] **Request a Strava connected-athlete quota increase** before onboarding real users (see note below) — <https://www.strava.com/settings/api>
 
 ## 🟡 Before shipping
 - [ ] Replace the "Powered by Strava" text with Strava's official **"Connect with Strava"** button asset in both `StravaConnectScreen.swift` and `ConnectStravaStepView.swift` (brand-guideline requirement)
@@ -27,3 +28,20 @@ and refresh tokens, and upload summary activities).
 - [ ] **GPX / route upload** (map + route) — needs per-point timestamps we don't currently store; would require a timestamped track from the watch
 - [ ] Per-event **"Sync to Strava"** button on Event Details (the `stravaSync` function already exists)
 - [ ] **Surface sync failures** — functions write `stravaSyncError` on the event, but nothing shows it yet
+
+## ⚠️ Known limitation — Strava connected-athlete quota
+
+**Symptom:** after authorizing, Strava returns `Error 403: Limit of connected athletes exceeded`
+("This app has exceeded the limit of connected athletes… request a quota increase").
+
+**Cause:** this is a **Strava-side app-tier limit**, not a bug in our app. Every new Strava API
+app starts with a very low connected-athlete cap (often 1 — the owner). The OAuth flow, redirect
+relay, Cloud Functions, and secret are all verified working; Strava blocks at its own quota gate.
+
+**Dev workaround (to keep testing):**
+- Each authorize tap consumes a slot even if the token exchange didn't finish. Revoke the existing
+  grant at <https://www.strava.com/settings/apps> (find PaceApp → Revoke Access), then retry.
+- Test with the **same Strava account that owns API app `269660`** (the owner gets the first slot).
+
+**Real fix (to onboard users):** request a connected-athlete **quota increase** from Strava via the
+form in the app's API settings — an approval step with Strava, nothing to change in the app.
