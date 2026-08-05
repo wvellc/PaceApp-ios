@@ -8,6 +8,7 @@
 import Foundation
 import ConnectIQ
 import FirebaseAuth
+import FirebaseFirestore
 import Logging
 
 // MARK: - IQDeviceStatus helpers
@@ -740,11 +741,19 @@ class ConnectIQManager: NSObject {
             EventDeletionCenter.shared.notifyDeleted(eventId: id)
         }
 
+        // Skip ids a previous sync already proved belong to another account.
+        guard !AppSession.foreignEventIds.contains(id) else { return }
+
         if let userId = AuthManager.shared.currentUser?.uid {
             Task {
                 do {
                     try await FirestoreEventRepository.shared.softDelete(eventId: id, userId: userId)
                 } catch {
+                    // Permission denied = the doc is owned by a previous account. Remember
+                    // the id so the watch's replay of it isn't retried on every connect.
+                    if (error as NSError).code == FirestoreErrorCode.permissionDenied.rawValue {
+                        AppSession.foreignEventIds.append(id)
+                    }
                     logger.error("[ConnectIQ] Failed to sync deleted ConnectIQ event to Firestore", metadata: [
                         "eventId": "\(id)",
                         "userId": "\(userId)",

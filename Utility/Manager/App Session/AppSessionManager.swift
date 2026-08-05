@@ -102,6 +102,13 @@ enum AppSession {
         }
     }
 
+    // FOREIGN EVENT IDS
+    // Event ids owned by a previous account — Firestore denies our writes, so skip them.
+    static var foreignEventIds: [Int] {
+        get { readObject(forKey: .foreignEventIds, as: [Int].self) ?? [] }
+        set { saveObject(newValue, forKey: .foreignEventIds) }
+    }
+
     // MARK: - Management Methods
 
     /// Remove stored session using key

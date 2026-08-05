@@ -12,7 +12,11 @@ service cloud.firestore {
     }
 
     match /events/{eventId} {
-      allow read, update, delete: if request.auth != null
+      // resource == null lets gets/listens on not-yet-created docs return a clean
+      // "not found" instead of permission-denied (no data exists to protect).
+      allow read: if request.auth != null
+        && (resource == null || request.auth.uid == resource.data.userId);
+      allow update, delete: if request.auth != null
         && request.auth.uid == resource.data.userId;
       allow create: if request.auth != null
         && request.auth.uid == request.resource.data.userId;

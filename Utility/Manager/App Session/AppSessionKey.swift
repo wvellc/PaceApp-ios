@@ -24,4 +24,8 @@ enum AppSessionKey: String, CaseIterable {
     // Timestamp of the last successful watch → phone sync.
     // Persisted so the greeting line survives app restarts.
     case lastWatchSyncDate
+
+    // Watch event ids whose Firestore write was permission-denied (doc owned by a
+    // previous account). Skipped on later syncs so the denial isn't retried forever.
+    case foreignEventIds
 }

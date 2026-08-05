@@ -249,15 +249,9 @@ final class AuthManager {
 
 		//Best-effort data cleanup — a failed read/write must NOT abort the account
 		//deletion below, else the user doc + Auth account get left behind.
-		if let events = try? await db.collection("events").whereField("userId", isEqualTo: uid).getDocuments() {
-			for doc in events.documents { try? await doc.reference.delete() }
-		}
-		if let favorites = try? await db.collection("favorites").whereField("userId", isEqualTo: uid).getDocuments() {
-			for doc in favorites.documents { try? await doc.reference.delete() }
-		}
-		if let legacy = try? await db.collection("users").document(uid).collection("activities").getDocuments() {
-			for doc in legacy.documents { try? await doc.reference.delete() }
-		}
+		await deleteDocuments(matching: db.collection("events").whereField("userId", isEqualTo: uid), label: "events")
+		await deleteDocuments(matching: db.collection("favorites").whereField("userId", isEqualTo: uid), label: "favorites")
+		await deleteDocuments(matching: db.collection("users").document(uid).collection("activities"), label: "legacy activities")
 
 		//Delete the profile doc, then the Auth account — both while still authenticated.
 		//user.delete() propagates so a rare failure surfaces instead of a silent half-delete.
@@ -273,8 +267,19 @@ final class AuthManager {
 		AppSession.removeAllData()
 	}
 	
+	// Best-effort bulk delete — never throws, but logs so a skipped cleanup
+	// (which orphans docs under a dead uid) is visible instead of silent.
+	private func deleteDocuments(matching query: Query, label: String) async {
+		do {
+			let snapshot = try await query.getDocuments()
+			for doc in snapshot.documents { try? await doc.reference.delete() }
+		} catch {
+			logger.warning("Account delete: \(label) cleanup skipped — \(error.localizedDescription)")
+		}
+	}
+
 	// MARK: - Firestore Sync
-	
+
 	func syncUserToFirestore(userId: String) async {
 		guard let model = userDetails else {
 			logger.warning("syncUserToFirestore called but userDetails is nil — skipping.")
