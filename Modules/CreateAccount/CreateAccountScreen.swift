@@ -62,12 +62,6 @@ struct CreateAccountScreen: View {
 		.onChange(of: AuthManager.shared.userDetails) { _, _ in
 			if viewModel.currentStep == .setGait { viewModel.seedGait() }
 		}
-		// Finish onboarding automatically once Strava connects on the final step.
-		.onChange(of: strava.isConnected) { _, connected in
-			if connected, viewModel.currentStep == .connectStrava {
-				viewModel.finishOnboarding()
-			}
-		}
 	}
 	
 	// MARK: - Top Toolbar
@@ -134,9 +128,16 @@ struct CreateAccountScreen: View {
 	// MARK: - Footer Button
 	
 	private var footerButton: some View {
-		AppButton(LocalizedStringResource(stringLiteral: viewModel.currentStep.footerButtonTitle)) {
+		AppButton(LocalizedStringResource(stringLiteral: footerTitle)) {
 			viewModel.onFooterTapped()
 		}
+	}
+
+	// "Next" once Strava is linked — tapping it finishes onboarding instead of reconnecting.
+	private var footerTitle: String {
+		viewModel.currentStep == .connectStrava && strava.isConnected
+			? "Next"
+			: viewModel.currentStep.footerButtonTitle
 	}
 	
 	// MARK: - Slide Transition
