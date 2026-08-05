@@ -116,10 +116,10 @@ async function getValidAccessToken(uid) {
 
 // MARK: - Activity upload
 
-/** Miles/Kilometers → meters (Strava expects meters). */
+/** Distance → meters (Strava expects meters). App stores "Miles" or "Kms"; anything not "Miles" is km. */
 function metersFor(distance, measure) {
   if (!distance) return 0;
-  return measure === "Kilometers" ? distance * 1000 : distance * 1609.34;
+  return measure === "Miles" ? distance * 1609.34 : distance * 1000;
 }
 
 /** Builds the form body for POST /activities from a PaceApp event document. */

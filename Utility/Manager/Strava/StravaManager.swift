@@ -33,8 +33,11 @@ final class StravaManager: NSObject {
 	// MARK: - Private
 	@ObservationIgnored private var authSession: ASWebAuthenticationSession?
 	@ObservationIgnored private var listener: ListenerRegistration?
-	@ObservationIgnored private let db = Firestore.firestore()
 	@ObservationIgnored private let log = Logger(label: "strava.manager")
+
+	// Computed, not stored — the singleton is created at app launch (a @State on PaceApp),
+	// so touching Firestore.firestore() here would run before FirebaseApp.configure().
+	private var db: Firestore { Firestore.firestore() }
 
 	private override init() { super.init() }
 

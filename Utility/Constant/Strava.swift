@@ -11,11 +11,15 @@
 // refresh, and activity upload all live in Firebase Cloud Functions — the app
 // never holds a Strava token. Fill these from https://www.strava.com/settings/api.
 struct StravaConst {
-	static let clientId       = ""                          // Strava app "Client ID"
+	static let clientId       = "269660"				// Strava app "Client ID"
 	static let callbackScheme = "paceapp"                   // ASWebAuthenticationSession scheme
-	static let callbackHost   = "strava-callback"           // paceapp://strava-callback
-	static let redirectURI    = "paceapp://strava-callback" // must match Strava "Authorization Callback Domain"
+	static let callbackHost   = "strava-callback"           // final relayed deep link: paceapp://strava-callback
 	static let scope          = "activity:write,read"       // write = uploads, read = read back
+
+	// Strava requires a real callback DOMAIN, so it redirects to this hosted page,
+	// which relays to the existing paceapp://strava-callback deep link (firebase-hosting/.../stravaCallback).
+	// Trailing slash serves the page directly (no hosting 301); host must match the Strava callback domain.
+	static let redirectURI    = "https://thepaceapp.web.app/stravaCallback/"
 
 	// strava:// opens the installed Strava app; https:// is the web fallback.
 	static let appAuthorizeURL = "strava://oauth/mobile/authorize"

@@ -129,7 +129,10 @@ playground.xcworkspace
 GoogleService-Info.plist
 
 # Secrets (uncomment or adjust to your setup)
-# .env
-# .env.*
+.env
+.env.*
+
+# Firebase deploy cache
+.firebase/
 /PaceApp.xcodeproj/project.xcworkspace/xcuserdata
 /PaceApp.xcodeproj/xcshareddata

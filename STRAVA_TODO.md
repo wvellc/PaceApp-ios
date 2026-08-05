@@ -5,12 +5,12 @@ and the flow (app does OAuth authorize only; Cloud Functions hold the secret, ex
 and refresh tokens, and upload summary activities).
 
 ## 🔴 Required to work (external + config)
-- [ ] Create a Strava API app; set **Authorization Callback Domain = `strava-callback`**; copy Client ID + Secret — <https://www.strava.com/settings/api>
-- [ ] Fill `clientId` and `functionsBaseURL` in `Utility/Constant/Strava.swift`
+- [ ] Create a Strava API app; set **Authorization Callback Domain = `thepaceapp.web.app`** (redirects to the hosted `/stravaCallback` relay → `paceapp://strava-callback`); copy Client ID + Secret — <https://www.strava.com/settings/api>
+- [ ] Fill `clientId` and `functionsBaseURL` in `Utility/Constant/Strava.swift` (`redirectURI` already points at the relay)
 - [ ] `firebase functions:secrets:set STRAVA_CLIENT_SECRET`; put `STRAVA_CLIENT_ID` in `functions/.env`
 - [ ] `cd functions && npm install`
 - [ ] Upgrade the Firebase project to the **Blaze** plan (Cloud Functions require it)
-- [ ] `firebase deploy --only functions,firestore:rules`
+- [ ] `firebase deploy --only functions,firestore:rules,hosting` (hosting publishes the relay page)
 - [ ] Confirm the `events (userId + status)` composite index is deployed (used by backfill)
 
 ## 🟡 Before shipping

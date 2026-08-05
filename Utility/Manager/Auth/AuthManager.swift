@@ -169,6 +169,7 @@ final class AuthManager {
 		try Auth.auth().signOut() //Logout from firebase
 		AppSession.removeAllData() //Clear session from local
 		ConnectIQManager.shared.disconnectFromApp() //Disconnect watch
+		StravaManager.shared.stopObserving() //Drop Strava listener so next user re-attaches to their own doc
 	}
 
 	// MARK: - Re-authentication (for account deletion)
@@ -242,6 +243,9 @@ final class AuthManager {
 
 		//Stop the live profile listener so deleting the user doc below doesn't fire it.
 		stopProfileListener()
+
+		//Stop the Strava connection listener for the same reason.
+		StravaManager.shared.stopObserving()
 
 		//Best-effort data cleanup — a failed read/write must NOT abort the account
 		//deletion below, else the user doc + Auth account get left behind.
