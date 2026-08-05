@@ -177,6 +177,7 @@ struct LoginScreen: View {
 					labelFont: .medium16,
 					labelColor: .blackApp,
 					detailFont: .regular17,
+					detailColor: .blackApp,
 					navigationTitleText: "Pick a country code",
 				),
 				selectedCountry: Binding<Country?>(
@@ -190,6 +191,7 @@ struct LoginScreen: View {
 				)
 			)
 			.foregroundStyle(.blackApp)
+			.tint(.black)
 		}
 		.onAppear {
 			// Reset navigation guard each time this screen becomes visible

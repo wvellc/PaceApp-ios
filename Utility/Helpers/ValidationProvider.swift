@@ -1,11 +1,3 @@
-//
-//  ValidationProvider.swift
-//  PaceApp
-//
-//  Created by FURKAN VIJAPURA on 3/16/26.
-//
-//
-//  String+Ext.swift
 //  PaceApp
 //
 //  Created by FURKAN VIJAPURA on 3/16/26.

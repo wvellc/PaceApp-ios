@@ -12,6 +12,9 @@ struct ProfileScreen: View {
 	@Environment(Router.self) private var router
 	@Environment(ConnectIQManager.self) private var ciqManager
 	@State private var viewModel = ProfileViewModel()
+	/// Ask the watch for its settings only once per screen lifetime — avoids a
+	/// redundant request on every tab visit.
+	@State private var didRequestWatchSettings = false
 	
 	var body: some View {
 		VStack(spacing: 0) {
@@ -54,8 +57,12 @@ struct ProfileScreen: View {
 		.appBackground()
 		.onAppear {
 			viewModel.loadUserInfoFromSession()
-			// Ask the watch for its latest settings so gait/height/weight refresh on each visit.
-			ciqManager.requestSettings()
+			// Ask the watch for its latest settings once — gait/height/weight then
+			// stay live via the AuthManager profile listener.
+			if !didRequestWatchSettings {
+				didRequestWatchSettings = true
+				ciqManager.requestSettings()
+			}
 		}
 		// Live refresh: the AuthManager profile listener updates userDetails when
 		// the watch syncs settings to Firestore — re-sync the view model instantly.

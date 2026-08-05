@@ -74,6 +74,44 @@ struct EventDocument: Codable, Identifiable {
 	var eventType: ActivityType { ActivityType(from: activityType) }
 }
 
+// MARK: - Decode Fallback
+// Rare offline writes can omit the write-once fields; default them at decode
+// so the event stays visible and heals on the next online upsert.
+
+extension EventDocument {
+	init(from decoder: Decoder) throws {
+		let c = try decoder.container(keyedBy: CodingKeys.self)
+		id                  = try c.decode(Int.self, forKey: .id)
+		userId              = try c.decode(String.self, forKey: .userId)
+		status              = try c.decode(String.self, forKey: .status)
+		name                = try c.decode(String.self, forKey: .name)
+		location            = try c.decode(String.self, forKey: .location)
+		scheduledAt         = try c.decode(Timestamp.self, forKey: .scheduledAt)
+		completedAt         = try c.decodeIfPresent(Timestamp.self, forKey: .completedAt)
+		activityType        = try c.decode(String.self, forKey: .activityType)
+		distanceValue       = try c.decode(Double.self, forKey: .distanceValue)
+		measure             = try c.decode(String.self, forKey: .measure)
+		goalTimeSeconds     = try c.decode(Int.self, forKey: .goalTimeSeconds)
+		lookBackIntervals   = try c.decode(Int.self, forKey: .lookBackIntervals)
+		avgPaceSeconds      = try c.decodeIfPresent(Int.self, forKey: .avgPaceSeconds)
+		avgHeartRate        = try c.decodeIfPresent(Int.self, forKey: .avgHeartRate)
+		elevationGain       = try c.decodeIfPresent(Double.self, forKey: .elevationGain)
+		effortPercentage    = try c.decodeIfPresent(Double.self, forKey: .effortPercentage)
+		actualTimeSeconds   = try c.decodeIfPresent(Int.self, forKey: .actualTimeSeconds)
+		actualDistance      = try c.decodeIfPresent(Double.self, forKey: .actualDistance)
+		timeVarianceSeconds = try c.decodeIfPresent(Int.self, forKey: .timeVarianceSeconds)
+		paces               = try c.decodeIfPresent([Int].self, forKey: .paces)
+		completedSegments   = try c.decodeIfPresent([[String: FirestoreFlexibleValue]].self, forKey: .completedSegments)
+		syncStatus          = try c.decodeIfPresent(String.self, forKey: .syncStatus) ?? "synced"
+		updatedAt           = try c.decodeIfPresent(Timestamp.self, forKey: .updatedAt) ?? Timestamp(date: Date())
+		source              = try c.decodeIfPresent(String.self, forKey: .source) ?? "watch"
+		createdAt           = try c.decodeIfPresent(Timestamp.self, forKey: .createdAt) ?? updatedAt
+		deletedAt           = try c.decodeIfPresent(Timestamp.self, forKey: .deletedAt)
+		segments            = try c.decodeIfPresent([RunSegment].self, forKey: .segments)
+		routePolyline       = try c.decodeIfPresent(String.self, forKey: .routePolyline)
+	}
+}
+
 // MARK: - FirestoreFlexibleValue
 // Supports mixed numeric types from legacy ConnectIQ payloads when encoding nested maps.
 

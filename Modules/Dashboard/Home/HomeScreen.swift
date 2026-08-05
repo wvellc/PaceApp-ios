@@ -15,7 +15,7 @@ struct HomeScreen: View {
 	// MARK: - State
 	
 	@State private var viewModel = HomeViewModel()
-
+	
 	let runActions: [RunAction] = [
 		RunAction(title: .newRun,      symbol: "icNewRun",      rout: .createRunEvent),
 		RunAction(title: .favoriteRun, symbol: "icFavoriteRun", rout: .favoritesRun),
@@ -28,15 +28,31 @@ struct HomeScreen: View {
 	/// Shared navigation state to push destinations from TabBarScreen.
 	@Environment(TabNavigationState.self) private var tabNavState
 	
+	/// Presents the FAQ page in an in-app Safari sheet (SFSafariViewController).
+	@State private var showFAQSafari = false
+	
 	// MARK: - Body
 	
 	var body: some View {
 		ZStack {
 			VStack(alignment: .leading, spacing: 0) {
-
+				
 				// MARK: Navigation bar
-				AppNavigation()
-
+				AppNavigation(leading: {
+					EmptyView()
+						.frame(width: 40)
+				}, trailing: {
+				// MARK: Questions banner - FAQ.
+					Button {
+						showFAQSafari = true
+					} label: {
+						Image(.icQuestion)
+							.resizable()
+							.frame(width: 32, height: 32, alignment: .center)
+					}
+					.buttonStyle(.plain)
+				})
+				
 				// MARK: Scrollable content — native List for smooth scroll + swipe.
 				upCommingActivityList
 			}
@@ -80,6 +96,11 @@ struct HomeScreen: View {
 			guard let update else { return }
 			viewModel.applyMetadataUpdate(eventId: update.eventId, name: update.name, location: update.location)
 		}
+		// FAQ — opens in Safari rather than the in-app WebView.
+		.sheet(isPresented: $showFAQSafari) {
+			SafariView(url: URL(string: NetworkConst.WebUrl.faq)!)
+				.ignoresSafeArea()
+		}
 	}
 	
 	// MARK: - Greeting Text
@@ -90,9 +111,9 @@ struct HomeScreen: View {
 		let hour = Calendar.current.component(.hour, from: Date())
 		let salutation: String
 		switch hour {
-		case 5..<12:  salutation = "GM,"    // Good morning
-		case 12..<17: salutation = "GA,"    // Good afternoon
-		default:      salutation = "GE,"    // Good evening
+			case 5..<12:  salutation = "GM,"    // Good morning
+			case 12..<17: salutation = "GA,"    // Good afternoon
+			default:      salutation = "GE,"    // Good evening
 		}
 		let name = AuthManager.shared.userDetails?.firstName?.trimmingCharacters(in: .whitespaces)
 		return name.map { "\(salutation) \($0)" } ?? salutation
@@ -123,7 +144,7 @@ struct HomeScreen: View {
 		// Deterministic square side (screen − row insets − column gap, halved).
 		// Avoids GeometryReader, which loops UICollectionView sizing inside a List cell.
 		let side = (UIScreen.main.bounds.width - 48) / 2
-
+		
 		return LazyVGrid(columns: columns, alignment: .center, spacing: spacing) {
 			ForEach(runActions) { action in
 				Button {
@@ -139,7 +160,7 @@ struct HomeScreen: View {
 	}
 	
 	// MARK: - Upcoming Activity List
-
+	
 	// Whole screen scrolls in one native List: header block + swipeable upcoming rows.
 	private var upCommingActivityList: some View {
 		List {
@@ -148,7 +169,7 @@ struct HomeScreen: View {
 				.listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
 				.listRowBackground(Color.clear)
 				.listRowSeparator(.hidden)
-
+			
 			// Upcoming activities — native swipe-to-delete rows.
 			if ciqManager.isWatchPreviouslyPaired, !viewModel.upcomingEvents.isEmpty {
 				Text(.upcomingActivities)
@@ -157,7 +178,7 @@ struct HomeScreen: View {
 					.listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
 					.listRowBackground(Color.clear)
 					.listRowSeparator(.hidden)
-
+				
 				ForEach(viewModel.upcomingEvents) { activity in
 					Button {
 						// Push EventDetailsScreen via shared TabNavigationState.
@@ -190,23 +211,25 @@ struct HomeScreen: View {
 		.scrollContentBackground(.hidden)
 		.scrollBounceBehavior(.basedOnSize)
 	}
-
+	
 	// MARK: - Header Block
-
+	
 	// Greeting + sync status, then metrics/actions (or the pair-watch prompt).
 	private var headerBlock: some View {
 		VStack(alignment: .leading, spacing: 0) {
-
-			// Greeting + sync status
+			
+			// Greeting + sync status — sync label hidden until a watch is paired.
 			VStack(alignment: .leading) {
 				Text(greetingText)
 					.font(.bold28)
 					.foregroundColor(.whiteApp)
-				Text(ciqManager.lastSyncLabel)
-					.font(.medium14)
-					.foregroundColor(.white50)
+				if ciqManager.isWatchPreviouslyPaired {
+					Text(ciqManager.lastSyncLabel)
+						.font(.medium14)
+						.foregroundColor(.white50)
+				}
 			}
-
+			
 			// Home data & Pair watch view
 			if !ciqManager.isWatchPreviouslyPaired {
 				PairWatchView {
@@ -218,7 +241,7 @@ struct HomeScreen: View {
 					if !viewModel.metrics.isEmpty {
 						metricRow
 					}
-
+					
 					// Run Actions
 					runActionGrid
 				}
@@ -239,7 +262,7 @@ struct HomeScreen: View {
 	private func tryShowMetricsPopup() {
 		guard ciqManager.connectedDevice != nil else { return }
 		guard !viewModel.metrics.isEmpty else { return }
-
+		
 		Task { @MainActor in
 			try? await Task.sleep(seconds: 1)
 			viewModel.showMetricPopup = AppSession.canShowMetricsOnboarding

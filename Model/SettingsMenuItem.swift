@@ -18,6 +18,7 @@ struct SettingsMenuItem: Identifiable {
 
 enum SettingsMenuItemID: Hashable {
     case notifications
+    case faq
     case privacyPolicy
     case termsConditions
     case licenses
