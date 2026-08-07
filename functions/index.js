@@ -4,7 +4,8 @@
  * The iOS/Android app performs the OAuth *authorize* step only and sends the
  * returned code here. These functions hold the Strava client secret, exchange
  * and refresh tokens, store them server-side (never on device), and upload
- * completed activities to Strava as summary activities (POST /activities).
+ * completed activities as TCX files (POST /uploads) so each PaceApp segment
+ * lands as a Strava lap.
  *
  * Config:
  *   firebase functions:secrets:set STRAVA_CLIENT_SECRET
@@ -28,9 +29,14 @@ const STRAVA_CLIENT_SECRET = defineSecret("STRAVA_CLIENT_SECRET");
 const STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token";
 const STRAVA_DEAUTH_URL = "https://www.strava.com/oauth/deauthorize";
 const STRAVA_ACTIVITIES_URL = "https://www.strava.com/api/v3/activities";
+const STRAVA_UPLOADS_URL = "https://www.strava.com/api/v3/uploads";
 
 // PaceApp activity string → Strava sport_type.
 const SPORT_BY_ACTIVITY = { Run: "Run", Walking: "Walk", Cycling: "Ride", Other: "Workout" };
+
+// PaceApp activity → TCX Sport attribute (the schema allows only Running/Biking/Other;
+// the exact Strava sport_type is set afterwards via PUT /activities/{id}).
+const TCX_SPORT_BY_ACTIVITY = { Run: "Running", Walking: "Running", Cycling: "Biking", Other: "Other" };
 
 // MARK: - Auth helper
 
@@ -197,48 +203,155 @@ function activityDescription(event, covered) {
   return lines.join("\n");
 }
 
-/** Builds the form body for POST /activities from a PaceApp event document. */
-function activityForm(event) {
-  const distance = coveredDistance(event);
-  const elapsed = Number(event.actualTimeSeconds) > 0 ? Number(event.actualTimeSeconds) : Number(event.goalTimeSeconds) || 0;
-  // completedAt marks the finish — subtract elapsed so Strava gets the real start.
-  const endTs = event.completedAt || event.scheduledAt;
-  const endMs = endTs && endTs.toDate ? endTs.toDate().getTime() : Date.now();
-  const startISO = new Date(endMs - (Number(event.actualTimeSeconds) > 0 ? elapsed * 1000 : 0)).toISOString();
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  const form = new URLSearchParams({
-    name: event.name || "PaceApp Activity",
-    sport_type: SPORT_BY_ACTIVITY[event.activityType] || "Workout",
-    start_date_local: startISO,
-    elapsed_time: String(Math.max(1, Math.round(elapsed))),
-  });
-  // Never report the planned distance as covered — omit when nothing was actually covered.
-  const meters = metersFor(distance, event);
-  if (meters > 0) form.append("distance", String(Math.round(meters)));
-  form.append("description", activityDescription(event, distance));
-  return form;
+/** Parses a segment's elapsed time — "H:MM:SS"/"MM:SS" or a raw number — into seconds. */
+function secondsFromTime(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return Math.max(0, Math.round(value));
+  if (typeof value !== "string") return 0;
+  const trimmed = value.trim();
+  if (/^\d+(\.\d+)?$/.test(trimmed)) return Math.max(0, Math.round(parseFloat(trimmed)));
+  const parts = trimmed.split(":").map((p) => parseInt(p, 10));
+  if (parts.length === 0 || parts.some((n) => Number.isNaN(n))) return 0;
+  return parts.reduce((acc, n) => acc * 60 + n, 0);
 }
 
-/** Creates the activity on Strava and returns its id. */
-async function createStravaActivity(accessToken, form) {
-  const resp = await fetch(STRAVA_ACTIVITIES_URL, {
+/** Real start time (ms) and elapsed seconds — completedAt marks the finish, so start = finish − elapsed. */
+function startInfo(event) {
+  const elapsed = Number(event.actualTimeSeconds) > 0 ? Number(event.actualTimeSeconds) : Number(event.goalTimeSeconds) || 0;
+  const endTs = event.completedAt || event.scheduledAt;
+  const endMs = endTs && endTs.toDate ? endTs.toDate().getTime() : Date.now();
+  const startMs = endMs - (Number(event.actualTimeSeconds) > 0 ? elapsed * 1000 : 0);
+  return { startMs, elapsed };
+}
+
+/** One lap per recorded PaceApp segment; falls back to a single whole-activity lap. */
+function buildLaps(event) {
+  const segments = Array.isArray(event.completedSegments) ? event.completedSegments : [];
+  const laps = segments
+    .map((s) => ({
+      meters: Math.round(metersFor(parseFloat(s.completed_distance) || 0, event)),
+      seconds: secondsFromTime(s.elapsed_time),
+    }))
+    .filter((l) => l.meters > 0 || l.seconds > 0);
+  if (laps.length > 0) return laps;
+
+  // No per-segment detail — represent the whole activity as one lap.
+  const meters = Math.round(metersFor(coveredDistance(event), event));
+  const seconds = Number(event.actualTimeSeconds) > 0 ? Number(event.actualTimeSeconds) : Number(event.goalTimeSeconds) || 1;
+  return [{ meters, seconds: Math.max(1, seconds) }];
+}
+
+/** Builds a TCX with one <Lap> per PaceApp segment — this is what makes them Strava laps. */
+function buildTCX(event) {
+  const { startMs } = startInfo(event);
+  const sport = TCX_SPORT_BY_ACTIVITY[event.activityType] || "Other";
+  const hr = Number(event.avgHeartRate) > 0 ? Math.round(Number(event.avgHeartRate)) : null;
+  const hrPoint = hr ? `<HeartRateBpm><Value>${hr}</Value></HeartRateBpm>` : "";
+  const hrLap = hr ? `<AverageHeartRateBpm><Value>${hr}</Value></AverageHeartRateBpm>` : "";
+
+  let cursorMs = startMs;
+  let cumulativeMeters = 0;
+  const lapXml = buildLaps(event).map((lap) => {
+    const lapStartISO = new Date(cursorMs).toISOString();
+    const lapEndISO = new Date(cursorMs + lap.seconds * 1000).toISOString();
+    const startMeters = cumulativeMeters;
+    cumulativeMeters += lap.meters;
+    cursorMs += lap.seconds * 1000;
+    // Two trackpoints per lap give Strava a monotonic time+distance stream to build laps from.
+    return `<Lap StartTime="${lapStartISO}">`
+      + `<TotalTimeSeconds>${lap.seconds}</TotalTimeSeconds>`
+      + `<DistanceMeters>${lap.meters}</DistanceMeters>`
+      + `<Calories>0</Calories>${hrLap}`
+      + `<Intensity>Active</Intensity><TriggerMethod>Manual</TriggerMethod><Track>`
+      + `<Trackpoint><Time>${lapStartISO}</Time><DistanceMeters>${startMeters}</DistanceMeters>${hrPoint}</Trackpoint>`
+      + `<Trackpoint><Time>${lapEndISO}</Time><DistanceMeters>${cumulativeMeters}</DistanceMeters>${hrPoint}</Trackpoint>`
+      + `</Track></Lap>`;
+  }).join("");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>`
+    + `<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">`
+    + `<Activities><Activity Sport="${sport}"><Id>${new Date(startMs).toISOString()}</Id>`
+    + lapXml
+    + `</Activity></Activities></TrainingCenterDatabase>`;
+}
+
+/** Uploads a TCX to Strava; returns the upload job json ({ id, activity_id, error, status }). */
+async function uploadTCX(accessToken, tcx, { externalId, name, description }) {
+  const form = new FormData();
+  form.append("data_type", "tcx");
+  form.append("external_id", externalId);
+  if (name) form.append("name", name);
+  if (description) form.append("description", description);
+  form.append("file", new Blob([tcx], { type: "application/xml" }), `${externalId}.tcx`);
+
+  const resp = await fetch(STRAVA_UPLOADS_URL, {
     method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: form,
+  });
+  const json = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(json.message || json.error || "Strava rejected the upload.");
+  return json;
+}
+
+/** Polls an upload job until Strava finishes processing it and returns the new activity id. */
+async function pollUpload(accessToken, uploadId) {
+  for (let attempt = 0; attempt < 12; attempt++) {
+    await sleep(1500);
+    const resp = await fetch(`${STRAVA_UPLOADS_URL}/${uploadId}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const json = await resp.json().catch(() => ({}));
+    if (json.activity_id) return json.activity_id;
+    if (json.error) {
+      // A duplicate still names the existing activity — reuse its id so we stop retrying.
+      const dup = String(json.error).match(/duplicate of activity (\d+)/i);
+      if (dup) return Number(dup[1]);
+      throw new Error(json.error);
+    }
+  }
+  throw new Error("Strava upload is still processing. It will appear shortly.");
+}
+
+/** Sets the exact sport type, name and description on the created activity (best-effort). */
+async function updateActivity(accessToken, activityId, { sportType, name, description }) {
+  const form = new URLSearchParams();
+  if (sportType) form.append("sport_type", sportType);
+  if (name) form.append("name", name);
+  if (description) form.append("description", description);
+  await fetch(`${STRAVA_ACTIVITIES_URL}/${activityId}`, {
+    method: "PUT",
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: form,
-  });
-  const json = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw new Error(json.message || "Strava rejected the activity.");
-  return json.id;
+  }).catch(() => {});
 }
 
-/** Syncs a single event to Strava (no-op if already synced). Returns the activity id or null. */
+/** Syncs a single event to Strava as a TCX upload with laps (no-op if already synced). */
 async function syncEvent(uid, eventRef, event) {
   if (event.stravaActivityId) return null;
   const accessToken = await getValidAccessToken(uid);
-  const activityId = await createStravaActivity(accessToken, activityForm(event));
+
+  const name = event.name || "PaceApp Activity";
+  const description = activityDescription(event, coveredDistance(event));
+  const externalId = `paceapp-${eventRef.id}`;
+
+  const lapCount = buildLaps(event).length;
+  logger.info(`syncEvent: uploading ${externalId} as ${lapCount} lap(s)…`);
+  const upload = await uploadTCX(accessToken, buildTCX(event), { externalId, name, description });
+  logger.info(`syncEvent: Strava accepted upload ${upload.id} for ${externalId}, awaiting processing…`);
+  const activityId = await pollUpload(accessToken, upload.id);
+
+  // The TCX only carries a coarse sport; set the exact Strava sport_type here.
+  await updateActivity(accessToken, activityId, {
+    sportType: SPORT_BY_ACTIVITY[event.activityType] || "Workout",
+    name,
+    description,
+  });
+
   await eventRef.set({
     stravaActivityId: activityId,
     stravaSyncedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -312,14 +425,16 @@ exports.stravaSync = onRequest({ secrets: [STRAVA_CLIENT_SECRET] }, async (req, 
 });
 
 /** Sync recent completed activities that haven't reached Strava yet. */
-exports.stravaBackfill = onRequest({ secrets: [STRAVA_CLIENT_SECRET] }, async (req, res) => {
+exports.stravaBackfill = onRequest({ secrets: [STRAVA_CLIENT_SECRET], timeoutSeconds: 300 }, async (req, res) => {
   const uid = await requireUid(req, res);
   if (!uid) return;
   try {
+    // Small batch — each TCX upload is processed asynchronously by Strava, so a large
+    // batch would blow the request timeout. Repeat taps clear a big backlog in chunks.
     const query = await db.collection("events")
       .where("userId", "==", uid)
       .where("status", "==", "completed")
-      .limit(30)
+      .limit(8)
       .get();
 
     let synced = 0;
@@ -368,7 +483,7 @@ exports.stravaDisconnect = onRequest({ secrets: [STRAVA_CLIENT_SECRET] }, async 
 
 /** When an event transitions into "completed", push it to Strava if the user is connected. */
 exports.onEventCompleted = onDocumentWritten(
-  { document: "events/{eventId}", secrets: [STRAVA_CLIENT_SECRET] },
+  { document: "events/{eventId}", secrets: [STRAVA_CLIENT_SECRET], timeoutSeconds: 120 },
   async (event) => {
     const after = event.data && event.data.after;
     if (!after || !after.exists) return;
@@ -378,15 +493,26 @@ exports.onEventCompleted = onDocumentWritten(
     const before = event.data.before;
     const beforeStatus = before && before.exists ? before.data().status : null;
     if (data.status !== "completed" || beforeStatus === "completed") return;
-    if (data.stravaActivityId || !data.userId) return;
+
+    const eventId = event.params.eventId;
+    if (data.stravaActivityId) {
+      logger.info(`onEventCompleted: ${eventId} already on Strava (activity ${data.stravaActivityId})`);
+      return;
+    }
+    if (!data.userId) return;
 
     const tokenSnap = await db.doc(`stravaTokens/${data.userId}`).get();
-    if (!tokenSnap.exists) return; // user hasn't connected Strava
+    if (!tokenSnap.exists) {
+      logger.info(`onEventCompleted: ${eventId} completed but Strava is not connected — skipping`);
+      return;
+    }
 
     try {
-      await syncEvent(data.userId, after.ref, data);
+      logger.info(`onEventCompleted: syncing ${eventId} to Strava…`);
+      const activityId = await syncEvent(data.userId, after.ref, data);
+      logger.info(`onEventCompleted: ${eventId} → Strava activity ${activityId}`);
     } catch (e) {
-      logger.warn(`auto-sync failed for ${event.params.eventId}: ${e.message}`);
+      logger.warn(`auto-sync failed for ${eventId}: ${e.message}`);
       await after.ref.set({ stravaSyncError: e.message }, { merge: true }).catch(() => {});
     }
   }
