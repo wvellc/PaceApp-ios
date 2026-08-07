@@ -116,39 +116,106 @@ async function getValidAccessToken(uid) {
 
 // MARK: - Activity upload
 
-/** Distance → meters (Strava expects meters). App stores "Miles" or "Kms"; anything not "Miles" is km. */
-function metersFor(distance, measure) {
-  if (!distance) return 0;
-  return measure === "Miles" ? distance * 1609.34 : distance * 1000;
+const METERS_PER_MILE = 1609.344;
+
+/** The event's unit comes from the user's preference at creation ("Miles"; anything else is km). */
+function isMiles(event) {
+  return event.measure === "Miles";
+}
+
+/** Unit label for descriptions, matching the event's stored measure. */
+function unitLabel(event) {
+  return isMiles(event) ? "mi" : "km";
+}
+
+/** Distance (in the event's unit) → meters for Strava. Rejects non-finite/negative values. */
+function metersFor(distance, event) {
+  const d = Number(distance);
+  if (!Number.isFinite(d) || d <= 0) return 0;
+  return isMiles(event) ? d * METERS_PER_MILE : d * 1000;
 }
 
 /** Distance actually covered — actualDistance, else the sum of per-segment completed_distance. */
 function coveredDistance(event) {
-  if (event.actualDistance > 0) return event.actualDistance;
+  if (Number(event.actualDistance) > 0) return Number(event.actualDistance);
   const segments = Array.isArray(event.completedSegments) ? event.completedSegments : [];
   return segments.reduce((total, s) => total + (parseFloat(s.completed_distance) || 0), 0);
+}
+
+/** Seconds → "H:MM:SS" (or "MM:SS" under an hour). */
+function fmtTime(totalSeconds) {
+  const s = Math.max(0, Math.round(totalSeconds));
+  const h = Math.floor(s / 3600);
+  const m = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const sec = String(s % 60).padStart(2, "0");
+  return h > 0 ? `${h}:${m}:${sec}` : `${m}:${sec}`;
+}
+
+/** Every meaningful stat the manual-create endpoint can't carry as a field goes in the description. */
+function activityDescription(event, covered) {
+  const unit = unitLabel(event);
+  const lines = [];
+
+  if (event.location) lines.push(`📍 ${event.location}`);
+
+  if (covered > 0) {
+    let line = `📏 ${covered.toFixed(2)} ${unit}`;
+    if (Number(event.distanceValue) > 0) line += ` of ${Number(event.distanceValue).toFixed(2)} ${unit} planned`;
+    lines.push(line);
+  }
+
+  if (Number(event.actualTimeSeconds) > 0) {
+    let line = `⏱ ${fmtTime(event.actualTimeSeconds)}`;
+    if (Number(event.goalTimeSeconds) > 0) {
+      const diff = event.actualTimeSeconds - event.goalTimeSeconds;
+      line += ` · goal ${fmtTime(event.goalTimeSeconds)} (${diff <= 0 ? "−" : "+"}${fmtTime(Math.abs(diff))})`;
+    }
+    lines.push(line);
+  }
+
+  // Watch pace first; else derive from what was actually covered.
+  const paceSec = Number(event.avgPaceSeconds) > 0
+    ? Number(event.avgPaceSeconds)
+    : (covered > 0 && Number(event.actualTimeSeconds) > 0 ? event.actualTimeSeconds / covered : 0);
+  if (paceSec > 0) lines.push(`⚡ Avg pace ${fmtTime(paceSec)} /${unit}`);
+
+  if (Number(event.avgHeartRate) > 0) lines.push(`❤️ Avg HR ${event.avgHeartRate} bpm`);
+  if (Number(event.elevationGain) > 0) lines.push(`⛰ Elevation gain ${Math.round(event.elevationGain)} m`);
+  if (Number(event.effortPercentage) > 0) lines.push(`💪 Effort ${Math.round(event.effortPercentage)}%`);
+
+  // Per-segment splits — only segments the watch actually recorded something for.
+  const segments = Array.isArray(event.completedSegments) ? event.completedSegments : [];
+  const splits = segments
+    .map((s, i) => ({ n: i + 1, d: parseFloat(s.completed_distance) || 0, t: s.elapsed_time }))
+    .filter((s) => s.d > 0 || s.t);
+  if (splits.length > 1) {
+    lines.push("Splits:");
+    splits.forEach((s) => lines.push(`${s.n}. ${s.d > 0 ? `${s.d.toFixed(2)} ${unit}` : "—"}${s.t ? ` · ${s.t}` : ""}`));
+  }
+
+  lines.push("Synced from PaceApp");
+  return lines.join("\n");
 }
 
 /** Builds the form body for POST /activities from a PaceApp event document. */
 function activityForm(event) {
   const distance = coveredDistance(event);
-  const elapsed = event.actualTimeSeconds || event.goalTimeSeconds || 0;
+  const elapsed = Number(event.actualTimeSeconds) > 0 ? Number(event.actualTimeSeconds) : Number(event.goalTimeSeconds) || 0;
   // completedAt marks the finish — subtract elapsed so Strava gets the real start.
   const endTs = event.completedAt || event.scheduledAt;
   const endMs = endTs && endTs.toDate ? endTs.toDate().getTime() : Date.now();
-  const startISO = new Date(endMs - (event.actualTimeSeconds ? elapsed * 1000 : 0)).toISOString();
+  const startISO = new Date(endMs - (Number(event.actualTimeSeconds) > 0 ? elapsed * 1000 : 0)).toISOString();
 
   const form = new URLSearchParams({
     name: event.name || "PaceApp Activity",
     sport_type: SPORT_BY_ACTIVITY[event.activityType] || "Workout",
     start_date_local: startISO,
-    elapsed_time: String(Math.max(0, Math.round(elapsed))),
+    elapsed_time: String(Math.max(1, Math.round(elapsed))),
   });
   // Never report the planned distance as covered — omit when nothing was actually covered.
-  if (distance > 0) form.append("distance", String(Math.round(metersFor(distance, event.measure))));
-  form.append("description", event.avgHeartRate
-    ? `Avg HR ${event.avgHeartRate} bpm • Synced from PaceApp`
-    : "Synced from PaceApp");
+  const meters = metersFor(distance, event);
+  if (meters > 0) form.append("distance", String(Math.round(meters)));
+  form.append("description", activityDescription(event, distance));
   return form;
 }
 
