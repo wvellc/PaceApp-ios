@@ -13,7 +13,7 @@ Native iOS pace-tracking app for runners and walkers. Pair a **Garmin watch**, s
 - **Goal-based events** — plan a run/walk/cycle with distance, goal time, and intervals; the watch tracks segments, pace, heart rate, and route.
 - **Live watch sync** — events, results, and settings flow two-way between the app and the Garmin watch (gait derived from height, alert toggles, units).
 - **History & analytics** — completed activities with filters, favorites, per-segment details, route map, and aggregate trends by week/month/year.
-- **Strava sync** — connect once (OAuth); completed activities upload automatically as summary activities. Manual resync and disconnect from Settings.
+- **Strava sync** — connect once (OAuth) with the official "Connect with Strava" button; completed activities upload automatically, with each segment as a Strava lap. Manual resync and disconnect from Settings, and the connection clears automatically if you revoke access on Strava.
 - **Dual sign-in** — phone OTP or email sign-in link, with inline re-authentication for account deletion.
 
 ## Getting started

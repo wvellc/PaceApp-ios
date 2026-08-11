@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # PaceApp iOS — Project Intelligence
 
-> Last verified against the codebase on 2026-08-05 (branch `strava-integration`).
+> Last verified against the codebase on 2026-08-11 (branch `strava-integration`).
 
 ## Overview
 
@@ -75,14 +75,21 @@ Read this first. Where it disagrees with older sections, this wins.
 - `GaitStrideCalculator.convert(_:fromUnit:toUnit:)` converts a step length between `Feet`/`Meters`, snapped to the picker's 1-dp resolution. `GaitSelectionView` calls it on the Meters/Feet segment `.onChange` so the shown value stays the same real measurement — shared by onboarding **SetGaitStepView** and **Profile → UpdateGait** (same component).
 
 ### Strava integration (client OAuth + Cloud Functions)
-- Split responsibility: the app does the OAuth **authorize** step only; **Cloud Functions** (`functions/index.js`) hold the client secret, exchange/refresh tokens, and upload summary activities (`POST /activities`). The device never stores a Strava token.
+- Split responsibility: the app does the OAuth **authorize** step only; **Cloud Functions** (`functions/index.js`) hold the client secret, exchange/refresh tokens, and upload activities as **TCX files** (`POST /uploads`) so each PaceApp segment becomes a Strava **lap**. The device never stores a Strava token.
 - iOS pieces: **`StravaConst`** (`Utility/Constant/Strava.swift` — clientId, scope `activity:write`, redirect), **`StravaManager`** (`Utility/Manager/Strava/`, `@Observable` singleton — connect/disconnect/syncRecent + Firestore state listener), **`StravaAPI`** (URLSession client calling the HTTPS functions with the Firebase ID token — deliberately no `FirebaseFunctions` SPM product), **`StravaConnectScreen`** (`Modules/Dashboard/Profile/Strava/`).
 - `connect()` opens the Strava app (`strava://oauth/mobile/authorize`) or the external browser — never `ASWebAuthenticationSession` (it stalls on the custom-scheme return). `redirectURI` is `https://thepaceapp.web.app/stravaCallback/` (Strava requires a real callback domain).
 - **The return leg is a universal link** — applinks + wildcard AASA mean iOS opens the app directly with the **https** URL. `StravaManager.isStravaCallback` accepts BOTH forms (`paceapp://strava-callback` and the https link); the `stravaCallback` function 302-redirects to the deep link as the Safari fallback.
-- Functions: `stravaExchange` (code→tokens), `stravaSync` (one event), `stravaBackfill` (recent unsynced), `stravaDisconnect`, `onEventCompleted` (Firestore trigger — auto-upload on the active→completed transition). Secret via `firebase functions:secrets:set STRAVA_CLIENT_SECRET`; client id in `functions/.env`.
+- Functions: `stravaExchange` (code→tokens), `stravaSync` (one event), `stravaBackfill` (recent unsynced, batched), `stravaDisconnect` (revokes via **`POST /oauth/revoke`** — the deprecated `/oauth/deauthorize` is retired 2027-06-01), `onEventCompleted` (Firestore trigger — auto-upload on the active→completed transition), `stravaWebhook` (Strava push subscription — GET handshake + POST athlete-deauthorize → clear the connection). Secret via `firebase functions:secrets:set STRAVA_CLIENT_SECRET`; client id in `functions/.env`.
 - State: server-only tokens in `stravaTokens/{uid}` (rules deny all client access); client-readable summary at `users/{uid}.strava` `{connected, athleteName}` mirrored by `startObserving()`/`stopObserving()` (stopped on logout + account delete). Synced events get stamped `stravaActivityId` (dedupe) + `stravaSyncedAt` / `stravaSyncError`.
-- **Upload honesty**: distance = `actualDistance`, else the sum of `completedSegments.completed_distance`, omitted entirely when nothing was covered — never report the planned `distanceValue`. Start time = `completedAt − actualTimeSeconds`. Event `measure` is `"Miles"`/`"Kilometers"` — functions treat anything ≠ `"Miles"` as km.
-- Entry points: Profile menu row → `.stravaIntegration`; Settings card (Connect when disconnected; **Resync + Disconnect** when connected); onboarding `connectStrava` step (footer flips to **Next** once connected). Backlog + Strava's connected-athlete quota limitation (403 on authorize) live in `STRAVA_TODO.md` / `functions/STRAVA_SETUP.md`.
+- **Revocation → disconnect**: a genuine revoke (Strava returns **401**, or the webhook's athlete-deauthorize event) routes through `clearStravaConnection` → `users/{uid}.strava.connected = false`, so the live listener flips Settings to "Not connected". `isRevocation(e)` clears **only** on a real revoke — a bad client secret / transient 5xx / **403** (scope-or-quota, not a revoke) must NOT delete tokens. Webhook does its work **before** responding (Cloud Run throttles post-response) and drops non-subscription POSTs once `STRAVA_WEBHOOK_SUBSCRIPTION_ID` is armed.
+- **TCX laps**: `buildTCX` emits one `<Lap>` per `completedSegments` entry (distance + time + avg HR) so segments render as Strava laps; no per-segment data → a single whole-activity lap. Uploads are **async** — `POST /uploads` → poll `GET /uploads/{id}` for the `activity_id`, then `PUT /activities/{id}` sets the exact `sport_type` + name + rich description.
+- **Upload honesty**: covered distance = `actualDistance`, else the sum of `completedSegments.completed_distance`, omitted entirely when nothing was covered — never the planned `distanceValue`. Start time = `completedAt − actualTimeSeconds`. Event `measure` is `"Miles"`/`"Kilometers"`/`"Kms"` — functions treat anything ≠ `"Miles"` as km.
+- Entry points: Profile menu row → `.stravaIntegration`; Settings card (official orange **Connect with Strava** button when disconnected via the shared **`StravaConnectButton`** — `Modules/Shared/`, asset `icStravaConnectOrange` on the `StravaOrange` color; **gradient Resync + red Disconnect** when connected); onboarding `connectStrava` step — its **footer** is that same Connect button until linked, then **Next**. Backlog + Strava's connected-athlete quota limitation (403 on authorize) live in `STRAVA_TODO.md` / `functions/STRAVA_SETUP.md`.
+
+### Deletes only on a user action (fix `aa13faa`)
+- The watch's **bulk `deletedEventIds`** list (from `sync_request`/`sync_all`) is reconciled **locally only** via **`reconcileDeletedEventIds`** — a sync replay never writes a Firestore soft-delete, and an id that's also live in the same payload's active/completed lists is kept (**live-data-wins**). This stopped completed events from silently flipping to `deleted` on the next sync.
+- Only an **explicit** delete writes to Firestore: the app delete or the watch's `delete_event` command (both → `applyDeletedEventId` → `softDelete`). `applyDeletedEventLocally` is the no-Firestore-write half shared by both paths.
+- A user-deleted event **stays deleted** — `FirestoreEventRepository.upsert` preserves a stored `deleted` status, so a later watch re-sync can't resurrect it. Id-less watch payloads are **skipped** (no more `Int(Date())` clock-key duplicate docs).
 
 ### Cross-account watch sync (foreign events)
 - The watch keeps its full event list across app accounts, so after an account delete/switch it replays deletes for docs the new uid can't touch → `permission denied` flood. `applyDeletedEventId` records such ids in **`AppSession.foreignEventIds`** on the first denial and skips them on every later replay (list cleared on logout).
@@ -457,6 +464,7 @@ ValidationProvider.isValid(text: vm.email, type: .email)
 | `.slateGrey` | Muted text, dividers |
 | `.pureWhite` | Primary text |
 | `.softWhite` | Secondary text |
+| `.stravaOrange` | Strava brand orange (`#FC5200`) — the Connect with Strava button fill |
 
 ### Gradients (`AppGradients`)
 
@@ -751,6 +759,8 @@ Holding the screen structs as `@State` preserves each screen's identity — and 
 | **Fractional watch values truncated to 0** | `EventDocumentMapper.mapGenericDicts` must check `Double` BEFORE `NSNumber` — the NSNumber branch's `.intValue` stored `0.25` as `0` (broke `completedSegments` distances). |
 | **Foreign-event `permission denied` flood** | The watch replays deletes for another account's docs on every connect. First denial records the id in `AppSession.foreignEventIds`; later replays skip it. |
 | **Strava shows planned distance / absurd pace** | Never upload `distanceValue` as covered distance — use `actualDistance` or the `completed_distance` sum, and omit the field when 0 (functions `coveredDistance`). |
+| **Completed event flips to `deleted` on sync** | The bulk `deletedEventIds` replay must be **local-only** (`reconcileDeletedEventIds`) — never a Firestore `softDelete`. Only `delete_event` / app delete write deletes; live-data-wins keeps an id present in the same payload. |
+| **Strava connection wrongly cleared** | Clear only on a real revoke — Strava returns **401** for invalidated tokens. A `403` (scope/quota) or a `400` client-credential error must NOT delete tokens, else a config slip mass-disconnects everyone (`isRevocation`). |
 
 ---
 
@@ -826,6 +836,6 @@ feat(scope): impactful non-technical summary
 - **`AnalyticsRepository` bypasses the protocol layer** — reads Firestore directly; acceptable for read-only aggregation, but don't copy the pattern for writes.
 - **Manual gait edits are overwritten** by height-derived gait on each watch connect / Profile visit — a "manual override" flag would be needed to preserve them.
 - **`heightCm`/`weightKg` are watch-sourced only** — onboarding doesn't collect them.
-- **Strava uploads are summary-only** — no GPX/route (no per-point timestamps are stored) and no HR trace; new-API-app athlete quota applies (403 "limit of connected athletes" until Strava grants an increase). Remaining work — official "Connect with Strava" button asset, `stravaSyncStatus` field on events, deauthorization webhook — is tracked in `STRAVA_TODO.md`.
+- **Strava uploads carry per-segment laps** (TCX) but are still **summary-level** — no GPS map / route or HR trace (no timestamped track is stored); new-API-app athlete quota applies (403 "limit of connected athletes" until Strava grants an increase). The official "Connect with Strava" button, revoke-endpoint migration, and the deauthorization webhook are now **in**; remaining work — register the webhook push subscription + arm `STRAVA_WEBHOOK_SUBSCRIPTION_ID`, a `stravaSyncStatus` field on events, and GPX/HR upload — is tracked in `STRAVA_TODO.md`.
 - **No test target** — verification is build-only.
 - **Localization** — copy lives in `Resources/Localizable.xcstrings`; keep user-facing strings localized.

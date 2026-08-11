@@ -42,8 +42,9 @@ firebase deploy --only functions,firestore:rules,hosting
 | `stravaExchange` | HTTPS POST `{code}` | OAuth code → tokens, connect account |
 | `stravaSync` | HTTPS POST `{eventId}` | Upload one completed event |
 | `stravaBackfill` | HTTPS POST | Upload recent unsynced completed events |
-| `stravaDisconnect` | HTTPS POST | Deauthorize + clear tokens |
+| `stravaDisconnect` | HTTPS POST | Revoke (`/oauth/revoke`) + clear tokens |
 | `onEventCompleted` | Firestore `events/{id}` write | Auto-upload when an event becomes `completed` |
+| `stravaWebhook` | HTTPS GET/POST | Push-subscription: handshake + athlete-deauthorize → clear connection |
 
 ## Data
 - `stravaTokens/{uid}` — access/refresh tokens (server-only; rules deny all client access).
@@ -51,8 +52,19 @@ firebase deploy --only functions,firestore:rules,hosting
 - Each synced event is stamped `stravaActivityId` (dedupe) + `stravaSyncedAt`.
 
 ## Notes
-- Uploads are **summary** activities (`POST /activities`): name, sport, distance,
-  elapsed time, start date, avg HR in the description. No GPS map / HR trace — the
-  stored event data has no per-point timestamps or HR stream.
-- Strava brand guidelines: the connect screen shows "Powered by Strava". Replace the
-  text with Strava's official "Connect with Strava" button asset before release.
+- Uploads are **TCX files** (`POST /uploads`): each PaceApp segment becomes a Strava **lap**
+  (distance + time + avg HR), then `PUT /activities/{id}` sets the exact sport type + rich
+  description. Still summary-level — no GPS map / HR trace (no per-point timestamps stored).
+- Disconnect uses **`POST /oauth/revoke`** (the deprecated `/oauth/deauthorize` is retired
+  2027-06-01). A revoke elsewhere is detected by a **401** or the webhook and clears the connection.
+
+## Deauthorization webhook (one-time setup)
+Register the push subscription after deploying (`verify_token` must match `STRAVA_WEBHOOK_VERIFY_TOKEN`):
+```bash
+curl -X POST https://www.strava.com/api/v3/push_subscriptions \
+  -F client_id=<CLIENT_ID> \
+  -F client_secret=<CLIENT_SECRET> \
+  -F callback_url=https://us-central1-thepaceapp.cloudfunctions.net/stravaWebhook \
+  -F verify_token=paceapp-strava-webhook
+```
+The response `{"id": <n>}` is the subscription id — set `STRAVA_WEBHOOK_SUBSCRIPTION_ID = <n>` in `index.js` and redeploy to arm the spoof guard (only one subscription per app is allowed).
