@@ -525,6 +525,10 @@ exports.stravaDisconnect = onRequest({ secrets: [STRAVA_CLIENT_SECRET] }, async 
 // Strava push subscription. Not a secret — Strava only echoes it back on the handshake.
 const STRAVA_WEBHOOK_VERIFY_TOKEN = "paceapp-strava-webhook";
 
+// Set to the numeric id Strava returns when you register the push subscription. Once set,
+// POSTs whose subscription_id doesn't match are dropped (spoof guard). null = not yet set.
+const STRAVA_WEBHOOK_SUBSCRIPTION_ID = null;
+
 /**
  * Strava push-subscription webhook. Two roles:
  *  - GET: the one-time subscription validation handshake (echo hub.challenge).
@@ -547,24 +551,36 @@ exports.stravaWebhook = onRequest(async (req, res) => {
   }
 
   if (req.method === "POST") {
-    // Strava requires a 200 within 2s — ack immediately, then process.
-    res.status(200).send("EVENT_RECEIVED");
     const body = req.body || {};
+
+    // Spoof guard — Strava payloads are unsigned, so drop anything not from our subscription.
+    if (STRAVA_WEBHOOK_SUBSCRIPTION_ID != null
+      && Number(body.subscription_id) !== Number(STRAVA_WEBHOOK_SUBSCRIPTION_ID)) {
+      res.status(200).send("IGNORED");
+      return;
+    }
+
     const deauthorized =
       body.object_type === "athlete" &&
       body.aspect_type === "update" &&
       body.updates && String(body.updates.authorized) === "false";
-    if (!deauthorized) return;
-    try {
-      const snap = await db.collection("stravaTokens")
-        .where("athleteId", "==", body.owner_id).get();
-      for (const doc of snap.docs) {
-        await clearStravaConnection(doc.id); // doc id == uid
+
+    // Do the work BEFORE responding — on Functions v2 (Cloud Run) CPU is throttled
+    // once the response is sent, so post-response work isn't guaranteed to complete.
+    if (deauthorized) {
+      try {
+        const snap = await db.collection("stravaTokens")
+          .where("athleteId", "==", body.owner_id).get();
+        for (const doc of snap.docs) {
+          await clearStravaConnection(doc.id); // doc id == uid
+        }
+        logger.info(`stravaWebhook: deauthorized athlete ${body.owner_id} (${snap.size} user[s])`);
+      } catch (e) {
+        logger.error("stravaWebhook deauthorize failed", e);
       }
-      logger.info(`stravaWebhook: deauthorized athlete ${body.owner_id} (${snap.size} user[s])`);
-    } catch (e) {
-      logger.error("stravaWebhook deauthorize failed", e);
     }
+
+    res.status(200).send("EVENT_RECEIVED");
     return;
   }
 
