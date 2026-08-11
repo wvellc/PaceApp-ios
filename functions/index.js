@@ -66,7 +66,11 @@ async function stravaTokenRequest(params) {
     body: new URLSearchParams(params),
   });
   const json = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw new Error(json.message || "Strava token request failed.");
+  if (!resp.ok) {
+    const err = new Error(json.message || "Strava token request failed.");
+    err.status = resp.status;
+    throw err;
+  }
   return json;
 }
 
@@ -96,6 +100,15 @@ async function storeTokens(uid, token) {
   return athleteName;
 }
 
+/** Marks the account disconnected server-side + client-side. Used when Strava has
+ *  revoked our tokens (a refresh/API call returns 401/400) so the app reflects it. */
+async function clearStravaConnection(uid) {
+  await db.doc(`stravaTokens/${uid}`).delete().catch(() => {});
+  await db.doc(`users/${uid}`).set({
+    strava: { connected: false, athleteName: null, athleteId: null },
+  }, { merge: true });
+}
+
 /** Returns a valid access token for the user, refreshing (and re-storing) it if it's near expiry. */
 async function getValidAccessToken(uid) {
   const snap = await db.doc(`stravaTokens/${uid}`).get();
@@ -105,12 +118,24 @@ async function getValidAccessToken(uid) {
   const now = Math.floor(Date.now() / 1000);
   if (data.expiresAt && now < data.expiresAt - 300) return data.accessToken;
 
-  const refreshed = await stravaTokenRequest({
-    client_id: STRAVA_CLIENT_ID.value(),
-    client_secret: STRAVA_CLIENT_SECRET.value(),
-    grant_type: "refresh_token",
-    refresh_token: data.refreshToken,
-  });
+  let refreshed;
+  try {
+    refreshed = await stravaTokenRequest({
+      client_id: STRAVA_CLIENT_ID.value(),
+      client_secret: STRAVA_CLIENT_SECRET.value(),
+      grant_type: "refresh_token",
+      refresh_token: data.refreshToken,
+    });
+  } catch (e) {
+    // 400/401 on refresh = the user revoked access (or Strava invalidated the token).
+    // Clear the connection so the app shows "Not connected"; leave transient 5xx/network
+    // errors intact so we retry next time.
+    if (e.status === 400 || e.status === 401) {
+      await clearStravaConnection(uid);
+      throw new Error("Strava is not connected.");
+    }
+    throw e;
+  }
   await db.doc(`stravaTokens/${uid}`).set({
     accessToken: refreshed.access_token,
     refreshToken: refreshed.refresh_token, // Strava rotates the refresh token
@@ -291,7 +316,11 @@ async function uploadTCX(accessToken, tcx, { externalId, name, description }) {
     body: form,
   });
   const json = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw new Error(json.message || json.error || "Strava rejected the upload.");
+  if (!resp.ok) {
+    const err = new Error(json.message || json.error || "Strava rejected the upload.");
+    err.status = resp.status;
+    throw err;
+  }
   return json;
 }
 
@@ -341,7 +370,18 @@ async function syncEvent(uid, eventRef, event) {
 
   const lapCount = buildLaps(event).length;
   logger.info(`syncEvent: uploading ${externalId} as ${lapCount} lap(s)…`);
-  const upload = await uploadTCX(accessToken, buildTCX(event), { externalId, name, description });
+  let upload;
+  try {
+    upload = await uploadTCX(accessToken, buildTCX(event), { externalId, name, description });
+  } catch (e) {
+    // A 401/403 here means the access token was revoked while still unexpired (so the
+    // refresh path in getValidAccessToken didn't run). Clear so the app reflects it.
+    if (e.status === 401 || e.status === 403) {
+      await clearStravaConnection(uid);
+      throw new Error("Strava is not connected.");
+    }
+    throw e;
+  }
   logger.info(`syncEvent: Strava accepted upload ${upload.id} for ${externalId}, awaiting processing…`);
   const activityId = await pollUpload(accessToken, upload.id);
 
@@ -477,6 +517,58 @@ exports.stravaDisconnect = onRequest({ secrets: [STRAVA_CLIENT_SECRET] }, async 
     logger.error("stravaDisconnect failed", e);
     res.status(502).json({ error: "Couldn't disconnect. Please try again." });
   }
+});
+
+// MARK: - Deauthorization webhook
+
+// Verify token you choose; it must match the `verify_token` used when creating the
+// Strava push subscription. Not a secret — Strava only echoes it back on the handshake.
+const STRAVA_WEBHOOK_VERIFY_TOKEN = "paceapp-strava-webhook";
+
+/**
+ * Strava push-subscription webhook. Two roles:
+ *  - GET: the one-time subscription validation handshake (echo hub.challenge).
+ *  - POST: event delivery. We act only on athlete deauthorization (updates.authorized=false),
+ *    clearing that athlete's connection so the app reflects "Not connected" instantly.
+ * Requires a push subscription registered with Strava pointing at this function URL
+ * (https://us-central1-thepaceapp.cloudfunctions.net/stravaWebhook) — one-time setup.
+ */
+exports.stravaWebhook = onRequest(async (req, res) => {
+  if (req.method === "GET") {
+    const mode = req.query["hub.mode"];
+    const token = req.query["hub.verify_token"];
+    const challenge = req.query["hub.challenge"];
+    if (mode === "subscribe" && token === STRAVA_WEBHOOK_VERIFY_TOKEN) {
+      res.json({ "hub.challenge": challenge });
+    } else {
+      res.status(403).send("Forbidden");
+    }
+    return;
+  }
+
+  if (req.method === "POST") {
+    // Strava requires a 200 within 2s — ack immediately, then process.
+    res.status(200).send("EVENT_RECEIVED");
+    const body = req.body || {};
+    const deauthorized =
+      body.object_type === "athlete" &&
+      body.aspect_type === "update" &&
+      body.updates && String(body.updates.authorized) === "false";
+    if (!deauthorized) return;
+    try {
+      const snap = await db.collection("stravaTokens")
+        .where("athleteId", "==", body.owner_id).get();
+      for (const doc of snap.docs) {
+        await clearStravaConnection(doc.id); // doc id == uid
+      }
+      logger.info(`stravaWebhook: deauthorized athlete ${body.owner_id} (${snap.size} user[s])`);
+    } catch (e) {
+      logger.error("stravaWebhook deauthorize failed", e);
+    }
+    return;
+  }
+
+  res.status(405).send("Method Not Allowed");
 });
 
 // MARK: - Auto-sync trigger
