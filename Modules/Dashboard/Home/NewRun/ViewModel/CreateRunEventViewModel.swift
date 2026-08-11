@@ -390,29 +390,36 @@ class CreateRunEventViewModel {
 	/// Saves the event locally and sends create_event to the watch.
 	/// Unlike submitForm(), does NOT navigate to root (the caller handles dismiss).
 	func submitDuplicate() {
-		let eventPayload = connectIQEventPayload()
-		ConnectIQManager.shared.sendMessage([
-			"command": "create_event",
-			"event": eventPayload
-		])
-		ConnectIQManager.shared.upsertSyncedActivity(from: eventPayload)
+		Task { @MainActor in
+			// Don't create on a session that no longer exists (account deleted/disabled elsewhere).
+			guard await AuthManager.shared.verifyAccountStillValid() else { return }
+			let eventPayload = connectIQEventPayload()
+			ConnectIQManager.shared.sendMessage([
+				"command": "create_event",
+				"event": eventPayload
+			])
+			ConnectIQManager.shared.upsertSyncedActivity(from: eventPayload)
+		}
 	}
 
 	private func submitForm() {
-		let eventPayload = connectIQEventPayload()
+		Task { @MainActor in
+			guard await AuthManager.shared.verifyAccountStillValid() else { return }
+			let eventPayload = connectIQEventPayload()
 
-		// Send as a create_event command so the watch handles it properly
-		// (checks deleted IDs, normalizes, and saves via saveActiveEvent)
-		ConnectIQManager.shared.sendMessage([
-			"command": "create_event",
-			"event": eventPayload
-		])
+			// Send as a create_event command so the watch handles it properly
+			// (checks deleted IDs, normalizes, and saves via saveActiveEvent)
+			ConnectIQManager.shared.sendMessage([
+				"command": "create_event",
+				"event": eventPayload
+			])
 
-		// Also save locally on the phone
-		ConnectIQManager.shared.upsertSyncedActivity(from: eventPayload)
+			// Also save locally on the phone
+			ConnectIQManager.shared.upsertSyncedActivity(from: eventPayload)
 
-		ToastManager.shared.present(.success("\(eventType.rawValue) event created"))
-		router?.navigateToRoot()
+			ToastManager.shared.present(.success("\(eventType.rawValue) event created"))
+			router?.navigateToRoot()
+		}
 	}
 
 	private func connectIQEventPayload() -> [String: Any] {

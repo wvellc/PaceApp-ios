@@ -84,22 +84,24 @@ struct EditEventScreen: View {
 	
 	// MARK: - Methods
 	private func saveEvent() {
-		if validateEventDetails() {
-			let trimmedName = eventName.trimmingCharacters(in: .whitespaces)
-			let trimmedLocation = location.trimmingCharacters(in: .whitespaces)
+		guard validateEventDetails() else { return }
+		let trimmedName = eventName.trimmingCharacters(in: .whitespaces)
+		let trimmedLocation = location.trimmingCharacters(in: .whitespaces)
+
+		Task { @MainActor in
+			// Don't write on a session that no longer exists (account deleted/disabled elsewhere).
+			guard await AuthManager.shared.verifyAccountStillValid() else { return }
 
 			// Persist to Firebase (synced events round-trip through the watch too).
 			if let syncId = eventData?.syncId {
 				ciqManager.updateEventMetadata(eventId: syncId, name: trimmedName, location: trimmedLocation)
 			} else if let eventId = eventData?.id, let userId = AuthManager.shared.currentUserID {
-				Task {
-					try? await FirestoreEventRepository.shared.updateMetadata(
-						eventId: eventId,
-						userId: userId,
-						name: trimmedName,
-						location: trimmedLocation
-					)
-				}
+				try? await FirestoreEventRepository.shared.updateMetadata(
+					eventId: eventId,
+					userId: userId,
+					name: trimmedName,
+					location: trimmedLocation
+				)
 			}
 
 			// Broadcast so open Details + the History list patch in place — no refetch.

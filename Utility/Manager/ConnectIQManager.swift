@@ -429,12 +429,16 @@ class ConnectIQManager: NSObject {
     
     func deleteSyncedEvent(id: Int) {
         logger.info("[ConnectIQ] Deleting synced event", metadata: ["eventId": "\(id)"])
-        applyDeletedEventId(id)
-        sendMessage([
-            "command": "delete_event",
-            "source": "phone",
-            "id": id
-        ])
+        Task { @MainActor in
+            // Don't delete on a session that no longer exists — sign out instead of a phantom write.
+            guard await AuthManager.shared.verifyAccountStillValid() else { return }
+            applyDeletedEventId(id)
+            sendMessage([
+                "command": "delete_event",
+                "source": "phone",
+                "id": id
+            ])
+        }
     }
 
     func updateEventMetadata(eventId targetEventId: Int, name: String, location: String) {
