@@ -204,7 +204,7 @@ struct SettingScreen: View {
 					}
 				}
 			} else {
-				stravaConnectButton { strava.connect() }
+				StravaConnectButton { strava.connect() }
 			}
 		}
 		.padding(10)
@@ -224,23 +224,6 @@ struct SettingScreen: View {
 				.background(AppGradients.button)
 				.clipShape(Capsule())
 		}
-	}
-
-	/// Official "Connect with Strava" button image on a Strava-orange fill,
-	/// per https://developers.strava.com/guidelines/.
-	private func stravaConnectButton(action: @escaping () -> Void) -> some View {
-		Button(action: action) {
-			Image(.icStravaConnectOrange)
-				.resizable()
-				.scaledToFit()
-				.frame(height: 48)
-				.frame(maxWidth: .infinity)
-				.background(.stravaOrange)
-				.clipShape(RoundedRectangle(cornerRadius: Constant.UI.defaultCornerRadius))
-		}
-		// Keep the orange fill untouched on press — the default fade exposed the
-		// image/fill seam. A subtle scale gives feedback without dimming.
-		.buttonStyle(StravaConnectButtonStyle())
 	}
 
 	/// Pill-style secondary action used for Disconnect.
@@ -379,18 +362,6 @@ struct SettingScreen: View {
 				router.setRoot(.auth)
 			}
 		}
-	}
-}
-
-// MARK: - Strava Connect Button Style
-
-/// Press style for the Strava connect button — no fade/tint so the full orange fill
-/// stays exactly as-is; only a subtle scale signals the tap.
-private struct StravaConnectButtonStyle: ButtonStyle {
-	func makeBody(configuration: Configuration) -> some View {
-		configuration.label
-			.scaleEffect(configuration.isPressed ? 0.98 : 1)
-			.animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
 	}
 }
 

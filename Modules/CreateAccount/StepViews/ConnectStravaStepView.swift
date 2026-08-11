@@ -10,8 +10,7 @@ import SwiftUI
 // MARK: - ConnectStravaStepView
 
 /// Final onboarding step — connect Strava via the shared OAuth flow (StravaManager).
-/// The footer "Connect Strava" button starts the flow; onboarding finishes on its own
-/// once the connection lands.
+/// The footer shows the orange "Connect with Strava" button until connected, then "Next".
 struct ConnectStravaStepView: View {
 
 	@Environment(StravaManager.self) private var strava
@@ -34,15 +33,15 @@ struct ConnectStravaStepView: View {
 
 			VSpace(height: 42)
 
-			// Connected badge — shown once the account links.
-			if strava.isConnected, let name = strava.athleteName, !name.isEmpty {
+			// Connected badge — shown once the account links. The connect button lives in the footer.
+			if strava.isConnected {
 				HStack(spacing: 12) {
 					Image(.icPerson)
 						.resizable()
 						.renderingMode(.template)
 						.foregroundStyle(.neonAquaBlue)
 						.frame(width: 22, height: 22)
-					Text("Connected as \(name)")
+					Text(connectedText)
 						.font(.semiBold16)
 						.foregroundStyle(.darkCharcoal)
 						.frame(maxWidth: .infinity, alignment: .leading)
@@ -55,6 +54,11 @@ struct ConnectStravaStepView: View {
 		}
 		.padding(.horizontal, 16)
 		.padding(.top, 24)
+	}
+
+	private var connectedText: String {
+		if let name = strava.athleteName, !name.isEmpty { return "Connected as \(name)" }
+		return "Connected"
 	}
 }
 
