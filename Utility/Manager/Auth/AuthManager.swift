@@ -353,17 +353,19 @@ final class AuthManager {
 		_profileListener = nil
 	}
 
-	/// Confirms the signed-in account still exists on the server (`user.reload()` throws for a
-	/// deleted/disabled account). On a confirmed removal it signs this device out (+ alert) and
-	/// returns false; a network blip returns true so a valid user isn't logged out while offline.
-	/// Call on foreground and before sensitive writes so nothing runs on a dead session.
+	/// Confirms the signed-in account still exists on the server by forcing a token refresh —
+	/// a deleted/disabled account's refresh token is rejected (which `reload()` can miss while
+	/// the cached ID token is still unexpired), and it also invalidates the token Firestore uses.
+	/// On a confirmed removal it signs this device out (+ alert) and returns false; a network
+	/// blip returns true so a valid user isn't logged out while offline. Call on foreground and
+	/// before sensitive writes so nothing runs on a dead session.
 	@discardableResult
 	func verifyAccountStillValid() async -> Bool {
 		guard !isReauthenticatingForDeletion, let user = currentUser else { return false }
 		guard !isEndingRemoteSession else { return true }   // a check is already in flight
 		isEndingRemoteSession = true
 		do {
-			try await user.reload()
+			_ = try await user.getIDTokenResult(forcingRefresh: true)
 			isEndingRemoteSession = false
 			return true
 		} catch {
