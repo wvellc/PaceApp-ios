@@ -39,7 +39,11 @@ final class AuthManager {
 	/// True while an email-link re-authentication (for account deletion) is in flight,
 	/// so the `onOpenURL` handler treats the returning link as reauth, not a fresh sign-in.
 	var isReauthenticatingForDeletion = false
-	
+
+	/// Guards the "signed out on another device" flow so its alert fires at most once per session.
+	@ObservationIgnored
+	private var isEndingRemoteSession = false
+
 	var currentUser: User? = Auth.auth().currentUser
 	var userDetails: UserModel?
 	var isUserAuthenticated: Bool { currentUser != nil }
@@ -64,6 +68,7 @@ final class AuthManager {
 				self.currentUser = user
 				
 				if let user {
+					self.isEndingRemoteSession = false
 					// Silently refresh profile in the background.
 					do {
 						_ = try await self.fetchUserProfileInfo(userId: user.uid)
@@ -244,8 +249,8 @@ final class AuthManager {
 		//Stop the live profile listener so deleting the user doc below doesn't fire it.
 		stopProfileListener()
 
-		//Stop the Strava connection listener for the same reason.
-		StravaManager.shared.stopObserving()
+		//Revoke Strava on the server (best-effort) while the ID token is still valid, then drop the listener.
+		await StravaManager.shared.disconnectForAccountDeletion()
 
 		//Best-effort data cleanup — a failed read/write must NOT abort the account
 		//deletion below, else the user doc + Auth account get left behind.
@@ -319,9 +324,15 @@ final class AuthManager {
 	private func startProfileListener(userId: String) {
 		_profileListener?.remove()
 		_profileListener = UserProfileRepository.shared.listenToProfile(userId: userId) { [weak self] model in
-			guard let model else { return }
 			Task { @MainActor in
-				self?.userDetails = model
+				guard let self else { return }
+				guard let model else {
+					// Doc vanished or the listener was denied — the account may have been deleted
+					// on another device; verify before ending this device's session.
+					self.verifySessionOrSignOut()
+					return
+				}
+				self.userDetails = model
 			}
 		}
 	}
@@ -329,6 +340,51 @@ final class AuthManager {
 	private func stopProfileListener() {
 		_profileListener?.remove()
 		_profileListener = nil
+	}
+
+	/// Foreground check — confirms the signed-in account still exists on the server, so a
+	/// remote delete/disable (another device) is caught promptly on resume. Reuses the reload path.
+	func verifyAccountStillValid() {
+		verifySessionOrSignOut()
+	}
+
+	/// Confirms the account is truly gone (`user.reload()` throws for a deleted account) before
+	/// signing out, so a transient listener blip can never log the user out.
+	private func verifySessionOrSignOut() {
+		guard !isEndingRemoteSession, !isReauthenticatingForDeletion, let user = currentUser else { return }
+		isEndingRemoteSession = true
+		Task { @MainActor in
+			do {
+				try await user.reload()
+				// Account still exists — the signal was transient; allow a future re-check.
+				self.isEndingRemoteSession = false
+			} catch {
+				// A network blip must not sign the user out; any other reload failure means the
+				// account is genuinely gone (deleted / disabled / token revoked).
+				let ns = error as NSError
+				if ns.domain == AuthErrorDomain, AuthErrorCode(rawValue: ns.code) == .networkError {
+					self.isEndingRemoteSession = false
+				} else {
+					self.endRemotelyEndedSession()
+				}
+			}
+		}
+	}
+
+	/// Signs out locally and tells the user their session ended elsewhere. The auth-state
+	/// listener tears down the watch/Strava/session and routes back to sign-in.
+	private func endRemotelyEndedSession() {
+		logger.info("Account no longer exists on the server — ending session on this device.")
+		stopProfileListener()
+		try? Auth.auth().signOut()
+		AppAlertManager.shared.present(
+			AppAlertModel(
+				title: "Signed out",
+				description: "This account was deleted or signed out on another device.",
+				primaryButton: AppAlertButton("OK"),
+				restrictOutsideTap: true
+			)
+		)
 	}
 
 	// MARK: - Private Helpers
