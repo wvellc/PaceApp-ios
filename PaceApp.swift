@@ -159,7 +159,7 @@ struct PaceApp: App {
             // On foreground, verify the account wasn't deleted/disabled elsewhere while
             // backgrounded — the Firebase auth-state listener routes to sign-in if it was.
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active { AuthManager.shared.verifyAccountStillValid() }
+                if phase == .active { Task { await AuthManager.shared.verifyAccountStillValid() } }
             }
 		}
 	}

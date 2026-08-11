@@ -5,9 +5,19 @@
 
 import Foundation
 
+/// Server-only profile lookup result — never read from cache, so a fresh-device cache miss
+/// can't be mistaken for a missing account (which would wrongly seed/overwrite the profile).
+enum ServerProfileResult {
+    case found(UserModel)
+    case missing      // server confirms the document does not exist
+    case unreachable  // couldn't reach the server (offline / transient)
+}
+
 protocol UserProfileRepositoryProtocol: AnyObject {
 	// MARK: - Users info Updates
     func fetchProfile(userId: String) async throws -> UserModel
+    /// Forces a server read so "missing" is authoritative — used before creating a new profile.
+    func fetchProfileFromServer(userId: String) async -> ServerProfileResult
     func upsertProfile(_ model: UserModel, userId: String) async throws
 
     // MARK: - Live Updates

@@ -69,26 +69,7 @@ final class AuthManager {
 				
 				if let user {
 					self.isEndingRemoteSession = false
-					// Silently refresh profile in the background.
-					do {
-						_ = try await self.fetchUserProfileInfo(userId: user.uid)
-					} catch {
-						// Brand-new user — no Firestore document exists yet.
-						// Seed a minimal model from the Firebase Auth record.
-						self.logger.info("No Firestore profile found for \(user.uid) — seeding new user document.")
-						var initial = UserModel(uuid: user.uid)
-						initial.email = user.email
-						initial.phoneNumber = user.phoneNumber
-						initial.firstName = user.displayName ?? ""
-						
-						self.userDetails = initial
-						
-						do {
-							try await UserProfileRepository.shared.upsertProfile(initial, userId: user.uid)
-						} catch {
-							self.logger.error("Failed to create initial profile for \(user.uid): \(error.localizedDescription)")
-						}
-					}
+					await self.loadOrCreateProfile(for: user)
 
 					// Keep userDetails live — watch → Firestore → app updates flow
 					// through this listener without any manual pull.
@@ -315,6 +296,36 @@ final class AuthManager {
 			throw error
 		}
 	}
+
+	/// Loads the signed-in user's profile, creating one only for a genuinely new account.
+	/// A cache-first miss (fresh device) or a transient failure must NEVER seed an empty
+	/// profile over an existing one — so "missing" is confirmed against the server first.
+	private func loadOrCreateProfile(for user: User) async {
+		if let model = try? await UserProfileRepository.shared.fetchProfile(userId: user.uid) {
+			self.userDetails = model
+			return
+		}
+		switch await UserProfileRepository.shared.fetchProfileFromServer(userId: user.uid) {
+		case .found(let model):
+			self.userDetails = model
+		case .missing:
+			await seedNewUser(user)
+		case .unreachable:
+			// Don't create/overwrite while offline — the live profile listener fills userDetails in.
+			logger.error("Profile unresolved for \(user.uid) (server unreachable) — keeping session, not seeding.")
+		}
+	}
+
+	/// Seeds a minimal profile for a brand-new account (confirmed absent on the server).
+	private func seedNewUser(_ user: User) async {
+		logger.info("No profile for \(user.uid) — seeding a new user document.")
+		var initial = UserModel(uuid: user.uid)
+		initial.email = user.email
+		initial.phoneNumber = user.phoneNumber
+		initial.firstName = user.displayName ?? ""
+		self.userDetails = initial
+		try? await UserProfileRepository.shared.upsertProfile(initial, userId: user.uid)
+	}
 	
 	// MARK: - Live Profile Listener
 
@@ -342,33 +353,34 @@ final class AuthManager {
 		_profileListener = nil
 	}
 
-	/// Foreground check — confirms the signed-in account still exists on the server, so a
-	/// remote delete/disable (another device) is caught promptly on resume. Reuses the reload path.
-	func verifyAccountStillValid() {
-		verifySessionOrSignOut()
+	/// Confirms the signed-in account still exists on the server (`user.reload()` throws for a
+	/// deleted/disabled account). On a confirmed removal it signs this device out (+ alert) and
+	/// returns false; a network blip returns true so a valid user isn't logged out while offline.
+	/// Call on foreground and before sensitive writes so nothing runs on a dead session.
+	@discardableResult
+	func verifyAccountStillValid() async -> Bool {
+		guard !isReauthenticatingForDeletion, let user = currentUser else { return false }
+		guard !isEndingRemoteSession else { return true }   // a check is already in flight
+		isEndingRemoteSession = true
+		do {
+			try await user.reload()
+			isEndingRemoteSession = false
+			return true
+		} catch {
+			let ns = error as NSError
+			if ns.domain == AuthErrorDomain, AuthErrorCode(rawValue: ns.code) == .networkError {
+				isEndingRemoteSession = false   // offline — don't block a valid user
+				return true
+			}
+			endRemotelyEndedSession()           // account genuinely gone → end the session
+			return false
+		}
 	}
 
-	/// Confirms the account is truly gone (`user.reload()` throws for a deleted account) before
-	/// signing out, so a transient listener blip can never log the user out.
+	/// Fire-and-forget account check used by the live profile listener when its snapshot
+	/// vanishes or is denied — routes through the network-blip-safe validity check.
 	private func verifySessionOrSignOut() {
-		guard !isEndingRemoteSession, !isReauthenticatingForDeletion, let user = currentUser else { return }
-		isEndingRemoteSession = true
-		Task { @MainActor in
-			do {
-				try await user.reload()
-				// Account still exists — the signal was transient; allow a future re-check.
-				self.isEndingRemoteSession = false
-			} catch {
-				// A network blip must not sign the user out; any other reload failure means the
-				// account is genuinely gone (deleted / disabled / token revoked).
-				let ns = error as NSError
-				if ns.domain == AuthErrorDomain, AuthErrorCode(rawValue: ns.code) == .networkError {
-					self.isEndingRemoteSession = false
-				} else {
-					self.endRemotelyEndedSession()
-				}
-			}
-		}
+		Task { @MainActor in _ = await self.verifyAccountStillValid() }
 	}
 
 	/// Signs out locally and tells the user their session ended elsewhere. The auth-state
