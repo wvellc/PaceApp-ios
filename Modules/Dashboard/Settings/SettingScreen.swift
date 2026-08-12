@@ -204,7 +204,7 @@ struct SettingScreen: View {
 					}
 				}
 			} else {
-				StravaConnectButton { strava.connect() }
+				StravaConnectButton(isLoading: strava.isWorking) { strava.connect() }
 			}
 		}
 		.padding(10)

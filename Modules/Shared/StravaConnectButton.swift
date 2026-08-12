@@ -13,6 +13,7 @@ import SwiftUI
 /// per https://developers.strava.com/guidelines/. Shared by Settings + onboarding.
 struct StravaConnectButton: View {
 
+	var isLoading: Bool = false
 	let action: () -> Void
 
 	var body: some View {
@@ -24,9 +25,20 @@ struct StravaConnectButton: View {
 				.frame(maxWidth: .infinity)
 				.background(.stravaOrange)
 				.clipShape(RoundedRectangle(cornerRadius: Constant.UI.defaultCornerRadius))
+				.overlay {
+					// Spinner while the OAuth code is exchanged (StravaManager.isWorking).
+					if isLoading {
+						ProgressView()
+							.tint(.whiteApp)
+							.frame(maxWidth: .infinity, maxHeight: .infinity)
+							.background(Color.stravaOrange)
+							.clipShape(RoundedRectangle(cornerRadius: Constant.UI.defaultCornerRadius))
+					}
+				}
 		}
 		// Keep the orange fill untouched on press — only a subtle scale signals the tap.
 		.buttonStyle(StravaConnectButtonStyle())
+		.disabled(isLoading)
 	}
 }
 
