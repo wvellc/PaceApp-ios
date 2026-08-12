@@ -393,8 +393,8 @@ final class AuthManager {
 		try? Auth.auth().signOut()
 		AppAlertManager.shared.present(
 			AppAlertModel(
-				title: "Signed out",
-				description: "This account was deleted or signed out on another device.",
+				title: "Session expired",
+				description: "Your session has timed out. Please sign in again.",
 				primaryButton: AppAlertButton("OK"),
 				restrictOutsideTap: true
 			)
