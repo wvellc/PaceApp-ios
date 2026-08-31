@@ -447,7 +447,9 @@ exports.stravaCallback = onRequest((req, res) => {
 });
 
 /** Exchange an OAuth code for tokens and connect the account. */
-exports.stravaExchange = onRequest({ secrets: [STRAVA_CLIENT_SECRET] }, async (req, res) => {
+// minInstances keeps one instance warm — the OAuth code exchange is user-facing, and a
+// scaled-to-zero cold start aborts the request ("no available instance") mid-connect.
+exports.stravaExchange = onRequest({ secrets: [STRAVA_CLIENT_SECRET], minInstances: 1 }, async (req, res) => {
   const uid = await requireUid(req, res);
   if (!uid) return;
   const code = req.body && req.body.code;
