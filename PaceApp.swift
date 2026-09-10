@@ -148,13 +148,10 @@ struct PaceApp: App {
 					}
 				}
 			}
-            // Cold-launch watch restoration + pending event resync.
-            // restoreSessionIfNeeded() rebuilds device registrations and triggers
-            // loadPersistedStateFromFirestore(). resyncPendingEvents() then forwards
-            // any events that were marked pending in a previous session.
+            // Cold-launch watch restoration — reconnecting loads this user's events,
+            // syncs with the watch, and delivers any phone changes still queued for it.
             .task {
                 ciqManager.restoreSessionIfNeeded()
-                await ciqManager.resyncPendingEvents()
             }
             // On foreground, verify the account wasn't deleted/disabled elsewhere while
             // backgrounded — the Firebase auth-state listener routes to sign-in if it was.

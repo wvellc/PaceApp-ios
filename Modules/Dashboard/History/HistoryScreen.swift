@@ -157,11 +157,8 @@ private extension HistoryScreen {
 					Button {
 						AppAlertManager.shared.confirmEventDeletion {
 							withAnimation {
-								if let syncId = activity.syncId {
-									ciqManager.deleteSyncedEvent(id: syncId)
-								} else {
-									viewModel.delete(event: activity)
-								}
+								// One delete path for every event — Firestore, History, and the watch stay in step.
+								ciqManager.deleteSyncedEvent(id: activity.id)
 							}
 						}
 					} label: {

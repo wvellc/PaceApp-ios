@@ -36,7 +36,7 @@ protocol EventRepositoryProtocol: AnyObject {
 	func fetchEvents(byIds ids: [String]) async throws -> [ActivityData]
 
 	// MARK: - ConnectIQ seeding
-	// One query fetches all user events; client partitions by status. e.g. → ConnectIQEventSnapshot(activePayloads: [...], deletedIds: [3, 7])
+	// One query fetches all user events; client partitions by status. e.g. → ConnectIQEventSnapshot(activePayloads: [...], deletedEvents: [3: date, 7: date])
 	func fetchAllEventPayloads(userId: String) async throws -> ConnectIQEventSnapshot
 }
 

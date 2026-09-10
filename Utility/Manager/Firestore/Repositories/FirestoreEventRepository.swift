@@ -189,11 +189,21 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 		// Write-once fields (source/createdAt/completedAt) must survive every app ⇄ watch
 		// round-trip — carry the stored values forward instead of the freshly stamped ones.
 		let ref = eventRef(eventId: document.id)
-		let snapshot = try? await ref.getDocument(source: .default)
+		let snapshot: DocumentSnapshot?
+		do {
+			snapshot = try await ref.getDocument(source: .default)
+		} catch let error where error.isFirestorePermissionDenied {
+			// Another account owns this doc — a write would flash it into this user's lists until the server rejects it.
+			throw error
+		} catch {
+			snapshot = nil
+		}
 		if let snapshot, snapshot.exists, let current = try? snapshot.data(as: EventDocument.self) {
 			document.source      = current.source
 			document.createdAt   = current.createdAt
 			document.completedAt = current.completedAt ?? document.completedAt
+			// A finished event never turns back into an upcoming one — a stale active copy is ignored.
+			if current.eventStatus == .completed, document.eventStatus == .active { return }
 			// A user-deleted event stays deleted — a later watch re-sync must not resurrect it.
 			if current.eventStatus == .deleted { document.status = EventStatus.deleted.rawValue }
 			try await write(document: document, merge: true)
@@ -300,7 +310,7 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 
 		var active: [[String: Any]] = []
 		var completed: [[String: Any]] = []
-		var deletedIds: [Int] = []
+		var deletedEvents: [Int: Date] = [:]
 
 		for doc in snapshot.documents {
 			guard let event = try? doc.data(as: EventDocument.self) else { continue }
@@ -308,14 +318,15 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 			switch event.eventStatus {
 			case .active:    active.append(payload)
 			case .completed: completed.append(payload)
-			case .deleted:   deletedIds.append(event.id)
+			// A still-pending server timestamp reads back as nil — that delete has only just happened.
+			case .deleted:   deletedEvents[event.id] = event.deletedAt?.dateValue() ?? Date()
 			}
 		}
 
 		return ConnectIQEventSnapshot(
 			activePayloads: active,
 			completedPayloads: completed,
-			deletedIds: deletedIds
+			deletedEvents: deletedEvents
 		)
 	}
 

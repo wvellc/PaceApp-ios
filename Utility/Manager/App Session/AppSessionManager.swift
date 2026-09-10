@@ -109,6 +109,13 @@ enum AppSession {
         set { saveObject(newValue, forKey: .foreignEventIds) }
     }
 
+    // WATCH OUTBOX
+    // Phone event changes still owed to the watch — sent in order on the next connection.
+    static var watchOutbox: [WatchOutboxEntry] {
+        get { readObject(forKey: .watchOutbox, as: [WatchOutboxEntry].self) ?? [] }
+        set { saveObject(newValue, forKey: .watchOutbox) }
+    }
+
     // MARK: - Management Methods
 
     /// Remove stored session using key

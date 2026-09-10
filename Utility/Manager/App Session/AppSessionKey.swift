@@ -28,4 +28,8 @@ enum AppSessionKey: String, CaseIterable {
     // Watch event ids whose Firestore write was permission-denied (doc owned by a
     // previous account). Skipped on later syncs so the denial isn't retried forever.
     case foreignEventIds
+
+    // Phone event changes (create/edit/delete) the watch hasn't confirmed yet.
+    // Cleared with the rest of the session on sign-out.
+    case watchOutbox
 }

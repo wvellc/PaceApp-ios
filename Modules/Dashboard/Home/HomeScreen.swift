@@ -194,9 +194,7 @@ struct HomeScreen: View {
 						Button {
 							AppAlertManager.shared.confirmEventDeletion {
 								withAnimation {
-									if let syncId = activity.syncId {
-										ciqManager.deleteSyncedEvent(id: syncId)
-									}
+									ciqManager.deleteSyncedEvent(id: activity.id)
 								}
 							}
 						} label: {

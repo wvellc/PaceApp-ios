@@ -92,20 +92,11 @@ struct EditEventScreen: View {
 			// Don't write on a session that no longer exists (account deleted/disabled elsewhere).
 			guard await AuthManager.shared.verifyAccountStillValid() else { return }
 
-			// Persist to Firebase (synced events round-trip through the watch too).
-			if let syncId = eventData?.syncId {
-				ciqManager.updateEventMetadata(eventId: syncId, name: trimmedName, location: trimmedLocation)
-			} else if let eventId = eventData?.id, let userId = AuthManager.shared.currentUserID {
-				try? await FirestoreEventRepository.shared.updateMetadata(
-					eventId: eventId,
-					userId: userId,
-					name: trimmedName,
-					location: trimmedLocation
-				)
-			}
-
-			// Broadcast so open Details + the History list patch in place — no refetch.
 			if let eventId = eventData?.id {
+				// Saves to Firebase and queues the change for the watch.
+				await ciqManager.updateEventMetadata(eventId: eventId, name: trimmedName, location: trimmedLocation)
+
+				// Broadcast so open Details + the History list patch in place — no refetch.
 				EventUpdateCenter.shared.notifyUpdated(eventId: eventId, name: trimmedName, location: trimmedLocation)
 			}
 
