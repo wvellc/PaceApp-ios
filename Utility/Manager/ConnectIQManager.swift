@@ -557,6 +557,7 @@ class ConnectIQManager: NSObject {
         // --- SYNC REQUEST: Watch asks phone to send all data ---
         case "sync_request":
             // Even a forced request merges — clearing first dropped phone-only events and deletions from the reply.
+            eventIds(from: dict["pendingDeletedEventIds"]).forEach { applyWatchDelete($0) }
             let requestCompleted = eventPayloads(from: dict["completedEvents"])
             let requestActive = eventPayloads(from: dict["activeEvents"])
             reconcileDeletedEventIds(eventIds(from: dict["deletedEventIds"]), liveActive: requestActive, liveCompleted: requestCompleted)
@@ -579,6 +580,7 @@ class ConnectIQManager: NSObject {
         // --- SYNC ALL: Watch sends all its data (response to our sync_request) ---
         // We merge but do NOT echo sync_all back — prevents infinite loop.
         case "sync_all":
+            eventIds(from: dict["pendingDeletedEventIds"]).forEach { applyWatchDelete($0) }
             let syncCompleted = eventPayloads(from: dict["completedEvents"])
             let syncActive = eventPayloads(from: dict["activeEvents"])
             reconcileDeletedEventIds(eventIds(from: dict["deletedEventIds"]), liveActive: syncActive, liveCompleted: syncCompleted)
@@ -598,7 +600,7 @@ class ConnectIQManager: NSObject {
         // --- DELETE EVENT: Watch deleted a specific event ---
         case "delete_event":
             if let id = eventId(from: dict) {
-                applyDeletedEventId(id)
+                applyWatchDelete(id)
                 refreshState()
             }
 				
@@ -747,8 +749,8 @@ class ConnectIQManager: NSObject {
         }
     }
 
-    // Local-only reconciliation of the watch's bulk tombstone list. The watch also lists every event it
-    // finished (ActiveEvent tombstones its own id), so it's never a Firestore delete — live data wins.
+    // Local-only reconciliation of the watch's bulk tombstone list. It also holds every event the watch finished,
+    // so it's never a Firestore delete — real watch deletes arrive as delete_event or pendingDeletedEventIds.
     private func reconcileDeletedEventIds(_ ids: [Int], liveActive: [[String: Any]], liveCompleted: [[String: Any]]) {
         let liveIds = Set(liveActive.compactMap { eventId(from: $0) })
             .union(liveCompleted.compactMap { eventId(from: $0) })
@@ -794,6 +796,16 @@ class ConnectIQManager: NSObject {
             }
         }
     }
+
+	// A delete the user made on the watch: applied for real (Firestore included), then confirmed back with
+	// delete_event so the watch stops re-sending it. Waits for a signed-in user, so no delete is confirmed unsaved.
+	private func applyWatchDelete(_ id: Int) {
+		guard AuthManager.shared.currentUserID != nil else { return }
+		if deletedEvents[id] == nil {
+			applyDeletedEventId(id)
+		}
+		enqueueWatchChange(.delete, eventId: id)
+	}
 
 	// Permission denied means another account owns the doc — the watch keeps a previous account's events.
 	// Remember the id so every later sync skips it instead of retrying (and flashing it into this user's lists).
