@@ -49,7 +49,7 @@ final class FirestoreUserProfileRepository: UserProfileRepositoryProtocol {
 					self.logger.error("Profile listener failed: \(error.localizedDescription)")
 					// Permission-denied on our own user doc = the token is no longer valid for this
 					// uid (account removed elsewhere) — surface it so the session can re-validate.
-					if (error as NSError).code == FirestoreErrorCode.permissionDenied.rawValue {
+					if error.isFirestorePermissionDenied {
 						onChange(nil)
 					}
 					return

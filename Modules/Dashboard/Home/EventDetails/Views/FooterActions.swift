@@ -12,7 +12,9 @@ struct FooterActions: View {
 	
 	let onDelete: () -> Void
 	let onEdit: () -> Void
-	
+	/// Shows the Duplicate button when set (completed events).
+	var onDuplicate: (() -> Void)? = nil
+
 	var body: some View {
 		if #available(iOS 26.0, *) {
 			GlassEffectContainer(spacing: 12) {
@@ -25,20 +27,34 @@ struct FooterActions: View {
 	
 	@ViewBuilder
 	var actions: some View {
-		HStack(spacing: 12) {
-			DetailButton(
-				title: "Delete",
-				icon:  "trash.fill",
-				color: .redBoho,
-				action: onDelete
-			)
+		VStack(spacing: 12) {
+
+			if let onDuplicate {
+				DetailButton(
+					title: "Duplicate",
+					icon: "plus.square.fill.on.square.fill",
+					color: .whiteApp,
+					action: onDuplicate
+				)
+			}
 			
-			DetailButton(
-				title: "Edit",
-				icon: "pencil.line",
-				color: .whiteApp ,
-				action: onEdit
-			)
+			HStack(spacing: 12) {
+				DetailButton(
+					title: "Delete",
+					icon:  "trash.fill",
+					color: .redBoho,
+					action: onDelete
+				)
+				
+				DetailButton(
+					title: "Edit",
+					icon: "pencil.line",
+					color: .whiteApp ,
+					action: onEdit
+				)
+				
+				
+			}
 		}
 	}
 }
@@ -63,6 +79,8 @@ private struct DetailButton: View {
 				Text(title)
 					.font(.medium16)
 					.foregroundStyle(color)
+					.lineLimit(1)
+					.minimumScaleFactor(0.8)
 			}
 			.frame(maxWidth: .infinity)
 			.padding(.vertical, 4)

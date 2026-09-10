@@ -102,10 +102,8 @@ class CreateRunEventViewModel {
 		eventName = source.title
 		location  = source.location
 		eventDate = Date()
-
-		if let unit = MeasureUnit(fullName: source.measure) {
-			distanceType = unit
-		}
+		eventType = source.eventType
+		distanceType = MeasureUnit(measure: source.measure)
 
 		// distance is stored pre-formatted ("5.00 mi") — take the numeric prefix.
 		let numeric = source.distance.split(separator: " ").first.map(String.init) ?? source.distance
@@ -387,35 +385,22 @@ class CreateRunEventViewModel {
 	// MARK: - Submit
 
 	/// Public entry point for the duplicate event flow.
-	/// Saves the event locally and sends create_event to the watch.
+	/// Saves the event and queues create_event for the watch.
 	/// Unlike submitForm(), does NOT navigate to root (the caller handles dismiss).
 	func submitDuplicate() {
 		Task { @MainActor in
 			// Don't create on a session that no longer exists (account deleted/disabled elsewhere).
 			guard await AuthManager.shared.verifyAccountStillValid() else { return }
-			let eventPayload = connectIQEventPayload()
-			ConnectIQManager.shared.sendMessage([
-				"command": "create_event",
-				"event": eventPayload
-			])
-			ConnectIQManager.shared.upsertSyncedActivity(from: eventPayload)
+			await ConnectIQManager.shared.upsertSyncedActivity(from: connectIQEventPayload())
 		}
 	}
 
 	private func submitForm() {
 		Task { @MainActor in
 			guard await AuthManager.shared.verifyAccountStillValid() else { return }
-			let eventPayload = connectIQEventPayload()
 
-			// Send as a create_event command so the watch handles it properly
-			// (checks deleted IDs, normalizes, and saves via saveActiveEvent)
-			ConnectIQManager.shared.sendMessage([
-				"command": "create_event",
-				"event": eventPayload
-			])
-
-			// Also save locally on the phone
-			ConnectIQManager.shared.upsertSyncedActivity(from: eventPayload)
+			// Saves on the phone and queues create_event, retried until the watch confirms it.
+			await ConnectIQManager.shared.upsertSyncedActivity(from: connectIQEventPayload())
 
 			ToastManager.shared.present(.success("\(eventType.rawValue) event created"))
 			router?.navigateToRoot()

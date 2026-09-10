@@ -46,6 +46,7 @@ final class EventDetailsViewModel {
 	var isFavorite: Bool = false
 	var isLoadingFavorite: Bool = false
 	var showEditScreen: ActivityData?   // Matches navigationDestination binding
+	var duplicateSource: ActivityData?  // Pushes the duplicate flow seeded with this event's plan
 
 	private let favoritesRepository: FavoritesRepositoryProtocol
 
@@ -68,7 +69,7 @@ final class EventDetailsViewModel {
 	}
 
 	// MARK: - Computed: Time Delta
-	// ... (all your existing computed properties unchanged - timeDeltaSeconds, completionPercent, etc.)
+	// ... (timeDeltaSeconds, completionPercentText, etc.)
 
 	var timeDeltaSeconds: Int {
 		guard let data = activityData else { return 0 }
@@ -84,17 +85,10 @@ final class EventDetailsViewModel {
 		return data.timeVar
 	}
 
-	var completionPercent: Int {
-		guard isCompletedEvent else { return 0 }
-		let goalSecs = Self.parseTimeString(activityData?.goal ?? "00:00:00")
-		guard goalSecs > 0 else { return 0 }
-		let actualSecs = abs(Self.parseTimeString(activityData?.duration ?? "00:00:00"))
-		if actualSecs == 0 { return 0 }
-		return min(100, max(0, Int(round(Double(min(goalSecs, actualSecs)) / Double(max(goalSecs, actualSecs)) * 100))))
-	}
-
+	/// Pace % badge — goal pace ÷ actual pace from the mapper, e.g. "111%" when faster than goal pace.
 	var completionPercentText: String {
-		isCompletedEvent ? "\(completionPercent)%" : "—"
+		guard isCompletedEvent, let percent = activityData?.pacePercentage else { return "—" }
+		return "\(Int(percent.rounded()))%"
 	}
 
 	// MARK: - Computed: Analysis
@@ -106,7 +100,7 @@ final class EventDetailsViewModel {
 
 	var completedDistance: String {
 		guard let data = activityData, !data.actualDist.isEmpty else { return "—" }
-		let unit = data.measure == "Miles" ? "mi" : "km"
+		let unit = MeasureUnit(measure: data.measure).shortLabel
 		if data.actualDist.contains("mi") || data.actualDist.contains("km") {
 			return data.actualDist
 		}
@@ -117,12 +111,10 @@ final class EventDetailsViewModel {
 		activityData?.goal ?? "—"
 	}
 
+	/// Actual finish time — only a completed event has one, so "—" hides the stat on upcoming events.
 	var totalTimeTaken: String {
-		guard let data = activityData else { return "—" }
-		if isCompletedEvent {
-			return data.duration
-		}
-		return data.goal
+		guard let data = activityData, isCompletedEvent else { return "—" }
+		return data.duration
 	}
 
 	var timeVariance: String {
@@ -187,7 +179,7 @@ final class EventDetailsViewModel {
 
 	var segmentRows: [SegmentRow] {
 		guard let data = activityData else { return [] }
-		let unit = (data.measure == "Miles") ? "mi" : "km"
+		let unit = MeasureUnit(measure: data.measure).shortLabel
 
 		// ── Active event — show plan only ────────────────────────────────────
 		if !isCompletedEvent {
@@ -313,6 +305,10 @@ final class EventDetailsViewModel {
 
 	func editEvent() {
 		showEditScreen = activityData
+	}
+
+	func duplicateEvent() {
+		duplicateSource = activityData
 	}
 
 	// MARK: - Private Helpers

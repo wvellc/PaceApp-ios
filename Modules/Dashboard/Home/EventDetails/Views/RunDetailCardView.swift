@@ -87,7 +87,7 @@ struct RunDetailCardView: View {
 					segments: viewModel.segmentRows,
 					isExpanded: viewModel.isSegmentsExpanded,
 					onToggle: viewModel.toggleSegments,
-					distanceUnit: (viewModel.activityData?.measure ?? "Miles") == "Miles" ? "mi" : "km"
+					distanceUnit: MeasureUnit(measure: viewModel.activityData?.measure ?? MeasureUnit.miles.rawValue).shortLabel
 				)
 			}
         }

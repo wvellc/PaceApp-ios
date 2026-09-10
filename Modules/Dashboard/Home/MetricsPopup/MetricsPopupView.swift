@@ -163,11 +163,11 @@ struct MetricsPopupView: View {
 	}
 	
 	private func dismissPopup() {
+		// Remove the popup once the fade-out actually finishes — no guessed delay.
 		withAnimation(.spring(response: 0.30, dampingFraction: 0.80)) {
 			popupScale   = 0.85
 			popupOpacity = 0
-		}
-		DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+		} completion: {
 			isPresented = false
 		}
 	}
@@ -187,14 +187,14 @@ private struct StepContentView: View {
 				.frame(width: 128, height: 128)
 				.padding(.bottom, 24)
 			
-			Text(/*metric.title*/"Welcome to your heart rate monitor!")
+			Text(metric.title)
 				.font(.medium24)
 				.foregroundColor(.darkCharcoal)
 				.multilineTextAlignment(.center)
 				.padding(.bottom, 8)
 
 			
-			Text(/*metric.description*/"This tool tracks your heart rate during workouts and daily activities. Click the heart icon to view your current rate and gain insights to enhance your fitness journey. Stay informed and improve your health!")
+			Text(metric.description)
 				.font(.medium16)
 				.foregroundColor(.fashionGray)
 				.multilineTextAlignment(.center)

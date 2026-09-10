@@ -24,7 +24,7 @@ enum EventStatus: String, Codable, CaseIterable {
 struct ConnectIQEventSnapshot {
 	let activePayloads: [[String: Any]]    // status == "active"
 	let completedPayloads: [[String: Any]] // status == "completed"
-	let deletedIds: [Int]                  // status == "deleted" — blocks re-insertion
+	let deletedEvents: [Int: Date]         // status == "deleted" → when; keeps deleted events from coming back
 }
 
 // MARK: - EventDocument

@@ -16,8 +16,8 @@ import SwiftUI
 /// but History and Favorites are one-shot fetches — they observe this center
 /// and prune the deleted item locally instead of refetching.
 ///
-/// Both deletion paths publish here: `ConnectIQManager.applyDeletedEventId`
-/// (synced events) and `HistoryViewModel.delete` (local-only events).
+/// Every real delete publishes here through `ConnectIQManager` — an app delete or
+/// the watch's delete_event, each also soft-deleted in Firestore.
 @MainActor
 @Observable
 final class EventDeletionCenter {

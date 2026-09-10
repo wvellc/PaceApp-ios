@@ -27,4 +27,14 @@ enum MeasureUnit: String, CaseIterable, Codable, Equatable {
 			return nil
 		}
 	}
+
+	/// Resolves an event's stored measure — "Miles" is miles, anything else ("Kilometers", legacy "Kms") is km.
+	init(measure: String) {
+		self = measure == MeasureUnit.miles.rawValue ? .miles : .km
+	}
+
+	/// Short distance label, e.g. "mi" / "km".
+	var shortLabel: String {
+		self == .miles ? "mi" : "km"
+	}
 }

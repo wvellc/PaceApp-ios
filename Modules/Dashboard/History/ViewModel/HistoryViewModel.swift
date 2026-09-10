@@ -233,29 +233,6 @@ final class HistoryViewModel {
 	
 	// MARK: - Delete
 	
-	/// Removes the event locally and soft-deletes it in Firestore.
-	func delete(event: ActivityData) {
-		guard let userId = currentUserId else { return }
-
-		// Optimistic local removal
-		if let index = activities.firstIndex(where: { $0.id == event.id }) {
-			activities.remove(at: index)
-		}
-
-		// Broadcast so other lists (e.g. Favorites) prune the same event.
-		EventDeletionCenter.shared.notifyDeleted(eventId: event.id)
-
-		// Firestore soft-delete — only on a still-valid session (account not deleted elsewhere).
-		Task { @MainActor in
-			guard await AuthManager.shared.verifyAccountStillValid() else { return }
-			do {
-				try await eventRepository.softDelete(eventId: event.id, userId: userId)
-			} catch {
-				logger.error("Failed to delete event \(event.id): \(error.localizedDescription)")
-			}
-		}
-	}
-
 	/// Prunes a deleted event from the loaded list — driven by `EventDeletionCenter`
 	/// so a delete triggered elsewhere (Details, Home) is reflected here immediately.
 	func removeLocally(eventId: Int) {
