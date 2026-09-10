@@ -49,6 +49,10 @@ struct EventDetailsScreen: View {
 		.navigationDestination(item: $viewModel.showEditScreen) { _ in
 			EditEventScreen(eventData: $viewModel.activityData)
 		}
+		// Duplicate reuses this event's plan as a new upcoming event — works from Home, History, and Favorites alike.
+		.navigationDestination(item: $viewModel.duplicateSource) { source in
+			CreateRunEventScreen(type: .duplicate, intialData: source)
+		}
 	}
 	
 	// MARK: - Scroll Content
@@ -124,14 +128,21 @@ struct EventDetailsScreen: View {
 			onDelete: {
 				// Confirm before deleting — destructive and irreversible.
 				AppAlertManager.shared.confirmEventDeletion {
-					if let syncId = activityData?.syncId {
-						ciqManager.deleteSyncedEvent(id: syncId)
+					if let eventId = viewModel.activityData?.id {
+						ciqManager.deleteSyncedEvent(id: eventId)
 					}
 					dismiss()
 				}
 			},
-			onEdit: viewModel.editEvent
+			onEdit: viewModel.editEvent,
+			onDuplicate: duplicateAction
 		)
+	}
+
+	// A finished event can be run again, just like on the watch.
+	private var duplicateAction: (() -> Void)? {
+		guard viewModel.isCompletedEvent else { return nil }
+		return viewModel.duplicateEvent
 	}
 }
 
