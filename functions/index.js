@@ -203,6 +203,15 @@ function coveredDistance(event) {
   return segments.reduce((total, s) => total + (parseFloat(s.completed_distance) || 0), 0);
 }
 
+/** Pace % — goal pace ÷ actual pace × 100 (100 = on goal pace, above = faster). Mirrors the app's EventDocumentMapper. */
+function pacePercentage(event, covered) {
+  const goal = Number(event.goalTimeSeconds);
+  const planned = Number(event.distanceValue);
+  const actual = Number(event.actualTimeSeconds);
+  if (!(goal > 0 && planned > 0 && actual > 0 && covered > 0)) return 0;
+  return (goal / planned) / (actual / covered) * 100;
+}
+
 /** Seconds → "H:MM:SS" (or "MM:SS" under an hour). */
 function fmtTime(totalSeconds) {
   const s = Math.max(0, Math.round(totalSeconds));
@@ -242,7 +251,8 @@ function activityDescription(event, covered) {
 
   if (Number(event.avgHeartRate) > 0) lines.push(`❤️ Avg HR ${event.avgHeartRate} bpm`);
   if (Number(event.elevationGain) > 0) lines.push(`⛰ Elevation gain ${Math.round(event.elevationGain)} m`);
-  if (Number(event.effortPercentage) > 0) lines.push(`💪 Effort ${Math.round(event.effortPercentage)}%`);
+  const pace = pacePercentage(event, covered);
+  if (pace > 0) lines.push(`🎯 Pace ${Math.round(pace)}% of goal`);
 
   // Per-segment splits — only segments the watch actually recorded something for.
   const segments = Array.isArray(event.completedSegments) ? event.completedSegments : [];

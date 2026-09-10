@@ -51,6 +51,7 @@ struct ActivityData: Identifiable, Hashable {
 	let actualDist: String      // actual distance covered e.g. "4.98"
 	let timeVar: String         // time variance string e.g. "+01:10" or "-00:30"
 	let avgHeartRate: Int       // average heart rate in BPM; 0 when unavailable
+	let pacePercentage: Double? // goal pace ÷ actual pace × 100 (100 = on goal pace); nil until completed
 
 	// MARK: - Route (populated once the watch has sent GPS data)
 	let routeCoordinates: [CLLocationCoordinate2D]  // decoded from EventDocument.routePolyline
@@ -79,6 +80,7 @@ struct ActivityData: Identifiable, Hashable {
 		actualDist: String = "",
 		timeVar: String = "",
 		avgHeartRate: Int = 0,
+		pacePercentage: Double? = nil,
 		paces: [Int] = [],
 		routeCoordinates: [CLLocationCoordinate2D] = []
 	) {
@@ -103,6 +105,7 @@ struct ActivityData: Identifiable, Hashable {
 		self.actualDist = actualDist
 		self.timeVar = timeVar
 		self.avgHeartRate = avgHeartRate
+		self.pacePercentage = pacePercentage
 		self.paces = paces
 		self.routeCoordinates = routeCoordinates
 	}
@@ -145,6 +148,7 @@ struct ActivityData: Identifiable, Hashable {
 		lhs.actualDist == rhs.actualDist &&
 		lhs.timeVar == rhs.timeVar &&
 		lhs.avgHeartRate == rhs.avgHeartRate &&
+		lhs.pacePercentage == rhs.pacePercentage &&
 		lhs.eventType == rhs.eventType &&
 		lhs.gaitType == rhs.gaitType &&
 		lhs.paces == rhs.paces

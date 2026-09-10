@@ -35,17 +35,22 @@ enum EventDocumentMapper {
 		let goalTimeSeconds = parseTimeString((payload["goal"] as? String) ?? "00:00:00")
 		let distanceValue = parseDouble(payload["distance"]) ?? 0
 		let measure = (payload["measure"] as? String) ?? "Miles"
-		let actualTimeStr = (payload["actualTime"] as? String) ?? ""
-		let hasCompletion = isCompleted || !actualTimeStr.isEmpty || payload["actualDist"] != nil
-		let status = hasCompletion ? EventStatus.completed.rawValue : EventStatus.active.rawValue
+		// Status comes from how the event arrived (finish_event / completedEvents), never from its fields —
+		// an older watch "Duplicate" copies the original run's results onto a brand-new upcoming event.
+		let status = isCompleted ? EventStatus.completed.rawValue : EventStatus.active.rawValue
+		let results: [String: Any] = isCompleted ? payload : [:]
+		let actualTimeStr = (results["actualTime"] as? String) ?? ""
 		let actualTimeSeconds = actualTimeStr.isEmpty ? nil : parseTimeString(actualTimeStr)
-		let actualDistance = parseDouble(payload["actualDist"])
-		let timeVarianceSeconds = parseSignedTimeVariance((payload["timeVar"] as? String) ?? "")
-		let avgHeartRate = parseInt(payload["avgHeartRate"])
-		let avgPaceSeconds = parseInt(payload["avgPace"])     // watch/Firebase value only — never computed locally
-		let effortPercentage = computeEffortPercentage(
+		let actualDistance = parseDouble(results["actualDist"])
+		let timeVarianceSeconds = parseSignedTimeVariance((results["timeVar"] as? String) ?? "")
+		let avgHeartRate = parseInt(results["avgHeartRate"])
+		let avgPaceSeconds = parseInt(results["avgPace"])     // watch/Firebase value only — never computed locally
+		let completedSegmentPayloads = arrayOfDicts(from: results["completedSegments"])
+		let effortPercentage = pacePercentage(
 			goalTimeSeconds: goalTimeSeconds,
-			actualTimeSeconds: actualTimeSeconds
+			plannedDistance: distanceValue,
+			actualTimeSeconds: actualTimeSeconds,
+			coveredDistance: coveredDistance(actualDistance: actualDistance, completedSegments: completedSegmentPayloads)
 		)
 
 		// Build typed RunSegment array from ConnectIQ "segments" payload.
@@ -88,7 +93,7 @@ enum EventDocumentMapper {
 			name: (payload["name"] as? String) ?? "",
 			location: (payload["location"] as? String) ?? "",
 			scheduledAt: Timestamp(date: scheduledAt),
-			completedAt: hasCompletion ? Timestamp(date: Date()) : nil,
+			completedAt: isCompleted ? Timestamp(date: Date()) : nil,
 			activityType: mapActivityType(payload["activity"] as? String),
 			distanceValue: distanceValue,
 			measure: measure,
@@ -101,8 +106,8 @@ enum EventDocumentMapper {
 			actualTimeSeconds: actualTimeSeconds,
 			actualDistance: actualDistance,
 			timeVarianceSeconds: timeVarianceSeconds,
-			paces: arrayOfInts(from: payload["paces"]),
-			completedSegments: mapGenericDicts(arrayOfDicts(from: payload["completedSegments"])),
+			paces: arrayOfInts(from: results["paces"]),
+			completedSegments: mapGenericDicts(completedSegmentPayloads),
 			syncStatus: syncStatus,
 			source: source,
 			createdAt: now,
@@ -122,7 +127,7 @@ enum EventDocumentMapper {
 		from document: EventDocument,
 		segments: [RunSegment] = []
 	) -> ActivityData? {
-		let unit = document.measure == "Miles" ? "mi" : "km"
+		let unit = MeasureUnit(measure: document.measure).shortLabel
 		let distanceText = String(format: "%.2f %@", document.distanceValue, unit)
 		let goalStr = formatTime(document.goalTimeSeconds)
 		let actualTimeStr = document.actualTimeSeconds.map { formatTime($0) } ?? ""
@@ -154,6 +159,7 @@ enum EventDocumentMapper {
 			actualDist: actualDistStr,
 			timeVar: timeVarStr,
 			avgHeartRate: document.avgHeartRate ?? 0,
+			pacePercentage: pacePercentage(for: document),
 			paces: document.paces ?? [],
 			routeCoordinates: routeCoords
 		)
@@ -292,7 +298,8 @@ enum EventDocumentMapper {
 			avgPaceSeconds: document.avgPaceSeconds ?? 0,
 			avgHeartRate: document.avgHeartRate ?? 0,
 			elevationGain: document.elevationGain ?? 0,
-			effortPercentage: document.effortPercentage ?? 0,
+			// Computed from the event itself, so events stored before the pace-based formula match too.
+			effortPercentage: pacePercentage(for: document) ?? 0,
 			distanceValue: document.distanceValue,
 			measure: document.measure
 		)
@@ -409,10 +416,31 @@ enum EventDocumentMapper {
 		}
 	}
 
-	static func computeEffortPercentage(goalTimeSeconds: Int, actualTimeSeconds: Int?) -> Double? {
-		guard let actual = actualTimeSeconds, goalTimeSeconds > 0 else { return nil }
-		let ratio = Double(min(goalTimeSeconds, actual)) / Double(max(goalTimeSeconds, actual))
-		return min(100, max(0, ratio * 100))
+	// Pace % = goal pace ÷ actual pace × 100 — 100% is right on goal pace, above 100% is faster.
+	// e.g. goal 10 km in 50:00, covered 10 km in 45:00 → 111%.
+	static func pacePercentage(for document: EventDocument) -> Double? {
+		pacePercentage(
+			goalTimeSeconds: document.goalTimeSeconds,
+			plannedDistance: document.distanceValue,
+			actualTimeSeconds: document.actualTimeSeconds,
+			coveredDistance: coveredDistance(
+				actualDistance: document.actualDistance,
+				completedSegments: genericDictsToAny(document.completedSegments)
+			)
+		)
+	}
+
+	static func pacePercentage(goalTimeSeconds: Int, plannedDistance: Double, actualTimeSeconds: Int?, coveredDistance: Double) -> Double? {
+		guard let actualTimeSeconds, actualTimeSeconds > 0, goalTimeSeconds > 0, plannedDistance > 0, coveredDistance > 0 else { return nil }
+		let goalPace = Double(goalTimeSeconds) / plannedDistance
+		let actualPace = Double(actualTimeSeconds) / coveredDistance
+		return goalPace / actualPace * 100
+	}
+
+	/// Distance actually covered — actualDistance, else the sum of each segment's completed_distance (mirrors functions `coveredDistance`).
+	static func coveredDistance(actualDistance: Double?, completedSegments: [[String: Any]]) -> Double {
+		if let actualDistance, actualDistance > 0 { return actualDistance }
+		return completedSegments.reduce(0) { $0 + (parseDouble($1["completed_distance"]) ?? 0) }
 	}
 
 	static func mapGenericDicts(_ dicts: [[String: Any]]) -> [[String: FirestoreFlexibleValue]]? {
