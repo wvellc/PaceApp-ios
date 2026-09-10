@@ -40,8 +40,8 @@ protocol EventRepositoryProtocol: AnyObject {
 	func fetchAllEventPayloads(userId: String) async throws -> ConnectIQEventSnapshot
 }
 
-/// Opaque handle for removing a Firestore listener.
-final class ListenerRegistrationToken {
+/// Opaque handle for removing a Firestore listener. `nonisolated` so a `deinit` can call `remove()` — removal is thread-safe.
+nonisolated final class ListenerRegistrationToken {
 	private let removeHandler: () -> Void
 	init(removeHandler: @escaping () -> Void) {
 		self.removeHandler = removeHandler

@@ -108,7 +108,7 @@ final class StravaManager: NSObject {
 	/// ID token is still valid, no toast. Best-effort; a failure must not block the deletion.
 	@MainActor
 	func disconnectForAccountDeletion() async {
-		try? await StravaAPI.post("/stravaDisconnect")
+		_ = try? await StravaAPI.post("/stravaDisconnect")
 		isConnected = false
 		athleteName = nil
 		stopObserving()

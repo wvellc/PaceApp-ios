@@ -26,9 +26,10 @@ final class AnalyticsViewModel {
 	private let repository: AnalyticsRepository
 	private(set) var userId: String
 
-	init(userId: String, repository: AnalyticsRepository = .shared) {
+	init(userId: String, repository: AnalyticsRepository? = nil) {
 		self.userId = userId
-		self.repository = repository
+		// Default resolved here: Swift 5 mode won't let a default argument touch main-actor state.
+		self.repository = repository ?? .shared
 	}
 
 	func load() async {

@@ -28,7 +28,8 @@ final class HomeViewModel {
 	// MARK: - Private
 
 	private let eventRepository: EventRepositoryProtocol
-	nonisolated(unsafe) private var activeEventsListener: ListenerRegistrationToken?
+	// Observation-ignored: stays a stored property, so deinit can reach it through nonisolated(unsafe).
+	@ObservationIgnored nonisolated(unsafe) private var activeEventsListener: ListenerRegistrationToken?
 
 	/// Guards against redundant re-attaches when .task(id:) re-fires with the same userId.
 	private var activeListenerUserId: String?
@@ -39,15 +40,16 @@ final class HomeViewModel {
 
 	/// Drives the distance ⇄ finish-time flash on capsule 2.
 	private var flashShowsDistance: Bool = true
-	nonisolated(unsafe) private var flashTask: Task<Void, Never>?
+	@ObservationIgnored nonisolated(unsafe) private var flashTask: Task<Void, Never>?
 
 	/// Index of the flashing (distance ⇄ finish-time) capsule in `metrics`.
 	private static let flashSlotIndex = 1
 
 	// MARK: - Init
 
-	init(eventRepository: EventRepositoryProtocol = FirestoreEventRepository.shared) {
-		self.eventRepository = eventRepository
+	init(eventRepository: EventRepositoryProtocol? = nil) {
+		// Default resolved here: Swift 5 mode won't let a default argument touch main-actor state.
+		self.eventRepository = eventRepository ?? FirestoreEventRepository.shared
 	}
 
 	// MARK: - Deinit

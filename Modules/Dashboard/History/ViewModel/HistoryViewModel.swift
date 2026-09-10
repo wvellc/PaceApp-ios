@@ -79,8 +79,9 @@ final class HistoryViewModel {
 	private let eventRepository: EventRepositoryProtocol
 	private let logger = Logger(label: "HistoryViewModel")
 	
-	init(eventRepository: EventRepositoryProtocol = FirestoreEventRepository.shared) {
-		self.eventRepository = eventRepository
+	init(eventRepository: EventRepositoryProtocol? = nil) {
+		// Default resolved here: Swift 5 mode won't let a default argument touch main-actor state.
+		self.eventRepository = eventRepository ?? FirestoreEventRepository.shared
 	}
 	
 	// MARK: - Computed: Filter Active
