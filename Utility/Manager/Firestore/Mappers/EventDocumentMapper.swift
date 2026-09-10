@@ -27,6 +27,8 @@ enum EventDocumentMapper {
 		syncStatus: String,
 		source: String
 	) -> (EventDocument, [RunSegment]) {
+		// Parse the same canonical distances we send, so the stored value always matches the watch.
+		let payload = normalizingWatchDistances(payload)
 		let id = connectIQId(from: payload["id"]) ?? Int(Date().timeIntervalSince1970)
 		let now = Timestamp(date: Date())
 		let scheduledAt = parseConnectIQDate(payload["date"] as? String) ?? Date()
@@ -171,10 +173,65 @@ enum EventDocumentMapper {
 		return copy
 	}
 
+	// MARK: - Distance (watch wire format)
+	// Every distance synced with the watch goes through here, e.g. 14 → "14.00", 14.0005 → "14.00".
+
+	/// Decimal places for synced distances — the one knob (the client's "tenths" would be 1).
+	static let distanceFractionDigits = 2
+
+	/// Watch wire string for a distance. `String(format:)` isn't localized, so the separator is always ".".
+	static func watchDistanceString(_ value: Double) -> String {
+		String(format: "%.\(distanceFractionDigits)f", value)
+	}
+
+	/// The value both sides calculate with — parsed back from the wire string, so the two can never disagree.
+	static func canonicalDistance(_ value: Double) -> Double {
+		Double(watchDistanceString(value)) ?? value
+	}
+
+	/// Rounds segment distances, giving the rounding remainder to the last one so they still sum to the total.
+	/// Drift larger than rounding (a genuinely different split) is left untouched.
+	static func canonicalSegmentDistances(_ distances: [Double], total: Double) -> [Double] {
+		var rounded = distances.map { canonicalDistance($0) }
+		guard let last = rounded.indices.last, total > 0 else { return rounded }
+		let drift = canonicalDistance(total) - rounded.reduce(0, +)
+		let maxRoundingDrift = Double(rounded.count) * 0.5 * pow(10, -Double(distanceFractionDigits)) + 1e-9
+		let adjusted = canonicalDistance(rounded[last] + drift)
+		guard abs(drift) <= maxRoundingDrift, adjusted > 0 else { return rounded }
+		rounded[last] = adjusted
+		return rounded
+	}
+
+	/// Rewrites "distance", "actualDist" and each segment "distance" in a watch payload as canonical wire strings.
+	static func normalizingWatchDistances(_ payload: [String: Any]) -> [String: Any] {
+		var result = payload
+		let total = parseDouble(payload["distance"])
+		if let total { result["distance"] = watchDistanceString(canonicalDistance(total)) }
+		if let actual = parseDouble(payload["actualDist"]) {
+			result["actualDist"] = watchDistanceString(canonicalDistance(actual))
+		}
+		let segments = arrayOfDicts(from: payload["segments"])
+		let segmentDistances = segments.compactMap { parseDouble($0["distance"]) }
+		// Only rewrite when every segment carries a distance, so the remainder lands on the right one.
+		if !segments.isEmpty, segmentDistances.count == segments.count {
+			let canonical = canonicalSegmentDistances(segmentDistances, total: total ?? 0)
+			result["segments"] = zip(segments, canonical).map { segment, distance in
+				var segment = segment
+				segment["distance"] = watchDistanceString(distance)
+				return segment
+			}
+		}
+		return result
+	}
+
 	// MARK: - EventDocument → ConnectIQ wire-format payload
 	// Inverse of document(from:...) — rebuilds the [String: Any] dict the watch expects.
 
 	static func connectIQPayload(from document: EventDocument) -> [String: Any] {
+		normalizingWatchDistances(rawConnectIQPayload(from: document))
+	}
+
+	private static func rawConnectIQPayload(from document: EventDocument) -> [String: Any] {
 		var payload: [String: Any] = [
 			"id":          document.id,
 			"name":        document.name,

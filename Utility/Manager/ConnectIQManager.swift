@@ -681,6 +681,8 @@ class ConnectIQManager: NSObject {
         normalizedPayload["syncStatus"] = syncStatus
         // Remove legacy syncType if present
         normalizedPayload.removeValue(forKey: "syncType")
+        // Canonical distance strings ("14.00") — stored, persisted, and echoed back to the watch in sync_all.
+        normalizedPayload = EventDocumentMapper.normalizingWatchDistances(normalizedPayload)
 
         logger.info("[ConnectIQ] Upserting event", metadata: ["eventId": "\(id)", "completed": "\(isCompleted)"])
 

@@ -423,6 +423,11 @@ class CreateRunEventViewModel {
 	}
 
 	private func connectIQEventPayload() -> [String: Any] {
+		// Distances leave as canonical wire strings ("14.00") — segments keep summing to the total.
+		EventDocumentMapper.normalizingWatchDistances(rawConnectIQEventPayload())
+	}
+
+	private func rawConnectIQEventPayload() -> [String: Any] {
 		[
             "id": Int(Date().timeIntervalSince1970),
             "syncType": "active",
@@ -431,7 +436,7 @@ class CreateRunEventViewModel {
 			"name": eventName,
 			"location": location,
 			"date": Self.connectIQDateFormatter.string(from: eventDate),
-			"distance": String(format: "%.2f", distance),
+			"distance": distance,
 			"measure": distanceType.fullName,
 			"intervals": "\(lookBackIntervals)",
 			"goal": goalTimeFormatted,
