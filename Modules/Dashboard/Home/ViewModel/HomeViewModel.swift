@@ -133,7 +133,7 @@ final class HomeViewModel {
 	/// Symbols and slot order match the Home screen design; capsule 2 alternates between
 	/// total distance and actual finish time via `startFlashLoop()`.
 	private func makeMetrics(from event: ActivityData) -> [HomeMetric] {
-		let paceUnit = event.measure == "Kilometers" ? "min/km" : "min/mile"
+		let paceUnit = MeasureUnit(measure: event.measure) == .miles ? "min/mile" : "min/km"
 		return [
 			// 1 — Average heart rate overall
 			HomeMetric(
@@ -151,7 +151,7 @@ final class HomeViewModel {
 				id: "timeVariance",
 				symbol: "icMatricsGoalTime",
 				value: event.timeVar.isEmpty ? "00:00" : event.timeVar,
-				unit: "m /sec",
+				unit: "h:m:s",
 				title: "Time Variance",
 				description: "How much faster or slower you finished compared to your goal time."
 			),
@@ -184,7 +184,7 @@ final class HomeViewModel {
 			id: "distanceFinishFlash",
 			symbol: "icMatricsHrs",
 			value: hasActual ? event.actualDist : event.distance,
-			unit: hasActual ? (event.measure == "Kilometers" ? "km" : "mi") : "",
+			unit: hasActual ? MeasureUnit(measure: event.measure).shortLabel : "",
 			title: "Total Distance",
 			description: "The total distance you covered in this run."
 		)
