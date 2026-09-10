@@ -181,32 +181,22 @@ struct SettingScreen: View {
 	@ViewBuilder
 	private var stravaSection: some View {
 		VStack(spacing: 14) {
-			HStack(spacing: 16) {
-				Circle()
-					.fill(.neonAquaBlue)
-					.frame(width: 42, height: 42)
-					.overlay {
-						Image(.icSync)
-							.resizable()
-							.renderingMode(.template)
-							.foregroundStyle(.whiteApp)
-							.frame(width: 32, height: 32)
-					}
-
-				VStack(alignment: .leading, spacing: 2) {
-					Text("Strava")
-						.font(.semiBold16)
-						.foregroundStyle(.darkCharcoal)
+			VStack(alignment: .leading, spacing: 2) {
+				Text("Strava")
+					.font(.semiBold16)
+					.foregroundStyle(.darkCharcoal)
+				// Status line only when connected — the orange button below speaks for itself.
+				if strava.isConnected {
 					Text(stravaStatusText)
 						.font(.medium14)
-						.foregroundStyle(strava.isConnected ? .fluorescentMint : .fashionGray)
+						.foregroundStyle(.fluorescentMint)
 				}
-				.frame(maxWidth: .infinity, alignment: .leading)
 			}
+			.frame(maxWidth: .infinity, alignment: .leading)
 
 			if strava.isConnected {
 				HStack(spacing: 12) {
-					stravaActionButton(title: "Resync", tint: .radiantBlue) {
+					stravaResyncButton {
 						Task { await strava.syncRecent() }
 					}
 					stravaActionButton(title: "Disconnect", tint: .redBoho) {
@@ -214,7 +204,7 @@ struct SettingScreen: View {
 					}
 				}
 			} else {
-				AppButton("Connect Strava") { strava.connect() }
+				StravaConnectButton(isLoading: strava.isWorking) { strava.connect() }
 			}
 		}
 		.padding(10)
@@ -223,7 +213,20 @@ struct SettingScreen: View {
 		.opacity(strava.isWorking ? 0.6 : 1)
 	}
 
-	/// Pill-style secondary action used for Reconnect / Disconnect.
+	/// Resync — the app's primary brand gradient (matches AppButton).
+	private func stravaResyncButton(action: @escaping () -> Void) -> some View {
+		Button(action: action) {
+			Text("Resync")
+				.font(.semiBold14)
+				.foregroundStyle(.whiteApp)
+				.frame(maxWidth: .infinity)
+				.padding(.vertical, 10)
+				.background(AppGradients.button)
+				.clipShape(Capsule())
+		}
+	}
+
+	/// Pill-style secondary action used for Disconnect.
 	private func stravaActionButton(title: String, tint: Color, action: @escaping () -> Void) -> some View {
 		Button(action: action) {
 			Text(title)
@@ -237,7 +240,6 @@ struct SettingScreen: View {
 	}
 
 	private var stravaStatusText: String {
-		guard strava.isConnected else { return "Not connected" }
 		if let name = strava.athleteName, !name.isEmpty { return "Connected as \(name)" }
 		return "Connected"
 	}

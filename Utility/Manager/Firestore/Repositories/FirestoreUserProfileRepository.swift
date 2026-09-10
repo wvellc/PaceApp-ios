@@ -27,6 +27,18 @@ final class FirestoreUserProfileRepository: UserProfileRepositoryProtocol {
 		return decodeProfile(snap, userId: userId)
 	}
 
+	/// Server-only read (never cache), so an absent result is authoritative. Returns
+	/// `.unreachable` on any error so the caller can avoid creating/overwriting a profile.
+	func fetchProfileFromServer(userId: String) async -> ServerProfileResult {
+		do {
+			let snap = try await db.collection("users").document(userId).getDocument(source: .server)
+			guard snap.exists, snap.data() != nil else { return .missing }
+			return .found(decodeProfile(snap, userId: userId))
+		} catch {
+			return .unreachable
+		}
+	}
+
 	// MARK: - Live Updates
 
 	func listenToProfile(userId: String, onChange: @escaping (UserModel?) -> Void) -> ListenerRegistrationToken {
@@ -35,6 +47,11 @@ final class FirestoreUserProfileRepository: UserProfileRepositoryProtocol {
 				guard let self else { return }
 				if let error {
 					self.logger.error("Profile listener failed: \(error.localizedDescription)")
+					// Permission-denied on our own user doc = the token is no longer valid for this
+					// uid (account removed elsewhere) — surface it so the session can re-validate.
+					if (error as NSError).code == FirestoreErrorCode.permissionDenied.rawValue {
+						onChange(nil)
+					}
 					return
 				}
 				guard let snapshot, snapshot.exists, snapshot.data() != nil else {

@@ -194,6 +194,8 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 			document.source      = current.source
 			document.createdAt   = current.createdAt
 			document.completedAt = current.completedAt ?? document.completedAt
+			// A user-deleted event stays deleted — a later watch re-sync must not resurrect it.
+			if current.eventStatus == .deleted { document.status = EventStatus.deleted.rawValue }
 			try await write(document: document, merge: true)
 		} else if let snapshot, !snapshot.exists {
 			// Confirmed new document — full write, including the write-once fields.

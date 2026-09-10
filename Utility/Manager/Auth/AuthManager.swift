@@ -39,7 +39,11 @@ final class AuthManager {
 	/// True while an email-link re-authentication (for account deletion) is in flight,
 	/// so the `onOpenURL` handler treats the returning link as reauth, not a fresh sign-in.
 	var isReauthenticatingForDeletion = false
-	
+
+	/// Guards the "signed out on another device" flow so its alert fires at most once per session.
+	@ObservationIgnored
+	private var isEndingRemoteSession = false
+
 	var currentUser: User? = Auth.auth().currentUser
 	var userDetails: UserModel?
 	var isUserAuthenticated: Bool { currentUser != nil }
@@ -64,26 +68,8 @@ final class AuthManager {
 				self.currentUser = user
 				
 				if let user {
-					// Silently refresh profile in the background.
-					do {
-						_ = try await self.fetchUserProfileInfo(userId: user.uid)
-					} catch {
-						// Brand-new user — no Firestore document exists yet.
-						// Seed a minimal model from the Firebase Auth record.
-						self.logger.info("No Firestore profile found for \(user.uid) — seeding new user document.")
-						var initial = UserModel(uuid: user.uid)
-						initial.email = user.email
-						initial.phoneNumber = user.phoneNumber
-						initial.firstName = user.displayName ?? ""
-						
-						self.userDetails = initial
-						
-						do {
-							try await UserProfileRepository.shared.upsertProfile(initial, userId: user.uid)
-						} catch {
-							self.logger.error("Failed to create initial profile for \(user.uid): \(error.localizedDescription)")
-						}
-					}
+					self.isEndingRemoteSession = false
+					await self.loadOrCreateProfile(for: user)
 
 					// Keep userDetails live — watch → Firestore → app updates flow
 					// through this listener without any manual pull.
@@ -244,8 +230,8 @@ final class AuthManager {
 		//Stop the live profile listener so deleting the user doc below doesn't fire it.
 		stopProfileListener()
 
-		//Stop the Strava connection listener for the same reason.
-		StravaManager.shared.stopObserving()
+		//Revoke Strava on the server (best-effort) while the ID token is still valid, then drop the listener.
+		await StravaManager.shared.disconnectForAccountDeletion()
 
 		//Best-effort data cleanup — a failed read/write must NOT abort the account
 		//deletion below, else the user doc + Auth account get left behind.
@@ -310,6 +296,36 @@ final class AuthManager {
 			throw error
 		}
 	}
+
+	/// Loads the signed-in user's profile, creating one only for a genuinely new account.
+	/// A cache-first miss (fresh device) or a transient failure must NEVER seed an empty
+	/// profile over an existing one — so "missing" is confirmed against the server first.
+	private func loadOrCreateProfile(for user: User) async {
+		if let model = try? await UserProfileRepository.shared.fetchProfile(userId: user.uid) {
+			self.userDetails = model
+			return
+		}
+		switch await UserProfileRepository.shared.fetchProfileFromServer(userId: user.uid) {
+		case .found(let model):
+			self.userDetails = model
+		case .missing:
+			await seedNewUser(user)
+		case .unreachable:
+			// Don't create/overwrite while offline — the live profile listener fills userDetails in.
+			logger.error("Profile unresolved for \(user.uid) (server unreachable) — keeping session, not seeding.")
+		}
+	}
+
+	/// Seeds a minimal profile for a brand-new account (confirmed absent on the server).
+	private func seedNewUser(_ user: User) async {
+		logger.info("No profile for \(user.uid) — seeding a new user document.")
+		var initial = UserModel(uuid: user.uid)
+		initial.email = user.email
+		initial.phoneNumber = user.phoneNumber
+		initial.firstName = user.displayName ?? ""
+		self.userDetails = initial
+		try? await UserProfileRepository.shared.upsertProfile(initial, userId: user.uid)
+	}
 	
 	// MARK: - Live Profile Listener
 
@@ -319,9 +335,15 @@ final class AuthManager {
 	private func startProfileListener(userId: String) {
 		_profileListener?.remove()
 		_profileListener = UserProfileRepository.shared.listenToProfile(userId: userId) { [weak self] model in
-			guard let model else { return }
 			Task { @MainActor in
-				self?.userDetails = model
+				guard let self else { return }
+				guard let model else {
+					// Doc vanished or the listener was denied — the account may have been deleted
+					// on another device; verify before ending this device's session.
+					self.verifySessionOrSignOut()
+					return
+				}
+				self.userDetails = model
 			}
 		}
 	}
@@ -329,6 +351,54 @@ final class AuthManager {
 	private func stopProfileListener() {
 		_profileListener?.remove()
 		_profileListener = nil
+	}
+
+	/// Confirms the signed-in account still exists on the server by forcing a token refresh —
+	/// a deleted/disabled account's refresh token is rejected (which `reload()` can miss while
+	/// the cached ID token is still unexpired), and it also invalidates the token Firestore uses.
+	/// On a confirmed removal it signs this device out (+ alert) and returns false; a network
+	/// blip returns true so a valid user isn't logged out while offline. Call on foreground and
+	/// before sensitive writes so nothing runs on a dead session.
+	@discardableResult
+	func verifyAccountStillValid() async -> Bool {
+		guard !isReauthenticatingForDeletion, let user = currentUser else { return false }
+		guard !isEndingRemoteSession else { return true }   // a check is already in flight
+		isEndingRemoteSession = true
+		do {
+			_ = try await user.getIDTokenResult(forcingRefresh: true)
+			isEndingRemoteSession = false
+			return true
+		} catch {
+			let ns = error as NSError
+			if ns.domain == AuthErrorDomain, AuthErrorCode(rawValue: ns.code) == .networkError {
+				isEndingRemoteSession = false   // offline — don't block a valid user
+				return true
+			}
+			endRemotelyEndedSession()           // account genuinely gone → end the session
+			return false
+		}
+	}
+
+	/// Fire-and-forget account check used by the live profile listener when its snapshot
+	/// vanishes or is denied — routes through the network-blip-safe validity check.
+	private func verifySessionOrSignOut() {
+		Task { @MainActor in _ = await self.verifyAccountStillValid() }
+	}
+
+	/// Signs out locally and tells the user their session ended elsewhere. The auth-state
+	/// listener tears down the watch/Strava/session and routes back to sign-in.
+	private func endRemotelyEndedSession() {
+		logger.info("Account no longer exists on the server — ending session on this device.")
+		stopProfileListener()
+		try? Auth.auth().signOut()
+		AppAlertManager.shared.present(
+			AppAlertModel(
+				title: "Session expired",
+				description: "Your session has timed out. Please sign in again.",
+				primaryButton: AppAlertButton("OK"),
+				restrictOutsideTap: true
+			)
+		)
 	}
 
 	// MARK: - Private Helpers

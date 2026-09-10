@@ -244,8 +244,9 @@ final class HistoryViewModel {
 		// Broadcast so other lists (e.g. Favorites) prune the same event.
 		EventDeletionCenter.shared.notifyDeleted(eventId: event.id)
 
-		// Firestore soft-delete
-		Task {
+		// Firestore soft-delete — only on a still-valid session (account not deleted elsewhere).
+		Task { @MainActor in
+			guard await AuthManager.shared.verifyAccountStillValid() else { return }
 			do {
 				try await eventRepository.softDelete(eventId: event.id, userId: userId)
 			} catch {

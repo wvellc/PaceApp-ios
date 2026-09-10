@@ -15,7 +15,7 @@ and refresh tokens, and upload summary activities).
 - [ ] **Request a Strava connected-athlete quota increase** before onboarding real users (see note below) — <https://www.strava.com/settings/api>
 
 ## 🟡 Before shipping
-- [ ] Replace the "Powered by Strava" text with Strava's official **"Connect with Strava"** button asset in both `StravaConnectScreen.swift` and `ConnectStravaStepView.swift` (brand-guideline requirement)
+- [x] Official **"Connect with Strava"** button asset — shipped in the Settings card and the onboarding footer via the shared `StravaConnectButton` (`Modules/Shared/`, asset `icStravaConnectOrange` on `StravaOrange`). *Profile `StravaConnectScreen.swift` still uses the generic `AppButton` — swap it for consistency (optional).*
 - [ ] End-to-end test on a real device — the OAuth round-trip and upload are untested
 - [ ] `start_date_local` is sent as UTC ISO → activities may show a timezone offset; pass a real local start time if it matters
 - [ ] **Track Strava sync status on the event document**
@@ -24,7 +24,8 @@ and refresh tokens, and upload summary activities).
   - Formalizes the existing `stravaActivityId` + `stravaSyncedAt` (success) / `stravaSyncError` (failure) stamps into one status field and adds the "edited → needs re-sync" transition
 
 ## 🟢 Later
-- [ ] Handle Strava's **deauthorization webhook** — flip `connected` to false when a user revokes access on Strava's side
+- [x] Strava **deauthorization webhook** (`stravaWebhook`) + 401-based revoke detection (`isRevocation`) flip `connected` to false when access is revoked. **One-time setup left:** register the push subscription with Strava, then set `STRAVA_WEBHOOK_SUBSCRIPTION_ID` in `functions/index.js` to arm the spoof guard.
+- [x] Segments upload as Strava **laps** (TCX via `POST /uploads`); disconnect uses the current **`/oauth/revoke`** endpoint.
 - [ ] **GPX / route upload** (map + route) — needs per-point timestamps we don't currently store; would require a timestamped track from the watch
 - [ ] Per-event **"Sync to Strava"** button on Event Details (the `stravaSync` function already exists)
 - [ ] **Surface sync failures** — functions write `stravaSyncError` on the event, but nothing shows it yet

@@ -39,13 +39,13 @@
 		E65D34072FAC5CC4001FB9F4 /* MKCoordinateRegion+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E65D34062FAC5CC4001FB9F4 /* MKCoordinateRegion+Ext.swift */; };
 		E66090822FE15D5C00565440 /* Array+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E66090812FE15D5C00565440 /* Array+Ext.swift */; };
 		E662BE592FA9EA08004B812D /* Color+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E662BE582FA9EA08004B812D /* Color+Ext.swift */; };
+		E66B753C3025B0D8006B0CA6 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = E66B753B3025B0D8006B0CA6 /* GoogleService-Info.plist */; };
 		E67C5C142FB73C7D00228877 /* ButtonGlassStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = E67C5C132FB73C7100228877 /* ButtonGlassStyle.swift */; };
 		E684F1E72F769CDF0059C38F /* ProfilePhotoShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = E684F1E62F769CDF0059C38F /* ProfilePhotoShape.swift */; };
 		E6A113122FD04B4700F482C7 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = E6A113112FD04B4700F482C7 /* FirebaseAuth */; };
 		E6A113142FD04B4700F482C7 /* FirebaseAuthCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = E6A113132FD04B4700F482C7 /* FirebaseAuthCombine-Community */; };
 		E6A113162FD04B4700F482C7 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = E6A113152FD04B4700F482C7 /* FirebaseCrashlytics */; };
 		E6A113182FD04B4700F482C7 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = E6A113172FD04B4700F482C7 /* FirebaseFirestore */; };
-		E6A1131A2FD0526500F482C7 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = E6A113192FD0526500F482C7 /* GoogleService-Info.plist */; };
 		E6AE33272F7D4875009189CD /* AppNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6AE33262F7D4875009189CD /* AppNavigation.swift */; };
 		E6B649522F67FAAF00612A01 /* CountryPicker in Frameworks */ = {isa = PBXBuildFile; productRef = E6B649512F67FAAF00612A01 /* CountryPicker */; };
 		E6B748E92F6A9D7C00202A2D /* OTPFieldView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6B748E82F6A9D7C00202A2D /* OTPFieldView.swift */; };
@@ -103,9 +103,9 @@
 		E65D34062FAC5CC4001FB9F4 /* MKCoordinateRegion+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MKCoordinateRegion+Ext.swift"; sourceTree = "<group>"; };
 		E66090812FE15D5C00565440 /* Array+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Array+Ext.swift"; sourceTree = "<group>"; };
 		E662BE582FA9EA08004B812D /* Color+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Ext.swift"; sourceTree = "<group>"; };
+		E66B753B3025B0D8006B0CA6 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		E67C5C132FB73C7100228877 /* ButtonGlassStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonGlassStyle.swift; sourceTree = "<group>"; };
 		E684F1E62F769CDF0059C38F /* ProfilePhotoShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePhotoShape.swift; sourceTree = "<group>"; };
-		E6A113192FD0526500F482C7 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		E6A1155B2FD0629100F482C7 /* PaceApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PaceApp.entitlements; sourceTree = "<group>"; };
 		E6AE33262F7D4875009189CD /* AppNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNavigation.swift; sourceTree = "<group>"; };
 		E6B748E82F6A9D7C00202A2D /* OTPFieldView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPFieldView.swift; sourceTree = "<group>"; };
@@ -345,7 +345,7 @@
 				E6C69B6E2F603E4D00ACED81 /* Modules */,
 				E6C69B582F603C8D00ACED81 /* Products */,
 				E6C335CC2F62D60500224AA5 /* Router */,
-				E6A113192FD0526500F482C7 /* GoogleService-Info.plist */,
+				E66B753B3025B0D8006B0CA6 /* GoogleService-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -458,10 +458,10 @@
 				E6C4BEEE2F616B8800C17C69 /* Gilroy-SemiBold.ttf in Resources */,
 				E6C4BEEF2F616B8800C17C69 /* Gilroy-Bold.ttf in Resources */,
 				E6C4BEF02F616B8800C17C69 /* Gilroy-ExtraBold.ttf in Resources */,
+				E66B753C3025B0D8006B0CA6 /* GoogleService-Info.plist in Resources */,
 				E6C4BEF12F616B8800C17C69 /* Gilroy-Medium.ttf in Resources */,
 				E6C4BEF22F616B8800C17C69 /* Gilroy-Light.ttf in Resources */,
 				E6C4BEF32F616B8800C17C69 /* Gilroy-Regular.ttf in Resources */,
-				E6A1131A2FD0526500F482C7 /* GoogleService-Info.plist in Resources */,
 				18E0166C2F925F7300A486AB /* PrivacyInfo.xcprivacy in Resources */,
 				E6C334272F62B74B00224AA5 /* Localizable.xcstrings in Resources */,
 			);
@@ -657,7 +657,7 @@
 				CODE_SIGN_ENTITLEMENTS = PaceApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 12;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 6LK9SH63JD;
 				ENABLE_APP_SANDBOX = YES;
@@ -718,7 +718,7 @@
 				CODE_SIGN_ENTITLEMENTS = PaceApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 12;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 6LK9SH63JD;
 				ENABLE_APP_SANDBOX = YES;

@@ -429,12 +429,16 @@ class ConnectIQManager: NSObject {
     
     func deleteSyncedEvent(id: Int) {
         logger.info("[ConnectIQ] Deleting synced event", metadata: ["eventId": "\(id)"])
-        applyDeletedEventId(id)
-        sendMessage([
-            "command": "delete_event",
-            "source": "phone",
-            "id": id
-        ])
+        Task { @MainActor in
+            // Don't delete on a session that no longer exists — sign out instead of a phantom write.
+            guard await AuthManager.shared.verifyAccountStillValid() else { return }
+            applyDeletedEventId(id)
+            sendMessage([
+                "command": "delete_event",
+                "source": "phone",
+                "id": id
+            ])
+        }
     }
 
     func updateEventMetadata(eventId targetEventId: Int, name: String, location: String) {
@@ -543,9 +547,11 @@ class ConnectIQManager: NSObject {
                 completedEventPayloads.removeAll()
                 deletedEventIds.removeAll()
             }
-            applyDeletedEventIds(eventIds(from: dict["deletedEventIds"]))
-            mergeEventPayloads(eventPayloads(from: dict["completedEvents"]), isCompleted: true, syncStatus: "synced")
-            mergeEventPayloads(eventPayloads(from: dict["activeEvents"]), isCompleted: false, syncStatus: "synced")
+            let requestCompleted = eventPayloads(from: dict["completedEvents"])
+            let requestActive = eventPayloads(from: dict["activeEvents"])
+            reconcileDeletedEventIds(eventIds(from: dict["deletedEventIds"]), liveActive: requestActive, liveCompleted: requestCompleted)
+            mergeEventPayloads(requestCompleted, isCompleted: true, syncStatus: "synced")
+            mergeEventPayloads(requestActive, isCompleted: false, syncStatus: "synced")
             // Apply remote settings if included
             if let remoteSettings = dict["settings"] as? [String: Any] {
                 applyRemoteSettings(remoteSettings)
@@ -568,9 +574,11 @@ class ConnectIQManager: NSObject {
                 completedEventPayloads.removeAll()
                 deletedEventIds.removeAll()
             }
-            applyDeletedEventIds(eventIds(from: dict["deletedEventIds"]))
-            mergeEventPayloads(eventPayloads(from: dict["completedEvents"]), isCompleted: true, syncStatus: "synced")
-            mergeEventPayloads(eventPayloads(from: dict["activeEvents"]), isCompleted: false, syncStatus: "synced")
+            let syncCompleted = eventPayloads(from: dict["completedEvents"])
+            let syncActive = eventPayloads(from: dict["activeEvents"])
+            reconcileDeletedEventIds(eventIds(from: dict["deletedEventIds"]), liveActive: syncActive, liveCompleted: syncCompleted)
+            mergeEventPayloads(syncCompleted, isCompleted: true, syncStatus: "synced")
+            mergeEventPayloads(syncActive, isCompleted: false, syncStatus: "synced")
             // Apply remote settings if included
             if let remoteSettings = dict["settings"] as? [String: Any] {
                 applyRemoteSettings(remoteSettings)
@@ -659,7 +667,12 @@ class ConnectIQManager: NSObject {
 
     private func upsertEventPayload(_ payload: [String: Any], isCompleted: Bool, syncStatus: String) {
         var normalizedPayload = payload
-        let id = eventId(from: normalizedPayload) ?? Int(Date().timeIntervalSince1970)
+        // No stable id → skip. A clock-based fallback would mint a fresh doc on every
+        // resync (duplicates); every real app/watch payload already carries an id.
+        guard let id = eventId(from: normalizedPayload) else {
+            logger.warning("[ConnectIQ] Skipping event upsert — payload has no id")
+            return
+        }
         if deletedEventIds.contains(id) {
             return
         }
@@ -720,14 +733,19 @@ class ConnectIQManager: NSObject {
         }
     }
 
-    private func applyDeletedEventIds(_ ids: [Int]) {
-        for id in ids {
-            applyDeletedEventId(id)
+    // Local-only reconciliation of the watch's bulk tombstone list — a sync replay is
+    // not a user action, so it never writes a Firestore delete (live data wins on conflict).
+    private func reconcileDeletedEventIds(_ ids: [Int], liveActive: [[String: Any]], liveCompleted: [[String: Any]]) {
+        let liveIds = Set(liveActive.compactMap { eventId(from: $0) })
+            .union(liveCompleted.compactMap { eventId(from: $0) })
+        for id in ids where !liveIds.contains(id) {
+            applyDeletedEventLocally(id)
         }
     }
 
-    private func applyDeletedEventId(_ id: Int) {
-        logger.info("[ConnectIQ] Applying deleted event", metadata: ["eventId": "\(id)"])
+    // Prunes an event from local state and notifies listeners — no Firestore write.
+    private func applyDeletedEventLocally(_ id: Int) {
+        logger.info("[ConnectIQ] Applying deleted event locally", metadata: ["eventId": "\(id)"])
         if !deletedEventIds.contains(id) {
             deletedEventIds.append(id)
         }
@@ -740,6 +758,12 @@ class ConnectIQManager: NSObject {
         Task { @MainActor in
             EventDeletionCenter.shared.notifyDeleted(eventId: id)
         }
+    }
+
+    // A genuine user delete (app action or the watch's delete_event) — prunes local
+    // state and also soft-deletes the Firestore doc. Bulk sync tombstones must not reach here.
+    private func applyDeletedEventId(_ id: Int) {
+        applyDeletedEventLocally(id)
 
         // Skip ids a previous sync already proved belong to another account.
         guard !AppSession.foreignEventIds.contains(id) else { return }

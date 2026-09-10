@@ -127,15 +127,21 @@ struct CreateAccountScreen: View {
 	
 	// MARK: - Footer Button
 	
+	@ViewBuilder
 	private var footerButton: some View {
-		AppButton(LocalizedStringResource(stringLiteral: footerTitle)) {
-			viewModel.onFooterTapped()
+		// Strava step: the footer IS the orange connect button until linked, then "Next".
+		if viewModel.currentStep == .connectStrava && !strava.isConnected {
+			StravaConnectButton(isLoading: strava.isWorking) { viewModel.connectStrava() }
+		} else {
+			AppButton(LocalizedStringResource(stringLiteral: footerTitle)) {
+				viewModel.onFooterTapped()
+			}
 		}
 	}
 
-	// "Next" once Strava is linked — tapping it finishes onboarding instead of reconnecting.
+	// Once Strava is linked the footer proceeds to finish.
 	private var footerTitle: String {
-		viewModel.currentStep == .connectStrava && strava.isConnected
+		viewModel.currentStep == .connectStrava
 			? "Next"
 			: viewModel.currentStep.footerButtonTitle
 	}

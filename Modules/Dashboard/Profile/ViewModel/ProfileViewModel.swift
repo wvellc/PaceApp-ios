@@ -55,12 +55,12 @@ final class ProfileViewModel {
                 title: "Manage your watch",
                 type: .navigation
             ),
-            ProfileMenuItem(
-                id: .stravaIntegration,
-                icon: .icSync,
-                title: "Connect Strava",
-                type: .navigation
-            ),
+//            ProfileMenuItem(
+//                id: .stravaIntegration,
+//                icon: .icSync,
+//                title: "Connect Strava",
+//                type: .navigation
+//            ),
             ProfileMenuItem(
                 id: .intvlVibrate,
                 icon: .icVibrate,
@@ -110,12 +110,17 @@ final class ProfileViewModel {
         let trimmedLastName  = lastName.trimmingCharacters(in: .whitespaces)
 
         guard let currentUID = AuthManager.shared.currentUserID else { return false }
-        var user = AuthManager.shared.userDetails ?? UserModel(uuid: currentUID)
-        user.firstName = trimmedFirstName
-        user.lastName  = trimmedLastName
 
         isUpdatingProfile = true
         defer { isUpdatingProfile = false }
+
+        // Confirm the account still exists before writing — a deleted/disabled account (on
+        // another device) is signed out here instead of writing to a dead session's cache.
+        guard await AuthManager.shared.verifyAccountStillValid() else { return false }
+
+        var user = AuthManager.shared.userDetails ?? UserModel(uuid: currentUID)
+        user.firstName = trimmedFirstName
+        user.lastName  = trimmedLastName
 
         do {
             try await UserProfileRepository.shared.upsertProfile(user, userId: currentUID)

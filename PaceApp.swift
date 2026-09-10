@@ -21,6 +21,7 @@ struct PaceApp: App {
 	@State private var router = Router.shared
 	@State private var ciqManager = ConnectIQManager.shared
 	@State private var stravaManager = StravaManager.shared
+	@Environment(\.scenePhase) private var scenePhase
 	
 	// MARK: - Initialization
 	
@@ -154,6 +155,11 @@ struct PaceApp: App {
             .task {
                 ciqManager.restoreSessionIfNeeded()
                 await ciqManager.resyncPendingEvents()
+            }
+            // On foreground, verify the account wasn't deleted/disabled elsewhere while
+            // backgrounded — the Firebase auth-state listener routes to sign-in if it was.
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { Task { await AuthManager.shared.verifyAccountStillValid() } }
             }
 		}
 	}

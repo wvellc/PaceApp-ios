@@ -126,13 +126,8 @@ final class CreateAccountViewModel {
         }
 
         if currentStep == .connectStrava {
-            // Connected → the footer reads "Next" and finishes onboarding;
-            // otherwise the tap starts the shared OAuth flow.
-            if StravaManager.shared.isConnected {
-                finishOnboarding()
-            } else {
-                StravaManager.shared.connect()
-            }
+            // Connecting is handled by the orange button in the step; the footer just proceeds.
+            finishOnboarding()
             return
         }
 
@@ -148,8 +143,12 @@ final class CreateAccountViewModel {
         }
     }
 
-    /// Persists gait and completes onboarding — the final step's "Next" tap once
-    /// Strava is connected.
+    /// Starts the shared Strava OAuth flow — the orange button in the connect step.
+    func connectStrava() {
+        StravaManager.shared.connect()
+    }
+
+    /// Persists gait and completes onboarding — the final step's "Next" tap.
     func finishOnboarding() {
         saveGait()
         navigationEvent = .finish

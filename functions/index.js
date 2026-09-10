@@ -4,7 +4,8 @@
  * The iOS/Android app performs the OAuth *authorize* step only and sends the
  * returned code here. These functions hold the Strava client secret, exchange
  * and refresh tokens, store them server-side (never on device), and upload
- * completed activities to Strava as summary activities (POST /activities).
+ * completed activities as TCX files (POST /uploads) so each PaceApp segment
+ * lands as a Strava lap.
  *
  * Config:
  *   firebase functions:secrets:set STRAVA_CLIENT_SECRET
@@ -26,11 +27,17 @@ const STRAVA_CLIENT_ID = defineString("STRAVA_CLIENT_ID");
 const STRAVA_CLIENT_SECRET = defineSecret("STRAVA_CLIENT_SECRET");
 
 const STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token";
-const STRAVA_DEAUTH_URL = "https://www.strava.com/oauth/deauthorize";
+// Revoke replaces the deprecated /oauth/deauthorize (removed by Strava on 2027-06-01).
+const STRAVA_REVOKE_URL = "https://www.strava.com/oauth/revoke";
 const STRAVA_ACTIVITIES_URL = "https://www.strava.com/api/v3/activities";
+const STRAVA_UPLOADS_URL = "https://www.strava.com/api/v3/uploads";
 
 // PaceApp activity string → Strava sport_type.
 const SPORT_BY_ACTIVITY = { Run: "Run", Walking: "Walk", Cycling: "Ride", Other: "Workout" };
+
+// PaceApp activity → TCX Sport attribute (the schema allows only Running/Biking/Other;
+// the exact Strava sport_type is set afterwards via PUT /activities/{id}).
+const TCX_SPORT_BY_ACTIVITY = { Run: "Running", Walking: "Running", Cycling: "Biking", Other: "Other" };
 
 // MARK: - Auth helper
 
@@ -60,7 +67,12 @@ async function stravaTokenRequest(params) {
     body: new URLSearchParams(params),
   });
   const json = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw new Error(json.message || "Strava token request failed.");
+  if (!resp.ok) {
+    const err = new Error(json.message || "Strava token request failed.");
+    err.status = resp.status;
+    err.body = json;
+    throw err;
+  }
   return json;
 }
 
@@ -90,6 +102,44 @@ async function storeTokens(uid, token) {
   return athleteName;
 }
 
+/** Marks the account disconnected server-side + client-side. Used when Strava has
+ *  revoked our tokens so the app's live listener flips to "Not connected". */
+async function clearStravaConnection(uid) {
+  // Flip the client-visible summary first, so Settings updates even if the token
+  // delete below fails (a leftover token is harmless — the next refresh clears it).
+  await db.doc(`users/${uid}`).set({
+    strava: { connected: false, athleteName: null, athleteId: null },
+  }, { merge: true });
+  await db.doc(`stravaTokens/${uid}`).delete().catch(() => {});
+}
+
+/** True when an error is a Strava token revocation: per the auth docs an invalidated token
+ *  returns 401. Excludes bad client creds (config, not a revoke) and the legacy 400 shape. */
+function isRevocation(e) {
+  if (!e) return false;
+  const errors = (e.body && e.body.errors) || [];
+  if (e.status === 401) {
+    return !errors.some((x) => x.field === "client_id" || x.field === "client_secret");
+  }
+  // Legacy: a revoked refresh token can also come back as 400 with field "refresh_token".
+  return errors.some((x) => x.field === "refresh_token" || x.field === "access_token");
+}
+
+/** Revokes a Strava token via the OAuth revoke endpoint: Basic auth with the client
+ *  credentials + the token in the form body. Revoking one token revokes its pair. */
+async function revokeStravaToken(token) {
+  if (!token) return;
+  const basic = Buffer.from(`${STRAVA_CLIENT_ID.value()}:${STRAVA_CLIENT_SECRET.value()}`).toString("base64");
+  await fetch(STRAVA_REVOKE_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${basic}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({ token }),
+  }).catch(() => {});
+}
+
 /** Returns a valid access token for the user, refreshing (and re-storing) it if it's near expiry. */
 async function getValidAccessToken(uid) {
   const snap = await db.doc(`stravaTokens/${uid}`).get();
@@ -99,12 +149,23 @@ async function getValidAccessToken(uid) {
   const now = Math.floor(Date.now() / 1000);
   if (data.expiresAt && now < data.expiresAt - 300) return data.accessToken;
 
-  const refreshed = await stravaTokenRequest({
-    client_id: STRAVA_CLIENT_ID.value(),
-    client_secret: STRAVA_CLIENT_SECRET.value(),
-    grant_type: "refresh_token",
-    refresh_token: data.refreshToken,
-  });
+  let refreshed;
+  try {
+    refreshed = await stravaTokenRequest({
+      client_id: STRAVA_CLIENT_ID.value(),
+      client_secret: STRAVA_CLIENT_SECRET.value(),
+      grant_type: "refresh_token",
+      refresh_token: data.refreshToken,
+    });
+  } catch (e) {
+    // Clear only on a genuine revocation; a bad client secret or transient 5xx
+    // must NOT delete every user's tokens.
+    if (isRevocation(e)) {
+      await clearStravaConnection(uid);
+      throw new Error("Strava is not connected.");
+    }
+    throw e;
+  }
   await db.doc(`stravaTokens/${uid}`).set({
     accessToken: refreshed.access_token,
     refreshToken: refreshed.refresh_token, // Strava rotates the refresh token
@@ -116,62 +177,252 @@ async function getValidAccessToken(uid) {
 
 // MARK: - Activity upload
 
-/** Distance → meters (Strava expects meters). App stores "Miles" or "Kms"; anything not "Miles" is km. */
-function metersFor(distance, measure) {
-  if (!distance) return 0;
-  return measure === "Miles" ? distance * 1609.34 : distance * 1000;
+const METERS_PER_MILE = 1609.344;
+
+/** The event's unit comes from the user's preference at creation ("Miles"; anything else is km). */
+function isMiles(event) {
+  return event.measure === "Miles";
+}
+
+/** Unit label for descriptions, matching the event's stored measure. */
+function unitLabel(event) {
+  return isMiles(event) ? "mi" : "km";
+}
+
+/** Distance (in the event's unit) → meters for Strava. Rejects non-finite/negative values. */
+function metersFor(distance, event) {
+  const d = Number(distance);
+  if (!Number.isFinite(d) || d <= 0) return 0;
+  return isMiles(event) ? d * METERS_PER_MILE : d * 1000;
 }
 
 /** Distance actually covered — actualDistance, else the sum of per-segment completed_distance. */
 function coveredDistance(event) {
-  if (event.actualDistance > 0) return event.actualDistance;
+  if (Number(event.actualDistance) > 0) return Number(event.actualDistance);
   const segments = Array.isArray(event.completedSegments) ? event.completedSegments : [];
   return segments.reduce((total, s) => total + (parseFloat(s.completed_distance) || 0), 0);
 }
 
-/** Builds the form body for POST /activities from a PaceApp event document. */
-function activityForm(event) {
-  const distance = coveredDistance(event);
-  const elapsed = event.actualTimeSeconds || event.goalTimeSeconds || 0;
-  // completedAt marks the finish — subtract elapsed so Strava gets the real start.
-  const endTs = event.completedAt || event.scheduledAt;
-  const endMs = endTs && endTs.toDate ? endTs.toDate().getTime() : Date.now();
-  const startISO = new Date(endMs - (event.actualTimeSeconds ? elapsed * 1000 : 0)).toISOString();
-
-  const form = new URLSearchParams({
-    name: event.name || "PaceApp Activity",
-    sport_type: SPORT_BY_ACTIVITY[event.activityType] || "Workout",
-    start_date_local: startISO,
-    elapsed_time: String(Math.max(0, Math.round(elapsed))),
-  });
-  // Never report the planned distance as covered — omit when nothing was actually covered.
-  if (distance > 0) form.append("distance", String(Math.round(metersFor(distance, event.measure))));
-  form.append("description", event.avgHeartRate
-    ? `Avg HR ${event.avgHeartRate} bpm • Synced from PaceApp`
-    : "Synced from PaceApp");
-  return form;
+/** Seconds → "H:MM:SS" (or "MM:SS" under an hour). */
+function fmtTime(totalSeconds) {
+  const s = Math.max(0, Math.round(totalSeconds));
+  const h = Math.floor(s / 3600);
+  const m = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const sec = String(s % 60).padStart(2, "0");
+  return h > 0 ? `${h}:${m}:${sec}` : `${m}:${sec}`;
 }
 
-/** Creates the activity on Strava and returns its id. */
-async function createStravaActivity(accessToken, form) {
-  const resp = await fetch(STRAVA_ACTIVITIES_URL, {
+/** Every meaningful stat the manual-create endpoint can't carry as a field goes in the description. */
+function activityDescription(event, covered) {
+  const unit = unitLabel(event);
+  const lines = [];
+
+  if (event.location) lines.push(`📍 ${event.location}`);
+
+  if (covered > 0) {
+    let line = `📏 ${covered.toFixed(2)} ${unit}`;
+    if (Number(event.distanceValue) > 0) line += ` of ${Number(event.distanceValue).toFixed(2)} ${unit} planned`;
+    lines.push(line);
+  }
+
+  if (Number(event.actualTimeSeconds) > 0) {
+    let line = `⏱ ${fmtTime(event.actualTimeSeconds)}`;
+    if (Number(event.goalTimeSeconds) > 0) {
+      const diff = event.actualTimeSeconds - event.goalTimeSeconds;
+      line += ` · goal ${fmtTime(event.goalTimeSeconds)} (${diff <= 0 ? "−" : "+"}${fmtTime(Math.abs(diff))})`;
+    }
+    lines.push(line);
+  }
+
+  // Watch pace first; else derive from what was actually covered.
+  const paceSec = Number(event.avgPaceSeconds) > 0
+    ? Number(event.avgPaceSeconds)
+    : (covered > 0 && Number(event.actualTimeSeconds) > 0 ? event.actualTimeSeconds / covered : 0);
+  if (paceSec > 0) lines.push(`⚡ Avg pace ${fmtTime(paceSec)} /${unit}`);
+
+  if (Number(event.avgHeartRate) > 0) lines.push(`❤️ Avg HR ${event.avgHeartRate} bpm`);
+  if (Number(event.elevationGain) > 0) lines.push(`⛰ Elevation gain ${Math.round(event.elevationGain)} m`);
+  if (Number(event.effortPercentage) > 0) lines.push(`💪 Effort ${Math.round(event.effortPercentage)}%`);
+
+  // Per-segment splits — only segments the watch actually recorded something for.
+  const segments = Array.isArray(event.completedSegments) ? event.completedSegments : [];
+  const splits = segments
+    .map((s, i) => ({ n: i + 1, d: parseFloat(s.completed_distance) || 0, t: s.elapsed_time }))
+    .filter((s) => s.d > 0 || s.t);
+  if (splits.length > 1) {
+    lines.push("Splits:");
+    splits.forEach((s) => lines.push(`${s.n}. ${s.d > 0 ? `${s.d.toFixed(2)} ${unit}` : "—"}${s.t ? ` · ${s.t}` : ""}`));
+  }
+
+  lines.push("Synced from PaceApp");
+  return lines.join("\n");
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Parses a segment's elapsed time — "H:MM:SS"/"MM:SS" or a raw number — into seconds. */
+function secondsFromTime(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return Math.max(0, Math.round(value));
+  if (typeof value !== "string") return 0;
+  const trimmed = value.trim();
+  if (/^\d+(\.\d+)?$/.test(trimmed)) return Math.max(0, Math.round(parseFloat(trimmed)));
+  const parts = trimmed.split(":").map((p) => parseInt(p, 10));
+  if (parts.length === 0 || parts.some((n) => Number.isNaN(n))) return 0;
+  return parts.reduce((acc, n) => acc * 60 + n, 0);
+}
+
+/** Real start time (ms) and elapsed seconds — completedAt marks the finish, so start = finish − elapsed. */
+function startInfo(event) {
+  const elapsed = Number(event.actualTimeSeconds) > 0 ? Number(event.actualTimeSeconds) : Number(event.goalTimeSeconds) || 0;
+  const endTs = event.completedAt || event.scheduledAt;
+  const endMs = endTs && endTs.toDate ? endTs.toDate().getTime() : Date.now();
+  const startMs = endMs - (Number(event.actualTimeSeconds) > 0 ? elapsed * 1000 : 0);
+  return { startMs, elapsed };
+}
+
+/** One lap per recorded PaceApp segment; falls back to a single whole-activity lap. */
+function buildLaps(event) {
+  const segments = Array.isArray(event.completedSegments) ? event.completedSegments : [];
+  const laps = segments
+    .map((s) => ({
+      meters: Math.round(metersFor(parseFloat(s.completed_distance) || 0, event)),
+      seconds: secondsFromTime(s.elapsed_time),
+    }))
+    .filter((l) => l.meters > 0 || l.seconds > 0);
+  if (laps.length > 0) return laps;
+
+  // No per-segment detail — represent the whole activity as one lap.
+  const meters = Math.round(metersFor(coveredDistance(event), event));
+  const seconds = Number(event.actualTimeSeconds) > 0 ? Number(event.actualTimeSeconds) : Number(event.goalTimeSeconds) || 1;
+  return [{ meters, seconds: Math.max(1, seconds) }];
+}
+
+/** Builds a TCX with one <Lap> per PaceApp segment — this is what makes them Strava laps. */
+function buildTCX(event) {
+  const { startMs } = startInfo(event);
+  const sport = TCX_SPORT_BY_ACTIVITY[event.activityType] || "Other";
+  const hr = Number(event.avgHeartRate) > 0 ? Math.round(Number(event.avgHeartRate)) : null;
+  const hrPoint = hr ? `<HeartRateBpm><Value>${hr}</Value></HeartRateBpm>` : "";
+  const hrLap = hr ? `<AverageHeartRateBpm><Value>${hr}</Value></AverageHeartRateBpm>` : "";
+
+  let cursorMs = startMs;
+  let cumulativeMeters = 0;
+  const lapXml = buildLaps(event).map((lap) => {
+    const lapStartISO = new Date(cursorMs).toISOString();
+    const lapEndISO = new Date(cursorMs + lap.seconds * 1000).toISOString();
+    const startMeters = cumulativeMeters;
+    cumulativeMeters += lap.meters;
+    cursorMs += lap.seconds * 1000;
+    // Two trackpoints per lap give Strava a monotonic time+distance stream to build laps from.
+    return `<Lap StartTime="${lapStartISO}">`
+      + `<TotalTimeSeconds>${lap.seconds}</TotalTimeSeconds>`
+      + `<DistanceMeters>${lap.meters}</DistanceMeters>`
+      + `<Calories>0</Calories>${hrLap}`
+      + `<Intensity>Active</Intensity><TriggerMethod>Manual</TriggerMethod><Track>`
+      + `<Trackpoint><Time>${lapStartISO}</Time><DistanceMeters>${startMeters}</DistanceMeters>${hrPoint}</Trackpoint>`
+      + `<Trackpoint><Time>${lapEndISO}</Time><DistanceMeters>${cumulativeMeters}</DistanceMeters>${hrPoint}</Trackpoint>`
+      + `</Track></Lap>`;
+  }).join("");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>`
+    + `<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">`
+    + `<Activities><Activity Sport="${sport}"><Id>${new Date(startMs).toISOString()}</Id>`
+    + lapXml
+    + `</Activity></Activities></TrainingCenterDatabase>`;
+}
+
+/** Uploads a TCX to Strava; returns the upload job json ({ id, activity_id, error, status }). */
+async function uploadTCX(accessToken, tcx, { externalId, name, description }) {
+  const form = new FormData();
+  form.append("data_type", "tcx");
+  form.append("external_id", externalId);
+  if (name) form.append("name", name);
+  if (description) form.append("description", description);
+  form.append("file", new Blob([tcx], { type: "application/xml" }), `${externalId}.tcx`);
+
+  const resp = await fetch(STRAVA_UPLOADS_URL, {
     method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: form,
+  });
+  const json = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    const err = new Error(json.message || json.error || "Strava rejected the upload.");
+    err.status = resp.status;
+    err.body = json;
+    throw err;
+  }
+  return json;
+}
+
+/** Polls an upload job until Strava finishes processing it and returns the new activity id. */
+async function pollUpload(accessToken, uploadId) {
+  for (let attempt = 0; attempt < 12; attempt++) {
+    await sleep(1500);
+    const resp = await fetch(`${STRAVA_UPLOADS_URL}/${uploadId}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const json = await resp.json().catch(() => ({}));
+    if (json.activity_id) return json.activity_id;
+    if (json.error) {
+      // A duplicate still names the existing activity — reuse its id so we stop retrying.
+      const dup = String(json.error).match(/duplicate of activity (\d+)/i);
+      if (dup) return Number(dup[1]);
+      throw new Error(json.error);
+    }
+  }
+  throw new Error("Strava upload is still processing. It will appear shortly.");
+}
+
+/** Sets the exact sport type, name and description on the created activity (best-effort). */
+async function updateActivity(accessToken, activityId, { sportType, name, description }) {
+  const form = new URLSearchParams();
+  if (sportType) form.append("sport_type", sportType);
+  if (name) form.append("name", name);
+  if (description) form.append("description", description);
+  await fetch(`${STRAVA_ACTIVITIES_URL}/${activityId}`, {
+    method: "PUT",
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: form,
-  });
-  const json = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw new Error(json.message || "Strava rejected the activity.");
-  return json.id;
+  }).catch(() => {});
 }
 
-/** Syncs a single event to Strava (no-op if already synced). Returns the activity id or null. */
+/** Syncs a single event to Strava as a TCX upload with laps (no-op if already synced). */
 async function syncEvent(uid, eventRef, event) {
   if (event.stravaActivityId) return null;
   const accessToken = await getValidAccessToken(uid);
-  const activityId = await createStravaActivity(accessToken, activityForm(event));
+
+  const name = event.name || "PaceApp Activity";
+  const description = activityDescription(event, coveredDistance(event));
+  const externalId = `paceapp-${eventRef.id}`;
+
+  const lapCount = buildLaps(event).length;
+  logger.info(`syncEvent: uploading ${externalId} as ${lapCount} lap(s)…`);
+  let upload;
+  try {
+    upload = await uploadTCX(accessToken, buildTCX(event), { externalId, name, description });
+  } catch (e) {
+    // A 401 = the access token was revoked while still unexpired. A 403 (scope /
+    // connected-athlete quota) is not a revoke, so surface it without clearing.
+    if (isRevocation(e)) {
+      await clearStravaConnection(uid);
+      throw new Error("Strava is not connected.");
+    }
+    throw e;
+  }
+  logger.info(`syncEvent: Strava accepted upload ${upload.id} for ${externalId}, awaiting processing…`);
+  const activityId = await pollUpload(accessToken, upload.id);
+
+  // The TCX only carries a coarse sport; set the exact Strava sport_type here.
+  await updateActivity(accessToken, activityId, {
+    sportType: SPORT_BY_ACTIVITY[event.activityType] || "Workout",
+    name,
+    description,
+  });
+
   await eventRef.set({
     stravaActivityId: activityId,
     stravaSyncedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -196,7 +447,9 @@ exports.stravaCallback = onRequest((req, res) => {
 });
 
 /** Exchange an OAuth code for tokens and connect the account. */
-exports.stravaExchange = onRequest({ secrets: [STRAVA_CLIENT_SECRET] }, async (req, res) => {
+// minInstances keeps one instance warm — the OAuth code exchange is user-facing, and a
+// scaled-to-zero cold start aborts the request ("no available instance") mid-connect.
+exports.stravaExchange = onRequest({ secrets: [STRAVA_CLIENT_SECRET], minInstances: 1 }, async (req, res) => {
   const uid = await requireUid(req, res);
   if (!uid) return;
   const code = req.body && req.body.code;
@@ -245,14 +498,16 @@ exports.stravaSync = onRequest({ secrets: [STRAVA_CLIENT_SECRET] }, async (req, 
 });
 
 /** Sync recent completed activities that haven't reached Strava yet. */
-exports.stravaBackfill = onRequest({ secrets: [STRAVA_CLIENT_SECRET] }, async (req, res) => {
+exports.stravaBackfill = onRequest({ secrets: [STRAVA_CLIENT_SECRET], timeoutSeconds: 300 }, async (req, res) => {
   const uid = await requireUid(req, res);
   if (!uid) return;
   try {
+    // Small batch — each TCX upload is processed asynchronously by Strava, so a large
+    // batch would blow the request timeout. Repeat taps clear a big backlog in chunks.
     const query = await db.collection("events")
       .where("userId", "==", uid)
       .where("status", "==", "completed")
-      .limit(30)
+      .limit(8)
       .get();
 
     let synced = 0;
@@ -278,18 +533,11 @@ exports.stravaDisconnect = onRequest({ secrets: [STRAVA_CLIENT_SECRET] }, async 
   const uid = await requireUid(req, res);
   if (!uid) return;
   try {
-    const snap = await db.doc(`stravaTokens/${uid}`).get();
-    const accessToken = snap.exists ? snap.data().accessToken : null;
-    if (accessToken) {
-      await fetch(STRAVA_DEAUTH_URL, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }).catch(() => {});
-    }
-    await db.doc(`stravaTokens/${uid}`).delete().catch(() => {});
-    await db.doc(`users/${uid}`).set({
-      strava: { connected: false, athleteName: null, athleteId: null },
-    }, { merge: true });
+    const data = (await db.doc(`stravaTokens/${uid}`).get()).data();
+    // Revoke the refresh token (that also kills its access tokens) so access is
+    // withdrawn on Strava's side, then clear our stored connection.
+    await revokeStravaToken(data && (data.refreshToken || data.accessToken));
+    await clearStravaConnection(uid);
     res.json({ disconnected: true });
   } catch (e) {
     logger.error("stravaDisconnect failed", e);
@@ -297,11 +545,79 @@ exports.stravaDisconnect = onRequest({ secrets: [STRAVA_CLIENT_SECRET] }, async 
   }
 });
 
+// MARK: - Deauthorization webhook
+
+// Verify token you choose; it must match the `verify_token` used when creating the
+// Strava push subscription. Not a secret — Strava only echoes it back on the handshake.
+const STRAVA_WEBHOOK_VERIFY_TOKEN = "paceapp-strava-webhook";
+
+// Set to the numeric id Strava returns when you register the push subscription. Once set,
+// POSTs whose subscription_id doesn't match are dropped (spoof guard). null = not yet set.
+const STRAVA_WEBHOOK_SUBSCRIPTION_ID = null;
+
+/**
+ * Strava push-subscription webhook. Two roles:
+ *  - GET: the one-time subscription validation handshake (echo hub.challenge).
+ *  - POST: event delivery. We act only on athlete deauthorization (updates.authorized=false),
+ *    clearing that athlete's connection so the app reflects "Not connected" instantly.
+ * Requires a push subscription registered with Strava pointing at this function URL
+ * (https://us-central1-thepaceapp.cloudfunctions.net/stravaWebhook) — one-time setup.
+ */
+exports.stravaWebhook = onRequest(async (req, res) => {
+  if (req.method === "GET") {
+    const mode = req.query["hub.mode"];
+    const token = req.query["hub.verify_token"];
+    const challenge = req.query["hub.challenge"];
+    if (mode === "subscribe" && token === STRAVA_WEBHOOK_VERIFY_TOKEN) {
+      res.json({ "hub.challenge": challenge });
+    } else {
+      res.status(403).send("Forbidden");
+    }
+    return;
+  }
+
+  if (req.method === "POST") {
+    const body = req.body || {};
+
+    // Spoof guard — Strava payloads are unsigned, so drop anything not from our subscription.
+    if (STRAVA_WEBHOOK_SUBSCRIPTION_ID != null
+      && Number(body.subscription_id) !== Number(STRAVA_WEBHOOK_SUBSCRIPTION_ID)) {
+      res.status(200).send("IGNORED");
+      return;
+    }
+
+    const deauthorized =
+      body.object_type === "athlete" &&
+      body.aspect_type === "update" &&
+      body.updates && String(body.updates.authorized) === "false" &&
+      body.owner_id != null;
+
+    // Do the work BEFORE responding — on Functions v2 (Cloud Run) CPU is throttled
+    // once the response is sent, so post-response work isn't guaranteed to complete.
+    if (deauthorized) {
+      try {
+        const snap = await db.collection("stravaTokens")
+          .where("athleteId", "==", body.owner_id).get();
+        // Clear each matched user independently (doc id == uid) so one failure can't skip the rest.
+        await Promise.allSettled(snap.docs.map((doc) => clearStravaConnection(doc.id)));
+        logger.info(`stravaWebhook: deauthorized athlete ${body.owner_id} (${snap.size} user[s])`);
+      } catch (e) {
+        logger.error("stravaWebhook deauthorize failed", e);
+      }
+    }
+
+    res.status(200).send("EVENT_RECEIVED");
+    return;
+  }
+
+  res.status(405).send("Method Not Allowed");
+});
+
 // MARK: - Auto-sync trigger
 
 /** When an event transitions into "completed", push it to Strava if the user is connected. */
 exports.onEventCompleted = onDocumentWritten(
-  { document: "events/{eventId}", secrets: [STRAVA_CLIENT_SECRET] },
+  { document: "events/{eventId}", secrets: [STRAVA_CLIENT_SECRET], timeoutSeconds: 120 },
   async (event) => {
     const after = event.data && event.data.after;
     if (!after || !after.exists) return;
@@ -311,15 +627,26 @@ exports.onEventCompleted = onDocumentWritten(
     const before = event.data.before;
     const beforeStatus = before && before.exists ? before.data().status : null;
     if (data.status !== "completed" || beforeStatus === "completed") return;
-    if (data.stravaActivityId || !data.userId) return;
+
+    const eventId = event.params.eventId;
+    if (data.stravaActivityId) {
+      logger.info(`onEventCompleted: ${eventId} already on Strava (activity ${data.stravaActivityId})`);
+      return;
+    }
+    if (!data.userId) return;
 
     const tokenSnap = await db.doc(`stravaTokens/${data.userId}`).get();
-    if (!tokenSnap.exists) return; // user hasn't connected Strava
+    if (!tokenSnap.exists) {
+      logger.info(`onEventCompleted: ${eventId} completed but Strava is not connected — skipping`);
+      return;
+    }
 
     try {
-      await syncEvent(data.userId, after.ref, data);
+      logger.info(`onEventCompleted: syncing ${eventId} to Strava…`);
+      const activityId = await syncEvent(data.userId, after.ref, data);
+      logger.info(`onEventCompleted: ${eventId} → Strava activity ${activityId}`);
     } catch (e) {
-      logger.warn(`auto-sync failed for ${event.params.eventId}: ${e.message}`);
+      logger.warn(`auto-sync failed for ${eventId}: ${e.message}`);
       await after.ref.set({ stravaSyncError: e.message }, { merge: true }).catch(() => {});
     }
   }
