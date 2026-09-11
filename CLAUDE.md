@@ -23,7 +23,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Read this first. Where it disagrees with older sections, this wins.
 
 ### Events — one embedded document, no subcollection
-- The event model is **`EventDocument`** (`Model/EventDocument.swift`, previously named `FirestoreEventDocument`), stored as a single doc at `events/{id}`. **Segments are an embedded `[RunSegment]` array on the document — there is no `events/{id}/segments` subcollection.** Route GPS is one encoded `routePolyline` string (`PolylineCodec`, `Utility/Extensions/PolylineCodec.swift`).
+- The event model is **`EventDocument`** (`Model/EventDocument.swift`), stored as a single doc at `events/{id}`. **Segments are an embedded `[RunSegment]` array on the document — there is no `events/{id}/segments` subcollection.** Route GPS is one encoded `routePolyline` string (`PolylineCodec`, `Utility/Extensions/PolylineCodec.swift`).
 - Key fields: `status` (`active`/`completed`/`deleted` → `EventStatus`, defined in the same file), `syncStatus` (`pending`/`synced` — plain String, no enum), `source` (`phone`/`watch`), `activityType`, `createdAt`. Variable-shape watch data uses `FirestoreFlexibleValue` (`completedSegments`).
 - Repository: **`FirestoreEventRepository.shared`** (accessor: `EventRepository.shared` enum). The single parse path for raw ConnectIQ `[String: Any]` payloads is **`EventDocumentMapper`** — never parse event dicts anywhere else.
 - **Immutable on sync**: `id` (doc key), `source`, and `createdAt` are set once at creation and must never be rewritten by a later app⇄watch sync. `FirestoreEventRepository.upsert` reloads the existing doc and preserves them. App-created payloads tag `source: "phone"`; a source-less payload arriving through the sync layer is treated as `"watch"`.
@@ -51,7 +51,7 @@ Read this first. Where it disagrees with older sections, this wins.
 - `ActivityType` (`run`/`walking`/`cycling`/`other`, defined in `Modules/Dashboard/Home/NewRun/ViewModel/ActivityType.swift`) exposes `.title` (header text) and `.icon` (asset). `EventDocument.eventType` is a typed accessor over the stored `activityType` string; `ActivityData.eventType` carries it to the UI (set by `EventDocumentMapper`). Drives the EventDetails title and the Home/History activity-row icons.
 
 ### Home is a single native `List`
-- Home is one `List` — a self-sizing header row + upcoming events as rows with native `.swipeActions`. This replaced a `ScrollView` + custom gesture row. History uses the same `List` + `.swipeActions` pattern (the reference for smooth scroll + swipe).
+- Home is one `List` — a self-sizing header row + upcoming events as rows with native `.swipeActions`. History uses the same `List` + `.swipeActions` pattern (the reference for smooth scroll + swipe).
 - **Never put a `GeometryReader` inside a `List`/collection cell** — the unstable self-sizing height crashes with `UICollectionView … recursive layout loop`. Size deterministically (e.g. from `UIScreen.main.bounds.width`).
 - **Buttons inside a `List` row need `.buttonStyle(.borderless)` / `.plain`**, otherwise the row swallows the tap (this is why `runActionGrid` and the metric capsules set an explicit button style).
 
@@ -72,11 +72,11 @@ Read this first. Where it disagrees with older sections, this wins.
 - **Friendly auth errors**: never surface `error.localizedDescription` to users. Route every auth/sign-in error through **`AuthErrorMapper.message(for:)`** (`Utility/Manager/Auth/`), which maps `AuthErrorCode` + network errors to short non-technical copy.
 
 ### Remote session validation (account deleted/disabled elsewhere)
-- **`AuthManager.verifyAccountStillValid()`** forces a token refresh via `user.getIDTokenResult(forcingRefresh: true)` — a deleted/disabled account's **refresh token is revoked**, so this fails reliably. `user.reload()` was NOT enough: it can pass while the cached ID token is still unexpired (~1h), and the 500 MB Firestore offline cache then serves reads / queues writes on a dead session. On a genuine revoke it signs out + shows the **"Session expired"** alert (`endRemotelyEndedSession`); a `networkError` returns valid so an offline user isn't logged out. Re-entrancy-guarded by `isEndingRemoteSession`.
+- **`AuthManager.verifyAccountStillValid()`** forces a token refresh via `user.getIDTokenResult(forcingRefresh: true)` — a deleted/disabled account's **refresh token is revoked**, so this fails reliably. `user.reload()` isn't enough: it can pass while the cached ID token is still unexpired (~1h), and the 500 MB Firestore offline cache then serves reads / queues writes on a dead session. On a genuine revoke it signs out + shows the **"Session expired"** alert (`endRemotelyEndedSession`); a `networkError` returns valid so an offline user isn't logged out. Re-entrancy-guarded by `isEndingRemoteSession`.
 - **Triggers**: app foreground (`PaceApp` `scenePhase == .active`); before every sensitive write — profile edit (`ProfileViewModel.updateProfile`) and event **create/edit/delete** (`CreateRunEventViewModel`, `EditEventScreen`, `ConnectIQManager.deleteSyncedEvent` — the single delete path for Home, History, and Event Details); and the live profile listener's permission-denied (`listenToProfile` → `onChange(nil)` → `verifySessionOrSignOut`). Background watch-sync writes are **not** gated (they keep their own permission-denied handling). Sign-out then routes to login via the auth-state listener (`user == nil` → `logout()` + `setRoot(.auth)`).
 
 ### Profile load on sign-in — never overwrite an existing profile
-- **`loadOrCreateProfile`** (in `AuthManager.configure`'s auth-state listener) tries a cache-first `fetchProfile`; on a miss it confirms against the **server** via **`fetchProfileFromServer` → `.found` / `.missing` / `.unreachable`** and only `seedNewUser` (creates an empty doc) when the server says **`.missing`**. A fresh-device cache miss or transient failure NEVER seeds/overwrites. This fixed "enter name / set up profile every time" on a new device: the old catch-all treated any fetch error as a new user and `upsertProfile`'d an empty model over the real one, wiping the name.
+- **`loadOrCreateProfile`** (in `AuthManager.configure`'s auth-state listener) tries a cache-first `fetchProfile`; on a miss it confirms against the **server** via **`fetchProfileFromServer` → `.found` / `.missing` / `.unreachable`** and only `seedNewUser` (creates an empty doc) when the server says **`.missing`**. A fresh-device cache miss or transient failure never seeds or overwrites — treating a fetch error as a new user would `upsertProfile` an empty model over the real profile and wipe the name.
 
 ### Gait unit conversion (Feet ⇄ Meters)
 - `GaitStrideCalculator.convert(_:fromUnit:toUnit:)` converts a step length between `Feet`/`Meters`, snapped to the picker's 1-dp resolution. `GaitSelectionView` calls it on the Meters/Feet segment `.onChange` so the shown value stays the same real measurement — shared by onboarding **SetGaitStepView** and **Profile → UpdateGait** (same component).
@@ -93,7 +93,7 @@ Read this first. Where it disagrees with older sections, this wins.
 - **Upload honesty**: covered distance = `actualDistance`, else the sum of `completedSegments.completed_distance`, omitted entirely when nothing was covered — never the planned `distanceValue`. Start time = `completedAt − actualTimeSeconds`. Event `measure` is `"Miles"`/`"Kilometers"`/`"Kms"` — functions treat anything ≠ `"Miles"` as km.
 - Entry points: Profile menu row → `.stravaIntegration`; Settings card (official orange **Connect with Strava** button when disconnected via the shared **`StravaConnectButton`** — `Modules/Shared/`, asset `icStravaConnectOrange` on the `StravaOrange` color; **gradient Resync + red Disconnect** when connected); onboarding `connectStrava` step — its **footer** is that same Connect button until linked, then **Next**. The Connect button shows a spinner (`StravaConnectButton(isLoading:)`) while **`StravaManager.isWorking`** — true during the OAuth code exchange after the callback returns. Backlog + Strava's connected-athlete quota limitation (403 on authorize) live in `STRAVA_TODO.md` / `functions/STRAVA_SETUP.md`.
 
-### Deletes — real deletes vs the watch's bulk list (fix `aa13faa`, verified against the watch code)
+### Deletes — real deletes vs the watch's bulk list
 - The watch's **bulk `deletedEventIds`** (in `sync_request`/`sync_all`) is reconciled **locally only** via **`reconcileDeletedEventIds`** → `removeEventLocally` — no Firestore soft-delete and **no `EventDeletionCenter` broadcast**, so Firestore-backed lists stay put. Verified reason: the watch also tombstones **every event it finishes** (`ActiveEvent` → `rememberDeletedEventId(self.id)`), so that list is not a list of user deletes. An id live in the same payload's lists is kept (**live-data-wins**).
 - **Real deletes** all go through `applyDeletedEventId` (records the id in `deletedEvents`, prunes local state, broadcasts via `EventDeletionCenter`, `softDelete`): the app delete (`deleteSyncedEvent` — the only delete path for Home, History, Event Details), the watch's live **`delete_event`**, and the watch's **`pendingDeletedEventIds`** (unconfirmed watch deletes, sent with every sync). Watch deletes go through **`applyWatchDelete`**, which waits for a signed-in user and **confirms each one back** with `delete_event` via the outbox so the watch can stop re-sending it.
 - `pendingDeletedEventIds` needs the watch-side change (handed to the watch developer; not in `PaceApp-Garmin` yet). Until the watch sends it, a watch delete made while the phone is out of range stays local-only and its Firestore doc survives.
@@ -104,7 +104,7 @@ Read this first. Where it disagrees with older sections, this wins.
 - **Load before anything**: `ensureEventStateLoaded()` seeds `activeEventPayloads` / `completedEventPayloads` / `deletedEvents: [Int: Date]` from Firestore **once per signed-in user**. Every event mutation awaits it, and watch messages that arrive earlier are buffered and handled in order (`receiveWatchMessage` → `handleBufferedWatchMessages`), so a late load never overwrites newer state.
 - **Outbox**: create/edit/delete call `enqueueWatchChange` → `WatchOutboxEntry` (`Model/`) persisted in **`AppSession.watchOutbox`** (one entry per event, newest wins; cleared on sign-out). `flushWatchOutbox` resolves the payload at send time (completed → **`finish_event`**, active → **`create_event`**, delete → `delete_event`), removes an entry only on **`IQSendMessageResult.success`**, stops while the watch is unreachable, and skips payload rejections (`UnsupportedType` / `InsufficientMemory`). Triggered after each enqueue and on connect — no delay-based retries.
 - **One send at a time**: every message goes through `enqueueSend` (a serial chain awaiting each SDK completion) — the SDK can reject overlapping sends (`DeviceIsBusy`).
-- **On connect** (`connectToApp`): load state → `requestFullSync()` (**never forced** — `forceResync` was removed) → `requestSettings()` → flush the outbox. An incoming `is_force_update` still **merges**; never clear phone state first.
+- **On connect** (`connectToApp`): load state → `requestFullSync()` (**never forced**) → `requestSettings()` → flush the outbox. An incoming `is_force_update` still **merges**; never clear phone state first.
 - **Full sync matches the watch's storage caps** (`EventSync.mc` `MAX_ACTIVE_EVENTS = 5`, `MAX_COMPLETED_EVENTS = 3`, `MAX_DELETED_IDS = 50`): newest 5 active / 3 completed by id (ids are creation timestamps), the 50 most recent deletions, **`coordinates` stripped** (the watch no longer stores GPS). Sending more only risks message size and watch memory; the watch prunes the rest anyway.
 - **Stale watch copy of a deleted event** → `upsertEventPayload` skips it and re-sends `delete_event`.
 - **Status comes from the channel, never the fields**: `EventDocumentMapper.document(from:isCompleted:)` marks completed only for `finish_event` / `completedEvents` and drops results from active payloads (an older watch Duplicate copied the original run's results onto the new event, filing it in History).
@@ -112,9 +112,9 @@ Read this first. Where it disagrees with older sections, this wins.
 
 ### Cross-account watch sync (foreign events)
 - The watch keeps its event list across app accounts, so after an account delete/switch it replays events and deletes for docs the new uid can't touch. On the first `permission denied` (upsert or soft-delete) **`recordForeignEvent`** stores the id in **`AppSession.foreignEventIds`** and prunes it locally; `upsertEventPayload` skips those ids on every later sync (list cleared on logout).
-- **Never write when the ownership read is denied**: `FirestoreEventRepository.upsert` rethrows a permission-denied pre-read instead of writing. A rejected write still lands in the local cache first (latency compensation) under the current `userId`, so a foreign run **flashed into History and then vanished** when the server rolled it back. Shared check: **`Error.isFirestorePermissionDenied`** (`Utility/Manager/Firestore/Error+Firestore.swift`).
+- **Never write when the ownership read is denied**: `FirestoreEventRepository.upsert` rethrows a permission-denied pre-read instead of writing. A rejected write still lands in the local cache first (latency compensation) under the current `userId`, so a foreign run would flash into History and vanish when the server rolls it back. Shared check: **`Error.isFirestorePermissionDenied`** (`Utility/Manager/Firestore/Error+Firestore.swift`).
 - `firestore.rules` events **read** allows `resource == null`, so gets/listens on not-yet-created docs return a clean "not found" instead of permission-denied (upsert preloads and fresh-event listeners rely on this).
-- `deleteAccount()` cleanup goes through `deleteDocuments(matching:label:)` — still best-effort, but a skipped cleanup now logs a warning instead of silently orphaning docs.
+- `deleteAccount()` cleanup goes through `deleteDocuments(matching:label:)` — best-effort, and a skipped cleanup logs a warning so orphaned docs are visible.
 
 ### Working style (owner preferences)
 - **Single-line comments** — one concise `//` line over multi-line blocks; keep structure clean. Still preserve `// MARK: -` sections and author headers.
@@ -122,7 +122,7 @@ Read this first. Where it disagrees with older sections, this wins.
 - **At most two comment lines together** — never stack more than two `//` lines in one place; if a block needs more explanation than that, the code is too dense — simplify it instead. (`// MARK: -` headers don't count.)
 - **Commit messages** — conventional `type(scope): summary`, but the summary and bullets must be **non-technical and high-level** (what the user experiences), not implementation detail.
 - **Sole-author commits** — every commit has a single author (the git logged-in user). **Never** append a `Co-Authored-By:` trailer (no Claude co-author).
-- **Build check** — `xcodebuild -project PaceApp.xcodeproj -scheme PaceApp -destination 'id=<sim-udid>' build`. There is no test target. Get an available iPhone 16-class simulator UDID via `xcrun simctl list devices available`.
+- **Build check** — `xcodebuild -project PaceApp.xcodeproj -scheme PaceApp -destination 'id=<sim-udid>' build`. There is no test target. Use the UDID of any available iPhone simulator from `xcrun simctl list devices available`.
 
 ---
 
@@ -133,10 +133,10 @@ Read this first. Where it disagrees with older sections, this wins.
 **Build (CLI):**
 ```bash
 xcodebuild -project PaceApp.xcodeproj -scheme PaceApp \
-  -destination 'platform=iOS Simulator,name=iPhone 16' build
+  -destination 'id=<sim-udid>' build   # UDID of any iPhone in: xcrun simctl list devices available
 ```
 
-**Preferred in-editor build/log workflow** (this environment exposes Xcode tools):
+**In-editor alternative** (only when Xcode's MCP tools are connected in the session):
 - `BuildProject` to compile, then `GetBuildLog` with `severity: error` to read failures.
 - Run this after each batch of file writes.
 
@@ -219,7 +219,7 @@ Core singletons (most are `@Observable @MainActor`):
 | `StravaManager.shared` | Strava OAuth + connection state (client half; Cloud Functions do uploads) |
 | `ToastManager.shared` | Global toast notifications |
 | `AppAlertManager` | Global alert overlay |
-| `AppSessionManager.shared` | UserDefaults wrapper |
+| `AppSession` (static enum, `AppSessionManager.swift`) | UserDefaults wrapper |
 | `EventUpdateCenter.shared` / `EventDeletionCenter.shared` | In-app broadcast of event edits/deletes for live list patching |
 | `HapticManager` | Haptic feedback |
 
@@ -400,12 +400,12 @@ All on `events`:
 2. Registers `addStateDidChangeListener` on `Auth.auth()`
 3. On auth state change: fetches Firestore user profile (creates if new user), starts the live profile listener
 4. Calls `router.setupRootNavigation()` to set appropriate root flow
-5. `autoLogin()` — checks `Auth.auth().currentUser`, restores session
+5. Launch routing — `Router.setupRootNavigation()` picks the root flow via `Router.staticRoot()` (signed-in user + profile completeness)
 
 ### Auth Flow Screens (`Modules/Auth/`)
 
 ```
-SplashScreen → (autoLogin) → Dashboard OR WelcomeScreen
+SplashScreen → (session restore) → Dashboard OR WelcomeScreen
 WelcomeScreen → LoginScreen (LoginViewModel; Phone/Email tabs)
 LoginScreen → OTPVerificationScreen (phone; OTPVerificationViewModel + OTPState machine)
            → "check your email" (email link)
@@ -437,7 +437,7 @@ The CreateAccount flow is a **watch-pairing onboarding wizard**, not a body-metr
 | `.setGait` | `SetGaitStepView` | Step length (shared `GaitSelectionView` with Profile → UpdateGait) |
 | `.connectStrava` | `ConnectStravaStepView` | Link Strava via the shared `StravaManager` flow (Skip available) |
 
-- `connectStrava` is the **active final step** (re-enabled). The step view reads `StravaManager` from the environment; `CreateAccountScreen` overrides the footer title to **"Next"** when `strava.isConnected`, and the footer tap then calls `finishOnboarding()` instead of relaunching OAuth.
+- `connectStrava` is the **active final step**. The step view reads `StravaManager` from the environment; `CreateAccountScreen` overrides the footer title to **"Next"** when `strava.isConnected`, and the footer tap then calls `finishOnboarding()` instead of relaunching OAuth.
 - Container: `CreateAccountScreen.swift` (module root — no `Screen/` subdir). State: `CreateAccountViewModel` with `var currentStep: CreateAccountStep = .profile`; advancement via the enum's computed `next` / `previous` (no `totalSteps` property).
 - The enum provides per-step `title`, `footerButtonTitle`, `showsBack`/`showsSkip`.
 - `ManageWatchStep` (`currentConnected`, `pairWatch`, `chooseYourModel`) mirrors the pairing steps for Profile → Manage Watch.
@@ -661,7 +661,7 @@ Holding the screen structs as `@State` preserves each screen's identity — and 
 - **URL scheme**: `connect://` registered for ConnectIQ callbacks (`paceapp://` is registered separately for the Strava callback)
 - **Queries schemes**: `gcm-ciq` + `strava` in `LSApplicationQueriesSchemes`
 - **Cold launch**: `restoreSessionIfNeeded()` only — reconnecting loads events, syncs, and flushes the watch outbox (see "Phone ⇄ watch event sync")
-- **Key operations**: `initialize()`, `pairDevice()`, `unpairDevice()`, `sendMessage(_:)` (serial, one at a time), `handleOpenURL(_:)`; events: `upsertSyncedActivity(from:)` / `updateEventMetadata(...)` (async), `deleteSyncedEvent(id:)` — each persists to Firestore and queues the watch change
+- **Key operations**: `findDevices()` (Garmin Connect device picker), `handleOpenURL(_:)` (picker callback), `connectToApp(device:)`, `disconnectFromApp()`, `sendMessage(_:)` (serial, one at a time); events: `upsertSyncedActivity(from:)` / `updateEventMetadata(...)` (async), `deleteSyncedEvent(id:)` — each persists to Firestore and queues the watch change
 - **Settings sync**: `sendSettings(gaitOverride:)` (app→watch), `applyRemoteSettings(_:)` (watch→app; echoes in-payload `vibrate_alert`/`beep_alert` when replying), `requestSettings()` (ask the watch for its body metrics). Gait math lives in `GaitStrideCalculator` (`Model/`).
 
 ---
@@ -687,7 +687,7 @@ Holding the screen structs as `@State` preserves each screen's identity — and 
 
 ## Session Management
 
-**`AppSessionManager`** (`Utility/Manager/App Session/`, UserDefaults wrapper) — keys are the **`AppSessionKey`** enum:
+**`AppSession`** (static enum in `Utility/Manager/App Session/AppSessionManager.swift`, UserDefaults wrapper) — keys are the **`AppSessionKey`** enum:
 - `isUserCanViewMetricsPopUp` → `canShowMetricsOnboarding: Bool`
 - `pairedWatchUUID` → `pairedWatchUUID: String?`
 - `pairedDevices` → `pairedDevices: [PersistedDevice]`
@@ -737,7 +737,7 @@ Holding the screen structs as `@State` preserves each screen's identity — and 
 1. **Never use `ObservableObject`/`@Published`** — the project uses Swift's `@Observable` macro exclusively.
 2. **Never create new Router instances** — always use `Router.shared` and `@Environment(Router.self)`.
 3. **Always use tab indentation** — match the existing codebase style.
-4. **Preserve all `// MARK: -` sections** and file header comments. Never remove inline comments or block comments.
+4. **Preserve all `// MARK: -` sections** and file header comments. Update or remove a comment only when the code it describes changes.
 5. **Firestore operations must go through the Repository layer** — never write raw Firestore calls in ViewModels or Views (known exception: `AnalyticsRepository`).
 6. **New screens** must follow the `*Screen` naming convention and be added to both `Destinations` enum and `Router+Destination.swift` (or, for tab-child details, to `TabNavigationState` + `TabBarScreen`'s destinations).
 7. **New root flows** must be added to `RootFlow` enum in `Router+Roots.swift` and handled in `Router.rootView()`.
@@ -802,10 +802,10 @@ Holding the screen structs as `@State` preserves each screen's identity — and 
 |---|---|---|
 | **firebase-ios-sdk** | 12.14.0 | `FirebaseAuth`, `FirebaseFirestore`, `FirebaseCore` |
 | **connectiq-companion-app-sdk-ios** (Garmin) | 1.8.0 | ConnectIQ watch SDK |
-| **swift-log** (apple) | 1.13.1 | Structured logging (`Logger.app`) |
+| **swift-log** (apple) | 1.13.1 | Structured logging (global `logger` in `Utility/Helpers/Logger.swift`) |
 | **CountryPicker** (SURYAKANTSHARMA) | 5.0.2 | Country/dial-code picker for phone auth |
 
-Plus Firebase's transitive deps (abseil, gRPC, GoogleAppMeasurement, GoogleUtilities, leveldb, nanopb, promises, app-check, …). **FITSwiftSDK has been removed** — older notes referencing it are obsolete.
+Plus Firebase's transitive deps (abseil, gRPC, GoogleAppMeasurement, GoogleUtilities, leveldb, nanopb, promises, app-check, …).
 
 ---
 
@@ -832,9 +832,7 @@ firebase-hosting/public/
 
 ### Pre-Edit Workflow
 
-1. **Read all relevant files** before making changes.
-2. **Fix root causes** rather than symptoms.
-3. **Prefer complete file rewrites** over incremental partial fixes when conflicting or redundant code is the source of confusion.
+- **Prefer complete file rewrites** over incremental partial fixes when conflicting or redundant code is the source of confusion.
 
 ### Adding a New Feature Checklist
 
@@ -848,7 +846,7 @@ firebase-hosting/public/
 
 ### Build Verification
 
-After each batch of file writes: `BuildProject` → `GetBuildLog` with `severity: error`.
+After each batch of file writes, build (see **Build, Test & Deploy Commands**) and read the errors.
 
 ### Git Commits
 
@@ -868,7 +866,7 @@ feat(scope): impactful non-technical summary
 - **`AnalyticsRepository` bypasses the protocol layer** — reads Firestore directly; acceptable for read-only aggregation, but don't copy the pattern for writes.
 - **Manual gait edits are overwritten** by height-derived gait on each watch connect / Profile visit — a "manual override" flag would be needed to preserve them.
 - **`heightCm`/`weightKg` are watch-sourced only** — onboarding doesn't collect them.
-- **Strava uploads carry per-segment laps** (TCX) but are still **summary-level** — no GPS map / route or HR trace (no timestamped track is stored); new-API-app athlete quota applies (403 "limit of connected athletes" until Strava grants an increase). The official "Connect with Strava" button, revoke-endpoint migration, and the deauthorization webhook are now **in**; remaining work — register the webhook push subscription + arm `STRAVA_WEBHOOK_SUBSCRIPTION_ID`, a `stravaSyncStatus` field on events, and GPX/HR upload — is tracked in `STRAVA_TODO.md`.
+- **Strava uploads carry per-segment laps** (TCX) but are still **summary-level** — no GPS map / route or HR trace (no timestamped track is stored); new-API-app athlete quota applies (403 "limit of connected athletes" until Strava grants an increase). Remaining work — register the webhook push subscription + arm `STRAVA_WEBHOOK_SUBSCRIPTION_ID`, a `stravaSyncStatus` field on events, and GPX/HR upload — is tracked in `STRAVA_TODO.md`.
 - **No test target** — verification is build-only.
 - **Localization** — copy lives in `Resources/Localizable.xcstrings`; keep user-facing strings localized.
 - **Watch-side delete confirmation pending** — the phone handles `pendingDeletedEventIds`, but the watch app doesn't send it yet (handed to the watch developer).
