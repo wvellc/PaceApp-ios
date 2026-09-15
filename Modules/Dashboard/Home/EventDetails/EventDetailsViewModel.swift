@@ -137,6 +137,12 @@ final class EventDetailsViewModel {
 		return "\(data.avgHeartRate) bpm"
 	}
 
+	/// Average pace from the watch, e.g. "09:00 /mi" — "00:00" when it sent none; hidden on upcoming events.
+	var averagePace: String {
+		guard let data = activityData, isCompletedEvent else { return "—" }
+		return "\(data.avgPaceFormatted) /\(MeasureUnit(measure: data.measure).shortLabel)"
+	}
+
 	// MARK: - Computed: Intervals (Paces)
 	//
 	// For completed events, the watch sends a "paces" array — one entry per interval,

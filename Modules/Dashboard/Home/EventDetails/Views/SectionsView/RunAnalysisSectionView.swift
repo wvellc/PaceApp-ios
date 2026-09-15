@@ -29,8 +29,8 @@ struct RunAnalysisSectionView: View {
 	
 	/// Builds the stats grid dynamically.
 	/// Fields with "—" values are hidden to keep the display clean.
-	/// Active events show: Event Distance, Finish Time Goal, Look-Back Intervals, Segments.
-	/// Completed events additionally show: Completed Distance, Total Time Taken, Time Variance, Average Heart Rate.
+	/// Active events show: Event Distance, Finish Time Goal, Look-Back Intervals, Segments (when the event has them).
+	/// Completed events additionally show: Completed Distance, Total Time Taken, Time Variance, Average Heart Rate, Average Pace.
 	private var stats: [StatItem] {
 		[
 			StatItem(label: "Event Distance",      value: viewModel.eventDistance),
@@ -40,7 +40,8 @@ struct RunAnalysisSectionView: View {
 			StatItem(label: "Time Variance",       value: viewModel.timeVariance),
 			StatItem(label: "Look-Back Intervals", value: viewModel.lookBackIntervals),
 			StatItem(label: "Segments",            value: viewModel.segmentsCount),
-			StatItem(label: "Average Heart Rate",  value: viewModel.averageHeartRate)
+			StatItem(label: "Average Heart Rate",  value: viewModel.averageHeartRate),
+			StatItem(label: "Average Pace",        value: viewModel.averagePace)
 		].filter { $0.value != nil && $0.value != "—" }
 	}
 	
