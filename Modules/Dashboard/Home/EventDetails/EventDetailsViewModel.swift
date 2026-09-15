@@ -126,8 +126,9 @@ final class EventDetailsViewModel {
 		activityData?.intervals ?? "—"
 	}
 
+	/// Segment count — "—" hides the stat when the event has no segments (the watch's rule: more than 1).
 	var segmentsCount: String {
-		guard let data = activityData else { return "0" }
+		guard let data = activityData, data.segmentCount > 1 else { return "—" }
 		return "\(data.segmentCount)"
 	}
 

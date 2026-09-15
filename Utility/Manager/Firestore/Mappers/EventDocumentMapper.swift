@@ -153,7 +153,7 @@ enum EventDocumentMapper {
 			goal: goalStr,
 			measure: document.measure,
 			intervals: "\(document.lookBackIntervals)",
-			segmentCount: max(segments.count, 1),
+			segmentCount: segments.count,                            // 0 = no segments (the watch's "1" means none too)
 			segments: segments,                                      // typed [RunSegment] — no dict conversion
 			completedSegments: genericDictsToAny(document.completedSegments),
 			actualDist: actualDistStr,
