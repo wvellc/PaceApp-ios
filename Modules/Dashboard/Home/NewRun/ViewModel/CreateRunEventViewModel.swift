@@ -218,8 +218,9 @@ class CreateRunEventViewModel {
 	}
 
 	func validateDistance() -> Bool {
-		if hundredths(distance) == 0 {
-			ToastManager.shared.present(.warning(String(localized: .distanceIsRequired)))
+		// Events start at 1.00 mi/km — shorter distances go in segments
+		if hundredths(distance) < 100 {
+			ToastManager.shared.present(.warning(String(localized: "Distance must be at least 1.00.")))
 			return false
 		}
 		return true
