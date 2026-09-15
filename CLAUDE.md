@@ -117,9 +117,9 @@ Read this first. Where it disagrees with older sections, this wins.
 - `deleteAccount()` cleanup goes through `deleteDocuments(matching:label:)` — best-effort, and a skipped cleanup logs a warning so orphaned docs are visible.
 
 ### New event form — distance & segment checks
-- `CreateRunEventViewModel` validates each step on Next: **`validateDistance()`** (blocks a 0.00 distance — toast "Distance is required."), `validateGoalTime()`, and **`validateCurrentSegment()`** on every segment.
+- `CreateRunEventViewModel` validates each step on Next: **`validateDistance()`** (events start at 1.00 — toast "Distance must be at least 1.00."), `validateGoalTime()`, and **`validateCurrentSegment()`** on every segment.
 - **Distances compare in whole hundredths** (`hundredths(_:)`, the wheels' resolution), never raw `Double` sums — 3 × 1.10 sums to 3.3000000000000003 and would falsely "exceed" 3.30. Only the running **sum** is rounded, so an untouched default split (1 ÷ 3) still totals exactly; `normalizingWatchDistances` lands the rounding remainder on the last segment when saving.
-- **Every distance wheel includes `00`** (0...999 — `DistanceStepView` and `SegmentDistancePickerRow`). A wheel whose selection has no matching row shows its first row, so a missing `00` displayed "01" for a real 0.xx distance. Switching Kms/Miles keeps the chosen number (no reset).
+- **Event distance starts at 1.00**: `DistanceStepView`'s whole-number wheel is 1...999 and its binding clamps to ≥ 1; segment wheels (`SegmentDistancePickerRow`) keep `00` for sub-1 segments. A wheel's value must always match one of its rows — an unmatched selection shows the first row, which once displayed "01" for a real 0.xx distance. Switching Kms/Miles keeps the chosen number (no reset).
 
 ### Working style (owner preferences)
 - **Single-line comments** — one concise `//` line over multi-line blocks; keep structure clean. Still preserve `// MARK: -` sections and author headers.
@@ -797,7 +797,7 @@ Holding the screen structs as `@State` preserves each screen's identity — and 
 | **Watch duplicate appears in History as a finished run** | Never infer completion from fields — status comes from the channel (`finish_event` / `completedEvents`), and active payloads drop results (`document(from:isCompleted:)`). |
 | **Deleted event comes back / create never reaches the watch** | Deletion records must not be pruned by list membership (`deletedEvents`), phone state must load before any sync, and phone changes go through the outbox (cleared only on a successful send) — never a one-shot `sendMessage`. |
 | **Sync message fails or the watch runs out of memory** | Send only what the watch keeps (5 active / 3 completed / 50 deletions) and strip `coordinates` (`watchSyncPayloads`). |
-| **Segment check says "exceeds total distance" on a valid plan** | Compare distances in hundredths (`CreateRunEventViewModel.hundredths`), never raw `Double` sums; and give every distance wheel a `00` row so the screen can't show "01" while the real value is 0.xx. |
+| **Segment check says "exceeds total distance" on a valid plan** | Compare distances in hundredths (`CreateRunEventViewModel.hundredths`), never raw `Double` sums; and keep every wheel's value inside its rows (event distance clamps to ≥ 1.00, segment wheels include `00`) so the screen can't show "01" while the real value is 0.xx. |
 | **New Swift file isn't compiled** | Some folders (e.g. `Utility/Extensions/`) are classic Xcode groups listed in `project.pbxproj`; synchronized folders (e.g. `Model/`, `Modules/`, `Router/`, `Utility/Manager/`) pick new files up automatically. Put new files in a synchronized folder or add them to the project. |
 
 ---
