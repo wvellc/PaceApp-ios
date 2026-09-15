@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # PaceApp iOS — Project Intelligence
 
-> Last verified against the codebase on 2026-08-11 (branch `strava-integration`); phone ⇄ watch sync notes re-verified 2026-09-10 (branch `sync_watch_phone`, against watch repo `PaceApp-Garmin` branch `v2.3-fixes`); new event form checks verified 2026-09-15 (branch `development`).
+> Last verified against the codebase on 2026-08-11 (branch `strava-integration`); phone ⇄ watch sync notes re-verified 2026-09-10 (branch `sync_watch_phone`, against watch repo `PaceApp-Garmin` branch `v2.3-fixes`); new event form checks and Event Details stats verified 2026-09-15 (branch `development`).
 
 ## Overview
 
@@ -60,6 +60,11 @@ Read this first. Where it disagrees with older sections, this wins.
 
 ### EventDetails map
 - Show the route map only when `hasRouteData` == **≥ 2 valid, non-`(0,0)` coordinates**. `routeCoordinates` filters invalid/placeholder points the watch/Firebase send; a single point can't draw a polyline.
+
+### EventDetails Analysis stats
+- `RunAnalysisSectionView` lists the stats in order and **hides any value that is `"—"`** — hide a stat by returning `"—"` from its `EventDetailsViewModel` property, not by removing it from the list. Result stats (Completed Distance, Total Time Taken, Time Variance, Average Heart Rate, Average Pace) return `"—"` on upcoming events.
+- **Segments** shows only when the event has **more than 1** segment. A no-segment event stores an empty `segments` list, and both phone and watch send `segmentCount: 1` for it — the watch's "none". `activityData(from:)` sets `ActivityData.segmentCount` to the real `segments.count` (0 = none).
+- **Average Pace** is the watch's `avgPace` via `ActivityData.avgPaceFormatted` plus unit (`"09:00 /mi"`), `"00:00"` when the watch sent none — the same value as the Home capsule (see the look-back caveat in Known Gaps).
 
 ### Edit propagation (name/location) + live list updates
 - The Firestore write is the source of truth. **`EventUpdateCenter`** broadcasts a name/location edit (mirrors **`EventDeletionCenter`** for deletes — both in `Utility/Manager/`); **Home upcoming, History, Favorites, and Event Details** each observe it via `.onChange` and patch the matching row in place — no refetch. History floats the just-edited row to the top (it orders by `updatedAt`).
@@ -798,6 +803,7 @@ Holding the screen structs as `@State` preserves each screen's identity — and 
 | **Deleted event comes back / create never reaches the watch** | Deletion records must not be pruned by list membership (`deletedEvents`), phone state must load before any sync, and phone changes go through the outbox (cleared only on a successful send) — never a one-shot `sendMessage`. |
 | **Sync message fails or the watch runs out of memory** | Send only what the watch keeps (5 active / 3 completed / 50 deletions) and strip `coordinates` (`watchSyncPayloads`). |
 | **Segment check says "exceeds total distance" on a valid plan** | Compare distances in hundredths (`CreateRunEventViewModel.hundredths`), never raw `Double` sums; and keep every wheel's value inside its rows (event distance clamps to ≥ 1.00, segment wheels include `00`) so the screen can't show "01" while the real value is 0.xx. |
+| **"Segments 1" on a run without segments** | `segmentCount: 1` with an empty `segments` list means *no segments* (phone and watch). Use the real `segments.count` and show the stat only above 1 — never `max(count, 1)`. |
 | **New Swift file isn't compiled** | Some folders (e.g. `Utility/Extensions/`) are classic Xcode groups listed in `project.pbxproj`; synchronized folders (e.g. `Model/`, `Modules/`, `Router/`, `Utility/Manager/`) pick new files up automatically. Put new files in a synchronized folder or add them to the project. |
 
 ---
@@ -878,5 +884,5 @@ feat(scope): impactful non-technical summary
 - **Watch-side delete confirmation pending** — the phone handles `pendingDeletedEventIds`, but the watch app doesn't send it yet (handed to the watch developer).
 - **Older watch-duplicate docs stay mis-filed** as completed runs (created before the status-from-channel fix) — they can't be told apart reliably; delete them from History.
 - **The watch keeps a previous account's `pending` events** — it never prunes pending events, so they fill its completed list until deleted on the watch.
-- **Average pace is the watch's look-back average** — a finished run's `avgPace` averages only the last *Look-Back Intervals* whole miles/km and skips a final part-interval (`updateAveragePace()` in `ActiveEvent.mc`). The phone shows it as-is (Home capsule, History cards, Stats, Strava description). Fix handed to the watch developer: save time ÷ distance covered in `getRecord()`, keeping the look-back average for live ETA / required pace.
+- **Average pace is the watch's look-back average** — a finished run's `avgPace` averages only the last *Look-Back Intervals* whole miles/km and skips a final part-interval (`updateAveragePace()` in `ActiveEvent.mc`). The phone shows it as-is (Home capsule, Event Details, History cards, Stats, Strava description). Fix handed to the watch developer: save time ÷ distance covered in `getRecord()`, keeping the look-back average for live ETA / required pace.
 - **A 0.00 segment is accepted** mid-event as long as the later segments make up the total — there's no per-segment minimum yet.

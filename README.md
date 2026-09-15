@@ -47,7 +47,7 @@ PaceApp is a native iOS companion for runners and walkers who race against a goa
 | ⌚ | **Garmin pairing & sync** | Events created on either side appear on both. Edits and deletes follow, and phone changes wait in a queue until the watch confirms them. |
 | ⚙️ | **Two-way settings** | Units, vibrate/beep alerts and step length (worked out from your height) stay in step between the app and the watch. |
 | 🏠 | **Home at a glance** | Upcoming events with swipe actions, plus your last run's heart rate, distance, finish time, time variance, pace and goal. |
-| 📜 | **History** | Finished runs with filters (distance, date, location), favorites, per-segment results, interval paces, time variance and pace % of goal. |
+| 📜 | **History** | Finished runs with filters (distance, date, location), favorites, per-segment results, interval paces, average pace, time variance and pace % of goal. |
 | 📊 | **Stats** | Trends by week, month or year: average and best pace, effort and more. |
 | 🟠 | **Strava** | Connect once and finished runs upload automatically, with each segment as a Strava lap. Resync or disconnect from Settings. |
 | 🔐 | **Sign-in & security** | Phone OTP or email sign-in link. Deleting or disabling the account elsewhere signs this device out, and account deletion re-authenticates inline. |
