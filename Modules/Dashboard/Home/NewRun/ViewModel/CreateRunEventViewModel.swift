@@ -33,13 +33,6 @@ class CreateRunEventViewModel {
 	var distanceType: MeasureUnit = .miles
 	var distance: Double = 1.0  // Double aligns with RunSegment.distance and Firestore storage
 
-	var distanceRange: [Double] {
-		switch distanceType {
-			case .km:    return Array(stride(from: 0.5, through: 200.0, by: 0.5))
-			case .miles: return Array(stride(from: 0.5, through: 150.0, by: 0.5))
-		}
-	}
-
 	// MARK: Step 3 – Goal Time
 	var goalHours: Int = 0
 	var goalMinutes: Int = 0
@@ -140,7 +133,9 @@ class CreateRunEventViewModel {
 				}
 
 			case .distance:
-				currentStep = .goalTime
+				if validateDistance() {
+					currentStep = .goalTime
+				}
 
 			case .goalTime:
 				if validateGoalTime() {
@@ -222,6 +217,14 @@ class CreateRunEventViewModel {
 		return true
 	}
 
+	func validateDistance() -> Bool {
+		if hundredths(distance) == 0 {
+			ToastManager.shared.present(.warning(String(localized: .distanceIsRequired)))
+			return false
+		}
+		return true
+	}
+
 	func validateGoalTime() -> Bool {
 		if totalGoalSeconds == 0 {
 			ToastManager.shared.present(.warning(String(localized: .goalTimeIsRequired)))
@@ -235,27 +238,29 @@ class CreateRunEventViewModel {
 
 		let currentSegment     = segments[currentSegmentIndex]
 		let completedSegments  = Array(segments.prefix(currentSegmentIndex + 1))
-		let cumulativeDistance = completedSegments.reduce(0.0) { $0 + $1.distance }
+		// Distances compare in whole hundredths, so rounding can't break an exact split (3 × 1.10 = 3.30)
+		let segmentDistance    = hundredths(currentSegment.distance)
+		let cumulativeDistance = hundredths(completedSegments.reduce(0.0) { $0 + $1.distance })
 		let cumulativeTime     = completedSegments.reduce(0) { $0 + $1.totalGoalSeconds }
-		let totalDist          = distance
+		let totalDist          = hundredths(distance)
 		let isLastSegment      = currentSegmentIndex == segments.count - 1
+		let segmentLabel       = "S\(currentSegmentIndex + 1)"
 
-		// MARK: Positive value check — every segment must have distance > 0
-		if currentSegment.distance >= totalDist {
-			segmentValidationError = "Combined segment distance exceeds total distance."
+		// MARK: Single segment checks — one segment can't cover the whole event
+		if segmentDistance >= totalDist {
+			segmentValidationError = "\(segmentLabel) distance must be shorter than the total distance."
 			return false
 		}
 
-		// MARK: Positive value check — every segment must have time > 0
 		if currentSegment.totalGoalSeconds >= totalGoalSeconds {
-			segmentValidationError = "Combined segment ETA exceeds total goal."
+			segmentValidationError = "\(segmentLabel) goal time must be shorter than the total goal time."
 			return false
 		}
 
 		// MARK: Exceeds checks — every segment
 
 		if cumulativeDistance > totalDist {
-			segmentValidationError = "The combined segment distance (\(formatDist(cumulativeDistance)) \(distanceType.rawValue)) exceeds total distance (\(formatDist(distance)) \(distanceType.rawValue))."
+			segmentValidationError = "The combined segment distance (\(formatDist(cumulativeDistance)) \(distanceType.rawValue)) exceeds total distance (\(formatDist(totalDist)) \(distanceType.rawValue))."
 			return false
 		}
 
@@ -268,7 +273,7 @@ class CreateRunEventViewModel {
 
 		if isLastSegment {
 			if cumulativeDistance < totalDist {
-				segmentValidationError = "The combined segment distance (\(formatDist(cumulativeDistance)) \(distanceType.rawValue)) is below total distance (\(formatDist(distance)) \(distanceType.rawValue))."
+				segmentValidationError = "The combined segment distance (\(formatDist(cumulativeDistance)) \(distanceType.rawValue)) is below total distance (\(formatDist(totalDist)) \(distanceType.rawValue))."
 				return false
 			}
 
@@ -283,9 +288,14 @@ class CreateRunEventViewModel {
 	}
 
 	// MARK: - Private Helpers
-	/// Formats a distance value to 2 decimal places string
-	private func formatDist(_ value: Double) -> String {
-		String(format: "%.2f", value)
+	/// Distance as whole hundredths — the wheels' resolution (1.10 → 110)
+	private func hundredths(_ value: Double) -> Int {
+		Int((value * 100).rounded())
+	}
+
+	/// Formats a hundredths distance as a 2-decimal string (330 → "3.30")
+	private func formatDist(_ hundredths: Int) -> String {
+		String(format: "%d.%02d", hundredths / 100, hundredths % 100)
 	}
 
 	/// Formats total seconds as HH:MM:SS

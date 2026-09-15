@@ -27,10 +27,6 @@ struct DistanceStepView: View {
 				unselectedForeground: .darkCharcoal,
 				trackBackground: .grayHint
 			)
-			.onChange(of: viewModel.distanceType) { _, newState in
-				// Reset to a valid value in new range
-				viewModel.distance = viewModel.distanceRange.first ?? 1.0
-			}
 			.tint(.radiantBlue)
 			
 			// Distance Value Picker
@@ -47,7 +43,7 @@ struct DistanceStepView: View {
 						viewModel.distance = Double(clampedInt) + fractional
 					}
 				)) {
-					ForEach(1...999, id: \.self) { intVal in
+					ForEach(0...999, id: \.self) { intVal in
 						// Format with at least two digits for small numbers
 						let text = intVal < 100 ? String(format: "%02d", intVal) : String(intVal)
 						Text(text)
@@ -111,9 +107,7 @@ struct DistanceStepView: View {
 
 #Preview("DistanceStepView") {
 	let vm = CreateRunEventViewModel()
-	//	vm.distanceType = .km
-	//    vm.distance = vm.distanceRange.first ?? 1.0
-	
+
 	DistanceStepView(viewModel: vm)
 		.padding()
 }
