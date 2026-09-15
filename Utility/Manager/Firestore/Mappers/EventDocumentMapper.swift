@@ -208,7 +208,8 @@ enum EventDocumentMapper {
 		return rounded
 	}
 
-	/// Rewrites "distance", "actualDist" and each segment "distance" in a watch payload as canonical wire strings.
+	/// Rewrites distances at 2 dp: "distance"/"actualDist" as strings (the watch stores and shows them as text),
+	/// each segment "distance" as a number (the watch does Float maths and `.format` on it).
 	static func normalizingWatchDistances(_ payload: [String: Any]) -> [String: Any] {
 		var result = payload
 		let total = parseDouble(payload["distance"])
@@ -223,7 +224,7 @@ enum EventDocumentMapper {
 			let canonical = canonicalSegmentDistances(segmentDistances, total: total ?? 0)
 			result["segments"] = zip(segments, canonical).map { segment, distance in
 				var segment = segment
-				segment["distance"] = watchDistanceString(distance)
+				segment["distance"] = distance
 				return segment
 			}
 		}

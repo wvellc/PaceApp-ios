@@ -419,7 +419,7 @@ class CreateRunEventViewModel {
 	}
 
 	private func connectIQEventPayload() -> [String: Any] {
-		// Distances leave as canonical wire strings ("14.00") — segments keep summing to the total.
+		// Distances leave at 2 dp — total as "14.00", segments as numbers that still sum to the total.
 		EventDocumentMapper.normalizingWatchDistances(rawConnectIQEventPayload())
 	}
 
