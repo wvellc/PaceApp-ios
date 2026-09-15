@@ -365,7 +365,7 @@ Key fields: `id: Int` (doc key), `userId`, `status`, `name`, `location`, `schedu
 ### EventDocumentMapper
 
 Static-only. Key methods: `document(from:userId:isCompleted:syncStatus:source:) -> (EventDocument, [RunSegment])` (status and results come from `isCompleted` only), `updatedDocument(...)`, `activityData(...)` (→ UI model, incl. `pacePercentage`), `connectIQPayload(from:)` (app→watch), `analyticsRecord(from:) -> EventAnalyticsRecord?`, plus lenient parse helpers (`parseConnectIQDate`, `parseTimeString`, `parseSignedTimeVariance`, `mapActivityType`/`reverseMapActivityType`, …). Uses `PolylineCodec` for `routePolyline`.
-- **Distances on the wire** are canonical 2-dp strings (`distanceFractionDigits`, `normalizingWatchDistances`) — both sides calculate with the value parsed back from the string.
+- **Distances on the wire** are canonical 2-dp values (`distanceFractionDigits`, `normalizingWatchDistances`): event `distance` and `actualDist` as **strings** (`"14.00"` — the watch stores them via `getEventString` and shows the text as-is), segment `distance` as **numbers** (the watch casts them to `Lang.Float` for `.format` and maths, so a string breaks segment runs). Segment values are rounded with the remainder on the last one, so they still sum to the total.
 - **Pace % (`effortPercentage`)** = goal pace ÷ actual pace × 100 (`pacePercentage(for:)`): goal time ÷ planned distance vs actual time ÷ covered distance (`coveredDistance` — `actualDistance`, else the sum of `completed_distance`). 100% = on goal pace, above = faster. Analytics computes it from the document, so older events match; `functions/index.js` `pacePercentage` mirrors it for the Strava description.
 
 ### Firestore Security Rules
