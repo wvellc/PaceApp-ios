@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # PaceApp iOS — Project Intelligence
 
-> Last verified against the codebase on 2026-08-11 (branch `strava-integration`); phone ⇄ watch sync notes re-verified 2026-09-10 (branch `sync_watch_phone`, against watch repo `PaceApp-Garmin` branch `v2.3-fixes`).
+> Last verified against the codebase on 2026-08-11 (branch `strava-integration`); phone ⇄ watch sync notes re-verified 2026-09-10 (branch `sync_watch_phone`, against watch repo `PaceApp-Garmin` branch `v2.3-fixes`); new event form checks verified 2026-09-15 (branch `development`).
 
 ## Overview
 
@@ -115,6 +115,11 @@ Read this first. Where it disagrees with older sections, this wins.
 - **Never write when the ownership read is denied**: `FirestoreEventRepository.upsert` rethrows a permission-denied pre-read instead of writing. A rejected write still lands in the local cache first (latency compensation) under the current `userId`, so a foreign run would flash into History and vanish when the server rolls it back. Shared check: **`Error.isFirestorePermissionDenied`** (`Utility/Manager/Firestore/Error+Firestore.swift`).
 - `firestore.rules` events **read** allows `resource == null`, so gets/listens on not-yet-created docs return a clean "not found" instead of permission-denied (upsert preloads and fresh-event listeners rely on this).
 - `deleteAccount()` cleanup goes through `deleteDocuments(matching:label:)` — best-effort, and a skipped cleanup logs a warning so orphaned docs are visible.
+
+### New event form — distance & segment checks
+- `CreateRunEventViewModel` validates each step on Next: **`validateDistance()`** (blocks a 0.00 distance — toast "Distance is required."), `validateGoalTime()`, and **`validateCurrentSegment()`** on every segment.
+- **Distances compare in whole hundredths** (`hundredths(_:)`, the wheels' resolution), never raw `Double` sums — 3 × 1.10 sums to 3.3000000000000003 and would falsely "exceed" 3.30. Only the running **sum** is rounded, so an untouched default split (1 ÷ 3) still totals exactly; `normalizingWatchDistances` lands the rounding remainder on the last segment when saving.
+- **Every distance wheel includes `00`** (0...999 — `DistanceStepView` and `SegmentDistancePickerRow`). A wheel whose selection has no matching row shows its first row, so a missing `00` displayed "01" for a real 0.xx distance. Switching Kms/Miles keeps the chosen number (no reset).
 
 ### Working style (owner preferences)
 - **Single-line comments** — one concise `//` line over multi-line blocks; keep structure clean. Still preserve `// MARK: -` sections and author headers.
@@ -792,6 +797,7 @@ Holding the screen structs as `@State` preserves each screen's identity — and 
 | **Watch duplicate appears in History as a finished run** | Never infer completion from fields — status comes from the channel (`finish_event` / `completedEvents`), and active payloads drop results (`document(from:isCompleted:)`). |
 | **Deleted event comes back / create never reaches the watch** | Deletion records must not be pruned by list membership (`deletedEvents`), phone state must load before any sync, and phone changes go through the outbox (cleared only on a successful send) — never a one-shot `sendMessage`. |
 | **Sync message fails or the watch runs out of memory** | Send only what the watch keeps (5 active / 3 completed / 50 deletions) and strip `coordinates` (`watchSyncPayloads`). |
+| **Segment check says "exceeds total distance" on a valid plan** | Compare distances in hundredths (`CreateRunEventViewModel.hundredths`), never raw `Double` sums; and give every distance wheel a `00` row so the screen can't show "01" while the real value is 0.xx. |
 | **New Swift file isn't compiled** | Some folders (e.g. `Utility/Extensions/`) are classic Xcode groups listed in `project.pbxproj`; synchronized folders (e.g. `Model/`, `Modules/`, `Router/`, `Utility/Manager/`) pick new files up automatically. Put new files in a synchronized folder or add them to the project. |
 
 ---
@@ -872,3 +878,5 @@ feat(scope): impactful non-technical summary
 - **Watch-side delete confirmation pending** — the phone handles `pendingDeletedEventIds`, but the watch app doesn't send it yet (handed to the watch developer).
 - **Older watch-duplicate docs stay mis-filed** as completed runs (created before the status-from-channel fix) — they can't be told apart reliably; delete them from History.
 - **The watch keeps a previous account's `pending` events** — it never prunes pending events, so they fill its completed list until deleted on the watch.
+- **Average pace is the watch's look-back average** — a finished run's `avgPace` averages only the last *Look-Back Intervals* whole miles/km and skips a final part-interval (`updateAveragePace()` in `ActiveEvent.mc`). The phone shows it as-is (Home capsule, History cards, Stats, Strava description). Fix handed to the watch developer: save time ÷ distance covered in `getRecord()`, keeping the look-back average for live ETA / required pace.
+- **A 0.00 segment is accepted** mid-event as long as the later segments make up the total — there's no per-segment minimum yet.
