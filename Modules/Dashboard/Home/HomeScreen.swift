@@ -108,15 +108,15 @@ struct HomeScreen: View {
 	/// Builds a time-of-day greeting with the user's first name.
 	/// Falls back to "Hey" if the name is not yet loaded.
 	private var greetingText: String {
-		let hour = Calendar.current.component(.hour, from: Date())
-		let salutation: String
-		switch hour {
-			case 5..<12:  salutation = "GM,"    // Good morning
-			case 12..<17: salutation = "GA,"    // Good afternoon
-			default:      salutation = "GE,"    // Good evening
-		}
+//		let hour = Calendar.current.component(.hour, from: Date())
+//		let salutation: String
+//		switch hour {
+//			case 5..<12:  salutation = "GM,"    // Good morning
+//			case 12..<17: salutation = "GA,"    // Good afternoon
+//			default:      salutation = "GE,"    // Good evening
+//		}
 		let name = AuthManager.shared.userDetails?.firstName?.trimmingCharacters(in: .whitespaces)
-		return name.map { "\(salutation) \($0)" } ?? salutation
+		return name.map { "Hi, \($0)" } ?? "Hi"
 	}
 	
 	// MARK: - Metric Row
