@@ -142,7 +142,7 @@ final class HomeViewModel {
 				value: "\(event.avgHeartRate)",
 				unit: "bpm",
 				title: "Average Heart Rate",
-				description: "Your average heart rate recorded across the whole run."
+				description: "Your average heart rate recorded across the whole event."
 			),
 			// 2 — Total distance ⇄ actual finish time (flashes back and forth)
 			flashShowsDistance ? distanceFace(event) : finishTimeFace(event),
@@ -162,7 +162,7 @@ final class HomeViewModel {
 				value: event.avgPaceFormatted,
 				unit: paceUnit,
 				title: "Average Pace",
-				description: "Your average pace for this run."
+				description: "Your average pace for this event."
 			),
 			// 5 — Goal time originally entered when creating the event
 			HomeMetric(
