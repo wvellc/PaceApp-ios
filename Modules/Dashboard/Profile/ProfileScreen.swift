@@ -81,17 +81,17 @@ struct ProfileScreen: View {
 			// Avatar Image
 			avatarShape
 				.fill(.whiteApp)
-				.frame(width: 100, height: 108)
+				.frame(width: 108, height: 108)
 				.overlay {
 					VStack(alignment: .center) {
 						Text(avatarInitials)
-							.font(Gilroy.bold.size(54))
+							.font(Gilroy.bold.size(38))
 							.foregroundStyle(.radiantBlue)
 							.lineLimit(1)
 							.minimumScaleFactor(0.6)
 							.frame(maxWidth: .infinity, maxHeight: .infinity)
 							.padding(.horizontal, 8)
-							.padding(.top, 30)
+							.offset(y: 8)
 					}
 				}
 			
