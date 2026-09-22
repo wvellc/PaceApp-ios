@@ -35,6 +35,9 @@ struct PaceAreaChart: View {
 	// 1. State to track the currently selected index
 	@State private var selectedIndex: Int? = nil
 
+    // How far the first/last axis labels sit outside the plot, into the card padding (16)
+    private static let edgeLabelShift: CGFloat = 8
+
     // Derived range so the chart fills nicely
     private var maxValue: Double { (dataPoints.map(\.value).max() ?? 100) * 1.15 }
 
@@ -118,13 +121,15 @@ struct PaceAreaChart: View {
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 1))
 						.foregroundStyle(.grayLight)
 					if let index = value.as(Int.self), dataPoints.indices.contains(index) {
-						// Anchor the two edge labels inward so they aren't clipped
-						// by the plot bounds: the first hugs leading, the last
-						// hugs trailing, the rest stay centred on their tick.
-						AxisValueLabel(anchor: index == 0 ? .topLeading : (index == dataPoints.count - 1 ? .topTrailing : .top)) {
+						let isFirst = index == 0
+						let isLast = index == dataPoints.count - 1
+						// Edge labels anchor inward so the plot bounds can't clip them, then shift
+						// back out into the card padding so they clear the next month along.
+						AxisValueLabel(anchor: isFirst ? .topLeading : (isLast ? .topTrailing : .top)) {
 							Text(dataPoints[index].label)
 								.font(.semiBold10)
 								.foregroundStyle(.grayMild)
+								.offset(x: isFirst ? -Self.edgeLabelShift : (isLast ? Self.edgeLabelShift : 0))
 						}
 					}
                 }
