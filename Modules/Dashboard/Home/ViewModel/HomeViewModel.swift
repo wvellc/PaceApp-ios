@@ -186,7 +186,7 @@ final class HomeViewModel {
 			value: hasActual ? event.actualDist : event.distance,
 			unit: hasActual ? MeasureUnit(measure: event.measure).shortLabel : "",
 			title: "Total Distance",
-			description: "The total distance you covered in this run."
+			description: "The total distance you covered in this event."
 		)
 	}
 
@@ -198,7 +198,7 @@ final class HomeViewModel {
 			value: event.duration.isEmpty ? "00:00:00" : event.duration,
 			unit: "time",
 			title: "Finish Time",
-			description: "Your actual finishing time for this run."
+			description: "Your actual finishing time for this event."
 		)
 	}
 
