@@ -7,13 +7,19 @@
 
 import SwiftUI
 import Logging
+import RevenueCatUI
 
 /// Settings screen for user preferences
 struct SettingScreen: View {
-	
+
 	@Environment(Router.self) private var router
 	@Environment(StravaManager.self) private var strava
+	@Environment(SubscriptionManager.self) private var subscription
 	@State private var viewModel = SettingsViewModel()
+
+	/// Pro paywall (free users) and Customer Center (subscribers).
+	@State private var showPaywall = false
+	@State private var showCustomerCenter = false
 	
 	@State private var selectedMenuItem: SettingsMenuItemID? = nil
 	/// Blocks the whole screen while an account action (delete / logout) runs.
@@ -45,6 +51,9 @@ struct SettingScreen: View {
 					.onChange(of: viewModel.selectedUnit) { _, newValue in
 						viewModel.updateDistanceUnit(newValue)      // Prevents didSet crash + debounced save
 					}
+
+					// Pace Pro subscription — Go Pro / Manage Subscription
+					subscriptionSection
 
 					// Strava connection management
 					stravaSection
@@ -100,6 +109,49 @@ struct SettingScreen: View {
 		.sheet(isPresented: $showFAQSafari) {
 			SafariView(url: URL(string: NetworkConst.WebUrl.faq)!)
 				.ignoresSafeArea()
+		}
+		// Pro paywall + Customer Center (RevenueCat).
+		.proPaywall(isPresented: $showPaywall)
+		.sheet(isPresented: $showCustomerCenter) {
+			CustomerCenterView()
+		}
+	}
+
+	// MARK: - Subscription
+
+	/// Pace Pro card — Go Pro opens the paywall; when subscribed it opens the
+	/// RevenueCat Customer Center for managing / cancelling the subscription.
+	@ViewBuilder
+	private var subscriptionSection: some View {
+		VStack(spacing: 14) {
+			VStack(alignment: .leading, spacing: 2) {
+				Text("Pace Pro")
+					.font(.semiBold16)
+					.foregroundStyle(.darkCharcoal)
+				Text(subscription.isPro ? "You're on Pace Pro" : "Unlock unlimited events")
+					.font(.medium14)
+					.foregroundStyle(subscription.isPro ? .fluorescentMint : .fashionGray)
+			}
+			.frame(maxWidth: .infinity, alignment: .leading)
+
+			subscriptionActionButton(title: subscription.isPro ? "Manage Subscription" : "Go Pro") {
+				if subscription.isPro { showCustomerCenter = true } else { showPaywall = true }
+			}
+		}
+		.padding(10)
+		.cardBackground()
+	}
+
+	/// Brand-gradient pill, matching the Strava Resync button.
+	private func subscriptionActionButton(title: String, action: @escaping () -> Void) -> some View {
+		Button(action: action) {
+			Text(title)
+				.font(.semiBold14)
+				.foregroundStyle(.whiteApp)
+				.frame(maxWidth: .infinity)
+				.padding(.vertical, 10)
+				.background(AppGradients.button)
+				.clipShape(Capsule())
 		}
 	}
 
@@ -371,4 +423,5 @@ struct SettingScreen: View {
 	SettingScreen()
 		.environment(Router())
 		.environment(StravaManager.shared)
+		.environment(SubscriptionManager.shared)
 }

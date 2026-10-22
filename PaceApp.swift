@@ -21,6 +21,7 @@ struct PaceApp: App {
 	@State private var router = Router.shared
 	@State private var ciqManager = ConnectIQManager.shared
 	@State private var stravaManager = StravaManager.shared
+	@State private var subscription = SubscriptionManager.shared
 	@Environment(\.scenePhase) private var scenePhase
 	
 	// MARK: - Initialization
@@ -54,6 +55,7 @@ struct PaceApp: App {
 			.environment(router)
 			.environment(ciqManager)
 			.environment(stravaManager)
+			.environment(subscription)
 			.appBackground()
 			.installToast(position: .top)
 			.installAppAlert()

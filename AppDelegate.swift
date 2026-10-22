@@ -21,6 +21,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		
 		// Register the global auth-state listener now that Firebase is ready.
 		AuthManager.shared.configure()
+
+		// Configure RevenueCat — identity is tied to the Firebase uid on sign-in.
+		SubscriptionManager.shared.configure()
 		
 		// Get a reference to Firestore
 		let db = Firestore.firestore()

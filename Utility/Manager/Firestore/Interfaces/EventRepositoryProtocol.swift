@@ -35,6 +35,9 @@ protocol EventRepositoryProtocol: AnyObject {
 	func softDelete(eventId: Int, userId: String) async throws
 	func fetchEvents(byIds ids: [String]) async throws -> [ActivityData]
 
+	/// Server-side count of a user's live events (active + completed) — gates free-plan creation.
+	func countActiveAndCompletedEvents(userId: String) async throws -> Int
+
 	// MARK: - ConnectIQ seeding
 	// One query fetches all user events; client partitions by status. e.g. → ConnectIQEventSnapshot(activePayloads: [...], deletedEvents: [3: date, 7: date])
 	func fetchAllEventPayloads(userId: String) async throws -> ConnectIQEventSnapshot

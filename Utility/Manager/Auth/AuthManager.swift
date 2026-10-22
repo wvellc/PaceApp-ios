@@ -75,12 +75,16 @@ final class AuthManager {
 					// through this listener without any manual pull.
 					self.startProfileListener(userId: user.uid)
 
+					// Tie the RevenueCat customer to this uid so Pro follows the user.
+					SubscriptionManager.shared.identify(userId: user.uid)
+
 					//Set the root navigation
 					Router.shared.setupRootNavigation()
 
 				} else {
 					self.stopProfileListener()
 					self.userDetails = nil
+					SubscriptionManager.shared.signOut()
 
 					try? await AuthManager.shared.logout()
 

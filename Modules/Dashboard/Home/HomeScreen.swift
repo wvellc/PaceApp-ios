@@ -30,6 +30,9 @@ struct HomeScreen: View {
 	
 	/// Presents the FAQ page in an in-app Safari sheet (SFSafariViewController).
 	@State private var showFAQSafari = false
+
+	/// Shown when a free user hits the event limit while tapping New Run.
+	@State private var showPaywall = false
 	
 	// MARK: - Body
 	
@@ -101,6 +104,25 @@ struct HomeScreen: View {
 			SafariView(url: URL(string: NetworkConst.WebUrl.faq)!)
 				.ignoresSafeArea()
 		}
+		// Free-plan event limit — present Pro instead of the create screen.
+		.proPaywall(isPresented: $showPaywall)
+	}
+
+	// MARK: - Run Action Gating
+
+	/// Routes a run action, gating New Run behind the free-plan event limit.
+	private func handleRunAction(_ action: RunAction) {
+		guard action.rout == .createRunEvent else {
+			router.navigate(to: action.rout)
+			return
+		}
+		Task {
+			if await SubscriptionManager.shared.canCreateEvent() {
+				router.navigate(to: .createRunEvent)
+			} else {
+				showPaywall = true
+			}
+		}
 	}
 	
 	// MARK: - Greeting Text
@@ -148,7 +170,7 @@ struct HomeScreen: View {
 		return LazyVGrid(columns: columns, alignment: .center, spacing: spacing) {
 			ForEach(runActions) { action in
 				Button {
-					router.navigate(to: action.rout)
+					handleRunAction(action)
 				} label: {
 					RunActionCard(action: action)
 						.frame(maxWidth: .infinity)

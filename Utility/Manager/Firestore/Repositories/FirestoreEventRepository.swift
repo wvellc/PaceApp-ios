@@ -65,6 +65,17 @@ final class FirestoreEventRepository: EventRepositoryProtocol {
 		return mapDocuments(snapshot.documents)
 	}
 
+	// MARK: - Count (free-tier gating)
+
+	/// Server-side aggregate count of a user's live events (active + completed, not deleted).
+	/// Billed far cheaper than fetching the documents — used to gate free-plan event creation.
+	func countActiveAndCompletedEvents(userId: String) async throws -> Int {
+		let query = eventsQuery(userId: userId)
+			.whereField("status", in: [EventStatus.active.rawValue, EventStatus.completed.rawValue])
+		let snapshot = try await query.count.getAggregation(source: .server)
+		return snapshot.count.intValue
+	}
+
 	// MARK: - Filtered + Paginated Fetch (History screen)
 
 	/// Firestore-side filters: distance range, exact date window.

@@ -23,6 +23,9 @@ struct EventDetailsScreen: View {
 	// MARK: Environment
 	@Environment(\.dismiss) private var dismiss
 	@Environment(ConnectIQManager.self) private var ciqManager
+
+	/// Shown when a free user hits the event limit while duplicating.
+	@State private var showPaywall = false
 	
 	// MARK: Init
 	init(activityData: ActivityData?) {
@@ -53,6 +56,8 @@ struct EventDetailsScreen: View {
 		.navigationDestination(item: $viewModel.duplicateSource) { source in
 			CreateRunEventScreen(type: .duplicate, intialData: source)
 		}
+		// Free-plan event limit — a duplicate still creates an event.
+		.proPaywall(isPresented: $showPaywall)
 	}
 	
 	// MARK: - Scroll Content
@@ -142,7 +147,18 @@ struct EventDetailsScreen: View {
 	// A finished event can be run again, just like on the watch.
 	private var duplicateAction: (() -> Void)? {
 		guard viewModel.isCompletedEvent else { return nil }
-		return viewModel.duplicateEvent
+		return handleDuplicate
+	}
+
+	/// Gates duplication behind the free-plan event limit, same as New Run.
+	private func handleDuplicate() {
+		Task {
+			if await SubscriptionManager.shared.canCreateEvent() {
+				viewModel.duplicateEvent()
+			} else {
+				showPaywall = true
+			}
+		}
 	}
 }
 
