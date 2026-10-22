@@ -14,6 +14,9 @@
 		E60361D42F90B3130036538C /* DatePickerField.swift in Sources */ = {isa = PBXBuildFile; fileRef = E60361D32F90B3130036538C /* DatePickerField.swift */; };
 		E60361D62F90B32F0036538C /* DatePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E60361D52F90B32F0036538C /* DatePickerSheet.swift */; };
 		E60DB71E2FD2E39D00D8127C /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = E60DB71D2FD2E39D00D8127C /* Logger.swift */; };
+		E618F4EC308A20CF0011B332 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = E618F4EB308A20CF0011B332 /* RevenueCat */; };
+		E618F4EE308A20CF0011B332 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = E618F4ED308A20CF0011B332 /* RevenueCatUI */; };
+		E618F4F1308A21300011B332 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E618F4F0308A21300011B332 /* StoreKit.framework */; };
 		E61F82232F63E6CC00C215DF /* AppBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F82222F63E6CC00C215DF /* AppBackground.swift */; };
 		E61F82282F63F50C00C215DF /* BackgroundContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F82272F63F50C00C215DF /* BackgroundContainer.swift */; };
 		E61F83AF2F641B0900C215DF /* CGFloat+Ext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F83AE2F641B0900C215DF /* CGFloat+Ext.swift */; };
@@ -80,6 +83,7 @@
 		E60361D32F90B3130036538C /* DatePickerField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePickerField.swift; sourceTree = "<group>"; };
 		E60361D52F90B32F0036538C /* DatePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePickerSheet.swift; sourceTree = "<group>"; };
 		E60DB71D2FD2E39D00D8127C /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
+		E618F4F0308A21300011B332 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		E61F82222F63E6CC00C215DF /* AppBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBackground.swift; sourceTree = "<group>"; };
 		E61F82272F63F50C00C215DF /* BackgroundContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundContainer.swift; sourceTree = "<group>"; };
 		E61F83AE2F641B0900C215DF /* CGFloat+Ext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CGFloat+Ext.swift"; sourceTree = "<group>"; };
@@ -183,15 +187,26 @@
 				E6A113122FD04B4700F482C7 /* FirebaseAuth in Frameworks */,
 				E6A113162FD04B4700F482C7 /* FirebaseCrashlytics in Frameworks */,
 				18C565A92F8CDF3A007BD365 /* ConnectIQ in Frameworks */,
+				E618F4EC308A20CF0011B332 /* RevenueCat in Frameworks */,
 				E6A113142FD04B4700F482C7 /* FirebaseAuthCombine-Community in Frameworks */,
 				E64AFC432FD2BE7100A21BF0 /* Logging in Frameworks */,
+				E618F4EE308A20CF0011B332 /* RevenueCatUI in Frameworks */,
 				E6A113182FD04B4700F482C7 /* FirebaseFirestore in Frameworks */,
+				E618F4F1308A21300011B332 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		E618F4EF308A21300011B332 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				E618F4F0308A21300011B332 /* StoreKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		E61F82242F63E97800C215DF /* AppBackground */ = {
 			isa = PBXGroup;
 			children = (
@@ -346,6 +361,7 @@
 				E6C69B582F603C8D00ACED81 /* Products */,
 				E6C335CC2F62D60500224AA5 /* Router */,
 				E66B753B3025B0D8006B0CA6 /* GoogleService-Info.plist */,
+				E618F4EF308A21300011B332 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -402,6 +418,8 @@
 				E6A113172FD04B4700F482C7 /* FirebaseFirestore */,
 				E64AFC402FD2BE7100A21BF0 /* InMemoryLogging */,
 				E64AFC422FD2BE7100A21BF0 /* Logging */,
+				E618F4EB308A20CF0011B332 /* RevenueCat */,
+				E618F4ED308A20CF0011B332 /* RevenueCatUI */,
 			);
 			productName = PaceApp;
 			productReference = E6C69B572F603C8D00ACED81 /* PaceApp.app */;
@@ -437,6 +455,7 @@
 				18C565A72F8CDF3A007BD365 /* XCRemoteSwiftPackageReference "connectiq-companion-app-sdk-ios" */,
 				E6A113102FD04B4700F482C7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				E64AFC3F2FD2BE7100A21BF0 /* XCRemoteSwiftPackageReference "swift-log" */,
+				E618F4EA308A20CF0011B332 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E6C69B582F603C8D00ACED81 /* Products */;
@@ -800,6 +819,14 @@
 				minimumVersion = 1.8.0;
 			};
 		};
+		E618F4EA308A20CF0011B332 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.97.0;
+			};
+		};
 		E64AFC3F2FD2BE7100A21BF0 /* XCRemoteSwiftPackageReference "swift-log" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/apple/swift-log";
@@ -831,6 +858,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 18C565A72F8CDF3A007BD365 /* XCRemoteSwiftPackageReference "connectiq-companion-app-sdk-ios" */;
 			productName = ConnectIQ;
+		};
+		E618F4EB308A20CF0011B332 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E618F4EA308A20CF0011B332 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
+		E618F4ED308A20CF0011B332 /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E618F4EA308A20CF0011B332 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCatUI;
 		};
 		E64AFC402FD2BE7100A21BF0 /* InMemoryLogging */ = {
 			isa = XCSwiftPackageProductDependency;
