@@ -20,26 +20,22 @@ paywall are already set up and carry over untouched.
 - Bundle ID: `net.paceapp`
 - App Store product IDs: `pro_monthly`, `pro_yearly`
 
-## A. RevenueCat — add the App Store app (needs ASC credentials)
+## A. RevenueCat — add the App Store app ✅ DONE
 
-- [ ] Project settings → Apps → New → **App Store**
-  - App name: `Pace App (App Store)`
-  - Bundle ID: `net.paceapp`
-  - App-Specific Shared Secret: **copied ✅** — paste into this field
-  - In-App Purchase Key (`.p8` + Key ID + Issuer ID) — recommended; enables product auto-import + refunds
-- [ ] Copy the generated public SDK key (`appl_…`)
-- [ ] App Store Server Notifications V2 — paste RevenueCat's URL into ASC (Production **and** Sandbox)
+- [x] App Store app created — `app4faeb2743f`, bundle `net.paceapp`, subscription key configured
+- [x] Public SDK key obtained (`appl_…`, wired into the app)
+- [x] App Store Server Notifications + preview URL scheme (`rc-4faeb2743f`, in Info.plist) set
 
-## B. Wire products (automatable via the RevenueCat MCP once app A exists)
+## B. Wire products ✅ DONE (via MCP)
 
-- [ ] Register products `pro_monthly`, `pro_yearly` on the App Store app
-- [ ] Attach both to entitlement `pace_app_pro`
-- [ ] Add `pro_monthly` → `$rc_monthly`, `pro_yearly` → `$rc_annual`
+- [x] Registered `pro_monthly` (`prod118bd2bdb0`) and `pro_yearly` (`prod8a8ddd2038`) on the App Store app
+- [x] Attached both to entitlement `pace_app_pro`
+- [x] Added `pro_monthly` → `$rc_monthly`, `pro_yearly` → `$rc_annual`
 
-## C. App code
+## C. App code ✅ DONE
 
-- [ ] `RevenueCatConst.apiKey` → build switch: Test Store key in DEBUG, `appl_` key in release
-- [ ] Build to confirm
+- [x] `RevenueCatConst.apiKey` → build switch: Test Store key in DEBUG, `appl_` key in release
+- [x] Builds clean
 
 ## D. App Store Connect — finish the subscriptions (group `22503378`)
 
