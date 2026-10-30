@@ -103,7 +103,8 @@ final class SubscriptionManager {
 		if isPro { return true }
 		guard let uid = AuthManager.shared.currentUserID else { return true }
 		let count = (try? await EventRepository.shared.countActiveAndCompletedEvents(userId: uid)) ?? 0
-		return count < RevenueCatConst.freeEventLimit
+		// Limit is remote-configurable (Firebase Remote Config), falling back to the constant.
+		return count < RemoteConfigManager.shared.freeEventLimit
 	}
 
 	// MARK: - Private

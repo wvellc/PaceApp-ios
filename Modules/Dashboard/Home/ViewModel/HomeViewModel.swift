@@ -32,8 +32,9 @@ final class HomeViewModel {
 
 	/// Shows the event-list upsell footer once a free user reaches the free event limit —
 	/// the point the next New Run / Duplicate would be gated. Hides the instant they upgrade.
+	/// The limit is remote-configurable (Firebase Remote Config), falling back to the constant.
 	var showProUpsell: Bool {
-		!SubscriptionManager.shared.isPro && liveEventCount >= RevenueCatConst.freeEventLimit
+		!SubscriptionManager.shared.isPro && liveEventCount >= RemoteConfigManager.shared.freeEventLimit
 	}
 
 	// MARK: - Private

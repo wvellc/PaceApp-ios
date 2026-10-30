@@ -74,6 +74,7 @@
 		E6D24C132FF7EFBB003A7D30 /* PolylineCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6D24C122FF7EFBB003A7D30 /* PolylineCodec.swift */; };
 		E6F888EF2F9A2FFC00F17F95 /* NoDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6F888EE2F9A2FFC00F17F95 /* NoDataView.swift */; };
 		F75AFF0330122E83009F1DB7 /* SafariView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75AFF0230122E83009F1DB7 /* SafariView.swift */; };
+		FEEDFACE0000000000000001 /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = FEEDFACE0000000000000002 /* FirebaseRemoteConfig */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -192,6 +193,7 @@
 				E64AFC432FD2BE7100A21BF0 /* Logging in Frameworks */,
 				E618F4EE308A20CF0011B332 /* RevenueCatUI in Frameworks */,
 				E6A113182FD04B4700F482C7 /* FirebaseFirestore in Frameworks */,
+				FEEDFACE0000000000000001 /* FirebaseRemoteConfig in Frameworks */,
 				E618F4F1308A21300011B332 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -416,6 +418,7 @@
 				E6A113132FD04B4700F482C7 /* FirebaseAuthCombine-Community */,
 				E6A113152FD04B4700F482C7 /* FirebaseCrashlytics */,
 				E6A113172FD04B4700F482C7 /* FirebaseFirestore */,
+				FEEDFACE0000000000000002 /* FirebaseRemoteConfig */,
 				E64AFC402FD2BE7100A21BF0 /* InMemoryLogging */,
 				E64AFC422FD2BE7100A21BF0 /* Logging */,
 				E618F4EB308A20CF0011B332 /* RevenueCat */,
@@ -903,6 +906,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = E6B649502F67FAAF00612A01 /* XCRemoteSwiftPackageReference "CountryPicker" */;
 			productName = CountryPicker;
+		};
+		FEEDFACE0000000000000002 /* FirebaseRemoteConfig */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E6A113102FD04B4700F482C7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseRemoteConfig;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -20,6 +20,8 @@ enum RevenueCatConst {
 	/// Entitlement that unlocks Pro — configured in the RevenueCat dashboard.
 	static let entitlementPro = "pace_app_pro"
 
-	/// Free plan allows this many live events (active + completed) before the paywall.
+	/// Fallback free-plan limit: this many live events (active + completed) before the paywall.
+	/// The live value is remote-configurable via Firebase Remote Config ("free_event_limit");
+	/// this constant is the offline/default.
 	static let freeEventLimit = 15
 }

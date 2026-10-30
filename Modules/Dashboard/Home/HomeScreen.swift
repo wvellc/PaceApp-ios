@@ -257,7 +257,7 @@ struct HomeScreen: View {
 						.font(.semiBold16)
 						.foregroundStyle(.fluorescentMint)
 						.multilineTextAlignment(.leading)
-					Text("You've reached the free limit of \(RevenueCatConst.freeEventLimit) events. Upgrade for unlimited events.")
+					Text("You've reached the free limit of \(RemoteConfigManager.shared.freeEventLimit) events. Upgrade for unlimited events.")
 						.font(.medium14)
 						.foregroundStyle(.white.opacity(0.7))
 						.multilineTextAlignment(.leading)

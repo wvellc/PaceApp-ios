@@ -18,6 +18,10 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		
 		// Configure Firebase — MUST run before any Auth.auth() calls.
 		FirebaseApp.configure()
+
+		// Kick off the first Remote Config fetch (free event limit, etc.). Defaults apply
+		// immediately, so the gate is safe before this resolves.
+		RemoteConfigManager.shared.refresh()
 		
 		// Register the global auth-state listener now that Firebase is ready.
 		AuthManager.shared.configure()
