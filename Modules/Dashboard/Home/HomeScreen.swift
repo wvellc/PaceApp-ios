@@ -226,10 +226,52 @@ struct HomeScreen: View {
 					}
 				}
 			}
+
+			// Free-limit upsell footer — a non-Pro user at/over the event limit, where the
+			// next New Run / Duplicate would be gated. Tapping opens the Pace Pro paywall.
+			if viewModel.showProUpsell {
+				proUpsellFooter
+					.listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 14, trailing: 16))
+					.listRowBackground(Color.clear)
+					.listRowSeparator(.hidden)
+			}
 		}
 		.listStyle(.plain)
 		.scrollContentBackground(.hidden)
 		.scrollBounceBehavior(.basedOnSize)
+	}
+
+	// MARK: - Pro Upsell Footer
+
+	// Event-list footer shown once a free user hits the free event limit; opens the paywall.
+	private var proUpsellFooter: some View {
+		Button {
+			showPaywall = true
+		} label: {
+			HStack(spacing: 14) {
+				Image(systemName: "crown.fill")
+					.font(.system(size: 22))
+					.foregroundStyle(.fluorescentMint)
+				VStack(alignment: .leading, spacing: 4) {
+					Text("Get Pace Pro to sync & create more events")
+						.font(.semiBold16)
+						.foregroundStyle(.fluorescentMint)
+						.multilineTextAlignment(.leading)
+					Text("You've reached the free limit of \(RevenueCatConst.freeEventLimit) events. Upgrade for unlimited events.")
+						.font(.medium14)
+						.foregroundStyle(.white.opacity(0.7))
+						.multilineTextAlignment(.leading)
+				}
+				Spacer(minLength: 0)
+			}
+			.padding(16)
+			.background(.darkSeaBlue, in: RoundedRectangle(cornerRadius: 16))
+			.overlay(
+				RoundedRectangle(cornerRadius: 16)
+					.strokeBorder(Color.fluorescentMint.opacity(0.4), lineWidth: 1)
+			)
+		}
+		.buttonStyle(.plain)
 	}
 	
 	// MARK: - Header Block

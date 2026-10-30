@@ -25,6 +25,17 @@ final class HomeViewModel {
 	var upcomingEvents: [ActivityData] = []
 	var isLoadingEvents: Bool = false
 
+	// MARK: - Pace Pro Upsell
+
+	/// Live event count (active + completed) — the same basis as the SubscriptionManager gate.
+	var liveEventCount: Int = 0
+
+	/// Shows the event-list upsell footer once a free user reaches the free event limit —
+	/// the point the next New Run / Duplicate would be gated. Hides the instant they upgrade.
+	var showProUpsell: Bool {
+		!SubscriptionManager.shared.isPro && liveEventCount >= RevenueCatConst.freeEventLimit
+	}
+
 	// MARK: - Private
 
 	private let eventRepository: EventRepositoryProtocol
@@ -75,10 +86,13 @@ final class HomeViewModel {
 			self.isLoadingEvents = false
 			// A run leaving the active set means one just completed — refresh the header metrics.
 			self.refreshLatestCompletedMetrics(userId: userId)
+			// Keep the upsell footer's count in step with creations/completions.
+			self.refreshLiveEventCount(userId: userId)
 		}
 
-		// Seed the header metrics on first attach.
+		// Seed the header metrics + upsell count on first attach.
 		refreshLatestCompletedMetrics(userId: userId)
+		refreshLiveEventCount(userId: userId)
 	}
 
 	func stopObservingEvents() {
@@ -93,6 +107,7 @@ final class HomeViewModel {
 	func handleEventDeleted(eventId: Int, userId: String) {
 		upcomingEvents.removeAll { $0.id == eventId }
 		refreshLatestCompletedMetrics(userId: userId)
+		refreshLiveEventCount(userId: userId)
 	}
 
 	/// Patches an edited event's name/location on the upcoming list in place — driven
@@ -101,6 +116,18 @@ final class HomeViewModel {
 		guard let index = upcomingEvents.firstIndex(where: { $0.id == eventId }) else { return }
 		upcomingEvents[index].title = name
 		upcomingEvents[index].location = location
+	}
+
+	// MARK: - Live Event Count (upsell footer)
+
+	/// Refreshes the active+completed count the upsell footer keys off — the same source
+	/// as the SubscriptionManager gate, so the footer appears exactly when the next New Run
+	/// or Duplicate would be blocked. Keeps the last value on a read error.
+	private func refreshLiveEventCount(userId: String) {
+		Task { @MainActor [weak self] in
+			guard let self else { return }
+			self.liveEventCount = (try? await self.eventRepository.countActiveAndCompletedEvents(userId: userId)) ?? self.liveEventCount
+		}
 	}
 
 	// MARK: - Latest Completed Event → Metrics
