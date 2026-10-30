@@ -57,6 +57,15 @@ paywall are already set up and carry over untouched.
 > fingerprints) but its **source is a separate Android codebase, not in this repo**.
 > The RevenueCat Android SDK must be wired in there, not here.
 
+> **STATUS 2026-10-30 — Android is LIVE and the purchase path is verified on a real
+> device.** F2–F4 are done and F1's subscriptions are published (the on-device paywall
+> showed live Play prices; confirm the exact amounts/display names in Play Console still
+> match the intended values below — the test device's storefront rendered local-currency
+> prices). End-to-end proof: internal-track install → paywall → Google test card → buy
+> Monthly → `pace_app_pro` unlocked → "Subscribed". Non-charging test purchases need the
+> tester under **Play Console → Setup → License testing**. Done in the Android repo
+> (`origin/monetization`); its `CLAUDE.md` documents the layer.
+
 ### F1. Play Console — create the subscriptions (needs Play Console access; app on ≥ internal track)
 
 - [ ] Subscription `pro_monthly` → base plan `monthly`, P1M, auto-renewing, **$7.99**
@@ -65,18 +74,18 @@ paywall are already set up and carry over untouched.
 - Description (≤80): `Unlimited events, Garmin sync, unlimited Strava sharing & advanced insights.`
 - Benefits (≤40, up to 4): `Unlimited events (free stops at 15)` · `Garmin watch sync` · `Unlimited Strava sharing` · `Advanced event insights`
 
-### F2. RevenueCat — add the Play Store app (needs a Google Play service-account JSON — likely the same account-holder gate as the iOS IAP key)
+### F2. RevenueCat — add the Play Store app ✅ DONE
 
-- [ ] Project settings → Apps → New → **Play Store**; package `net.paceapp`; upload the service-account JSON (Play Console → API access → grant subscription/financial permissions)
-- [ ] Copy the generated public SDK key (`goog_…`)
-- [ ] Real-Time Developer Notifications — paste RevenueCat's Pub/Sub topic into Play Console → Monetization setup
+- [x] Project settings → Apps → New → **Play Store**; package `net.paceapp`; service-account JSON uploaded
+- [x] Public SDK key (`goog_…`) copied and wired into the Android app
+- [x] Real-Time Developer Notifications configured (proven live by the on-device purchase → entitlement unlock)
 
-### F3. Wire products (automatable via MCP once F2 exists)
+### F3. Wire products ✅ DONE
 
-- [ ] Register `pro_monthly:monthly`, `pro_yearly:yearly`
-- [ ] Attach both to `pace_app_pro`; add to `$rc_monthly` / `$rc_annual`
+- [x] Registered `pro_monthly:monthly`, `pro_yearly:yearly`
+- [x] Attached both to `pace_app_pro`; added to `$rc_monthly` / `$rc_annual`
 
-### F4. Android app code (separate Android repo)
+### F4. Android app code (separate Android repo) ✅ DONE
 
-- [ ] Add `com.revenuecat.purchases:purchases` (+ `purchases-ui` for the paywall)
-- [ ] Configure with the `goog_` key; `logIn` with the Firebase uid; gate on `pace_app_pro`; present the dashboard paywall (PaywallActivity / Compose); cap free events at 15 — mirror the iOS behaviour
+- [x] Added `com.revenuecat.purchases:purchases` (+ `purchases-ui` for the paywall)
+- [x] Configured with the `goog_` key; `logIn` with the Firebase uid; gate on `pace_app_pro`; present the dashboard paywall (`PaywallActivityLauncher`); cap free events (default 15, now **remotely configurable** via Firebase Remote Config key `free_event_limit`) — mirrors iOS

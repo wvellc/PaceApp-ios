@@ -872,6 +872,17 @@ feat(scope): impactful non-technical summary
 
 ---
 
+## Subscriptions — Pace Pro (RevenueCat)
+
+Paid tier gated by the RevenueCat entitlement **`pace_app_pro`** (`Utility/Constant/RevenueCat.swift`, `entitlementPro`). The `purchases-ios-spm` SDK is configured at launch (`AppDelegate`) with a build switch — RevenueCat **Test Store** key in DEBUG, the `appl_` App Store key in release (`RevenueCatConst.apiKey`). The hosted dashboard paywall (`PaceProPaywall`, `default` offering) is presented via the **`.proPaywall`** modifier (Android parity: `PaywallActivityLauncher` — same dashboard paywall, each platform's native presentation). **`SubscriptionManager`** (`Utility/Manager/Subscription/`, `@Observable @MainActor` singleton) exposes `isPro` and the gate `count < RemoteConfigManager.shared.freeEventLimit`. Gate rule on both platforms: `isPro || (active + completed liveCount) < freeEventLimit`. **Don't gate the sync layer** — the watch→phone archive is ungated; only create/duplicate are gated.
+
+- **Free-event limit is remotely configurable** via Firebase Remote Config — **`Utility/Manager/RemoteConfig/RemoteConfigManager.swift`** (`@Observable @MainActor`), key **`free_event_limit`**, fallback **`RevenueCatConst.freeEventLimit = 15`**. `minimumFetchInterval` 0 in DEBUG / 3600s release; refreshed from `AppDelegate`. Both phones share one Firebase project, so a console change moves the limit on iOS and Android together (Android mirror: `core/config/RemoteConfigManager.kt`, same key).
+- **Home upsell footer** — `Modules/Dashboard/Home/HomeScreen.swift` `proUpsellFooter` renders when `!isPro && liveEventCount >= freeEventLimit` (`HomeViewModel.showProUpsell`), tap → paywall. Android mirror: `ProUpsellFooter.kt`.
+- **Profile Subscription row** (`Modules/Dashboard/Profile/ProfileScreen.swift` `subscriptionRow`) reads "Subscription" for free users (→ paywall) and "Subscribed" + mint seal for Pro (→ **`SubscriptionDetailView`**: a simplified white card — no "Active Plan" label, no "Manage Subscription" button). The RevenueCat **Customer Center** is wired but **dormant** (`showCustomerCenter` + `.sheet { CustomerCenterView() }`) — removing the Manage button left it without an entry point; re-wire if a manage/cancel path is wanted. Android matches (`PlanDetailsDialog`, dormant `CustomerCenterController`).
+- **Go-live + reference IDs** (project, entitlement, offering, package, paywall, product IDs) live in **`REVENUECAT_TODO.md`**. iOS App Store subscriptions (group `22503378`) still await submission (section D); the shared RevenueCat project's **Play side is live** and the **Android purchase path was verified on a real device (2026-10-30)** — test card → `pace_app_pro` unlocked. iOS sandbox purchase is the remaining real-device check once the App Store subscriptions are submitted.
+
+---
+
 ## Known Gaps & On the Horizon
 
 - **Leftover `segments` subcollection rule** in `firestore.rules` — segments are embedded now; the rule is harmless but dead.
