@@ -86,10 +86,6 @@ struct ProfileScreen: View {
 					planPeriod: subscription.planPeriodTitle,
 					renewalDate: subscription.renewalDate,
 					willRenew: subscription.willRenew,
-					onManage: {
-						showSubscriptionDetail = false
-						showCustomerCenter = true
-					},
 					onClose: { showSubscriptionDetail = false }
 				)
 				.transition(.opacity)

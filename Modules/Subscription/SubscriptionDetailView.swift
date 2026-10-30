@@ -5,16 +5,14 @@
 
 import SwiftUI
 
-/// Dark plan-details dialog shown when a subscriber taps the "Subscribed" row.
-/// Mirrors the reference layout — Active Plan header, stat rows, renewal date —
-/// in the app's theme, and keeps Manage Subscription reachable for cancelling.
+/// Light plan-details dialog shown when a subscriber taps the "Subscribed" row.
+/// Pace Pro header, the plan facts and renewal date, then a Close button.
 struct SubscriptionDetailView: View {
 
 	let planName: String
 	let planPeriod: String
 	let renewalDate: Date?
 	let willRenew: Bool
-	var onManage: () -> Void
 	var onClose: () -> Void
 
 	var body: some View {
@@ -33,16 +31,11 @@ struct SubscriptionDetailView: View {
 
 	private var card: some View {
 		VStack(spacing: 20) {
-			VStack(spacing: 6) {
-				Text("Active Plan")
-					.font(.medium14)
-					.foregroundStyle(.white50)
-				Text(planName)
-					.font(.bold24)
-					.foregroundStyle(.fluorescentMint)
-			}
+			Text(planName)
+				.font(.bold24)
+				.foregroundStyle(.black)
 
-			Divider().overlay(Color.white.opacity(0.12))
+			Divider().overlay(Color.black.opacity(0.12))
 
 			VStack(spacing: 14) {
 				detailRow(label: "Events", value: "Unlimited")
@@ -52,32 +45,18 @@ struct SubscriptionDetailView: View {
 				}
 			}
 
-			VStack(spacing: 12) {
-				Button(action: onManage) {
-					Text("Manage Subscription")
-						.font(.semiBold14)
-						.foregroundStyle(.whiteApp)
-						.frame(maxWidth: .infinity)
-						.padding(.vertical, 12)
-						.background(AppGradients.button)
-						.clipShape(Capsule())
-				}
-				Button(action: onClose) {
-					Text("Close")
-						.font(.semiBold14)
-						.foregroundStyle(.whiteApp)
-						.frame(maxWidth: .infinity)
-						.padding(.vertical, 12)
-						.overlay(Capsule().strokeBorder(Color.white.opacity(0.25), lineWidth: 1))
-				}
+			// Close (bordered).
+			Button(action: onClose) {
+				Text("Close")
+					.font(.semiBold14)
+					.foregroundStyle(.black)
+					.frame(maxWidth: .infinity)
+					.padding(.vertical, 12)
+					.overlay(Capsule().strokeBorder(Color.black.opacity(0.25), lineWidth: 1))
 			}
 		}
 		.padding(24)
-		.background(.darkSeaBlue, in: RoundedRectangle(cornerRadius: 20))
-		.overlay(
-			RoundedRectangle(cornerRadius: 20)
-				.strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
-		)
+		.background(.white, in: RoundedRectangle(cornerRadius: 20))
 	}
 
 	// MARK: - Helpers
@@ -86,11 +65,11 @@ struct SubscriptionDetailView: View {
 		HStack {
 			Text(label)
 				.font(.medium14)
-				.foregroundStyle(.white50)
+				.foregroundStyle(.black.opacity(0.6))
 			Spacer()
 			Text(value)
 				.font(.semiBold16)
-				.foregroundStyle(.whiteApp)
+				.foregroundStyle(.black)
 		}
 	}
 
