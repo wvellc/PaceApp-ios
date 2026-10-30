@@ -6,15 +6,22 @@
 //
 
 import SwiftUI
+import RevenueCatUI
 
 struct ProfileScreen: View {
-	
+
 	@Environment(Router.self) private var router
 	@Environment(ConnectIQManager.self) private var ciqManager
+	@Environment(SubscriptionManager.self) private var subscription
 	@State private var viewModel = ProfileViewModel()
 	/// Ask the watch for its settings only once per screen lifetime — avoids a
 	/// redundant request on every tab visit.
 	@State private var didRequestWatchSettings = false
+
+	/// Pro paywall (free users), plan details + Customer Center (subscribers).
+	@State private var showPaywall = false
+	@State private var showSubscriptionDetail = false
+	@State private var showCustomerCenter = false
 	
 	var body: some View {
 		VStack(spacing: 0) {
@@ -69,6 +76,26 @@ struct ProfileScreen: View {
 		.onChange(of: AuthManager.shared.userDetails) { _, _ in
 			viewModel.loadUserInfoFromSession()
 		}
+		// Pro paywall + plan details (RevenueCat).
+		.proPaywall(isPresented: $showPaywall)
+		.sheet(isPresented: $showCustomerCenter) { CustomerCenterView() }
+		.overlay {
+			if showSubscriptionDetail {
+				SubscriptionDetailView(
+					planName: "Pace Pro",
+					planPeriod: subscription.planPeriodTitle,
+					renewalDate: subscription.renewalDate,
+					willRenew: subscription.willRenew,
+					onManage: {
+						showSubscriptionDetail = false
+						showCustomerCenter = true
+					},
+					onClose: { showSubscriptionDetail = false }
+				)
+				.transition(.opacity)
+			}
+		}
+		.animation(.easeInOut(duration: 0.2), value: showSubscriptionDetail)
 	}
 	
 	// MARK: - Avatar Section
@@ -146,8 +173,52 @@ struct ProfileScreen: View {
 		VStack(spacing: 16) {
 			ForEach(viewModel.menuItems) { item in
 				profileMenuRow(item: item)
+				// Subscription row sits right under Manage Watch.
+				if item.id == .manageWatch {
+					subscriptionRow
+				}
 			}
 		}
+	}
+
+	// MARK: - Subscription Row
+
+	/// "Subscription" for free users (opens the paywall); "Subscribed" for Pro
+	/// users (opens the plan-details dialog).
+	@ViewBuilder
+	private var subscriptionRow: some View {
+		Button {
+			if subscription.isPro { showSubscriptionDetail = true }
+			else { showPaywall = true }
+		} label: {
+			HStack(spacing: 16) {
+				Circle()
+					.fill(.neonAquaBlue)
+					.frame(width: 42, height: 42)
+					.overlay {
+						Image(.icSubscription)
+							.resizable()
+							.renderingMode(.template)
+							.foregroundStyle(.whiteApp)
+							.frame(width: 32, height: 32)
+					}
+
+				Text(subscription.isPro ? "Subscribed" : "Subscription")
+					.font(.semiBold16)
+					.foregroundStyle(.darkCharcoal)
+					.frame(maxWidth: .infinity, alignment: .leading)
+
+				// Mint badge confirms an active plan at a glance.
+				if subscription.isPro {
+					Image(systemName: "checkmark.seal.fill")
+						.font(.system(size: 20))
+						.foregroundStyle(.fluorescentMint)
+				}
+			}
+			.padding(Constant.UI.padding12)
+			.cardBackground()
+		}
+		.buttonStyle(.plainSelected(active: .clear, pressed: .radiantBlue))
 	}
 	
 	// MARK: - Menu Row
@@ -292,4 +363,6 @@ struct ProfileScreen: View {
 #Preview {
 	ProfileScreen()
 		.environment(Router())
+		.environment(ConnectIQManager.shared)
+		.environment(SubscriptionManager.shared)
 }

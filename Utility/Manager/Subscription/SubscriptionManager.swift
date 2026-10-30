@@ -25,6 +25,27 @@ final class SubscriptionManager {
 	/// Latest customer info — exposed for the Customer Center and debugging.
 	private(set) var customerInfo: CustomerInfo?
 
+	// MARK: - Plan Details
+
+	/// The active Pace Pro entitlement, when subscribed.
+	var proEntitlement: EntitlementInfo? {
+		customerInfo?.entitlements[RevenueCatConst.entitlementPro]
+	}
+
+	/// Renewal (or expiry) date of the active plan.
+	var renewalDate: Date? { proEntitlement?.expirationDate }
+
+	/// True when the plan auto-renews — false once cancelled but still active.
+	var willRenew: Bool { proEntitlement?.willRenew ?? false }
+
+	/// Billing period label from the product id — "Monthly" / "Yearly".
+	var planPeriodTitle: String {
+		let id = proEntitlement?.productIdentifier.lowercased() ?? ""
+		if id.contains("year") || id.contains("annual") { return "Yearly" }
+		if id.contains("month") { return "Monthly" }
+		return "Pro"
+	}
+
 	/// Streams live CustomerInfo updates; cancelled on reconfigure.
 	@ObservationIgnored private var streamTask: Task<Void, Never>?
 
