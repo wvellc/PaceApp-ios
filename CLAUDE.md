@@ -894,7 +894,8 @@ Paid tier gated by the RevenueCat entitlement **`pace_app_pro`** (`Utility/Const
   Home/Favorites/History; History stops paging at the limit) — display only, **sync is unchanged**; (2) **auto-post
   at most N events to Strava**, the rest deferred (`stravaDeferredFree`) and **backfilled on upgrade** by the
   server-side `onProActivated` function. N = Remote Config `free_event_limit` (the Cloud Function reads it via
-  `admin.remoteConfig().getServerTemplate()`, fallback 15; the SA needs Remote Config read access or it falls back).
+  `admin.remoteConfig().getServerTemplate()`, fallback 15; the Functions SA has **Firebase Remote Config Viewer**
+  so the live value is honored — falls back to 15 only if that access is lost).
 
 ---
 
