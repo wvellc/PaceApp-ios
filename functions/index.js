@@ -888,8 +888,12 @@ exports.onProActivated = onDocumentWritten(
       .get();
     let posted = 0;
     for (const doc of snap.docs) {
-      if (doc.data().stravaActivityId) continue;
-      try { await syncEvent(uid, doc.ref, doc.data()); posted++; }
+      const data = doc.data();
+      if (data.stravaActivityId) continue;
+      // Only events DEFERRED by the free-tier cap — NOT the user's entire unsynced history
+      // (old runs completed before Strava was connected must not get dumped on upgrade).
+      if (data.stravaDeferredFree !== true) continue;
+      try { await syncEvent(uid, doc.ref, data); posted++; }
       catch (e) { logger.warn(`onProActivated: skipped ${doc.id}: ${e.message}`); }
     }
     logger.info(`onProActivated: backfilled ${posted} deferred event(s) to Strava for ${uid}`);
