@@ -38,7 +38,7 @@ enum ValidationType {
 	func message(for text: String) -> String {
 		let digits = text.filter(\.isNumber)
 		switch self {
-			case .phoneNumber where digits.count == 10 && Set(digits).count == 1:
+			case .phoneNumber where digits.count >= 7 && Set(digits).count == 1:
 				return "Nice try — that's not a real number. 🙂"
 			default:
 				return validationMessage

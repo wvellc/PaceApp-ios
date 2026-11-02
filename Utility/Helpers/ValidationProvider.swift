@@ -38,11 +38,11 @@ struct ValidationProvider {
 		return expression.firstMatch(in: text, range: range) != nil
 	}
 
-	// Phone: exactly 10 digits (grouping spaces ignored), a leading 2–9 as every
-	// real numbering plan uses, and not the same digit ten times over.
+	// Phone: 7–15 digits (the E.164 national-number range, so every country's plan fits —
+	// the country code is chosen separately), and not the same digit repeated.
 	private static func isValidPhoneNumber(_ text: String) -> Bool {
 		let digits = text.filter(\.isNumber)
-		guard matches(digits, regex: "^[2-9][0-9]{9}$") else { return false }
+		guard (7...15).contains(digits.count) else { return false }
 		return Set(digits).count > 1
 	}
 }

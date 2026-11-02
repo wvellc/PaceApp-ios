@@ -45,18 +45,20 @@ extension String {
 		ValidationProvider.isValid(text: self, type: .password)
 	}
 	
-	/// Phone number: 10 digits, leading 2–9, not all the same digit.
+	/// Phone number: 7–15 digits (the E.164 national range) and not all the same digit —
+	/// permissive enough for every country's numbering plan.
 	func isPhoneNumber() -> Bool {
 		ValidationProvider.isValid(text: self, type: .phoneNumber)
 	}
 
-	/// Live display format for a mobile number: strips non-digits, caps at 10,
-	/// and groups as "98765 43210". Idempotent, so it's safe to re-run on itself.
+	/// Live display format for a phone number: strips non-digits, caps at 15 (the E.164
+	/// ceiling), and groups into space-separated blocks of 5. Idempotent, so it's safe
+	/// to re-run on itself.
 	func asGroupedMobileNumber() -> String {
-		let digits = String(filter(\.isNumber).prefix(10))
-		guard digits.count > 5 else { return digits }
-		let split = digits.index(digits.startIndex, offsetBy: 5)
-		return "\(digits[..<split]) \(digits[split...])"
+		let digits = Array(filter(\.isNumber).prefix(15))
+		return stride(from: 0, to: digits.count, by: 5)
+			.map { String(digits[$0..<min($0 + 5, digits.count)]) }
+			.joined(separator: " ")
 	}
 	
 	/// Alphanumeric: letters and digits only, no spaces or special chars.
