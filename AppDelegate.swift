@@ -9,6 +9,17 @@ import FirebaseCore
 import FirebaseAuth
 import Logging
 import FirebaseFirestore
+import FirebaseAppCheck
+
+/// Production App Check provider factory: App Attest on iOS 14+, DeviceCheck otherwise.
+final class PaceAppCheckProviderFactory: NSObject, AppCheckProviderFactory {
+	func createProvider(with app: FirebaseApp) -> AppCheckProvider? {
+		if #available(iOS 14.0, *) {
+			return AppAttestProvider(app: app)
+		}
+		return DeviceCheckProvider(app: app)
+	}
+}
 
 class AppDelegate: NSObject, UIApplicationDelegate {
 	
@@ -16,6 +27,15 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 					 didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
 		logger.debug("Application did finish launching")
 		
+		// App Check — set the provider factory BEFORE FirebaseApp.configure() so every Firebase
+		// request carries an attestation token. Release: App Attest (iOS 14+) / DeviceCheck.
+		// Debug: the debug provider — register the token printed at launch in the Firebase console.
+		#if DEBUG
+		AppCheck.setAppCheckProviderFactory(AppCheckDebugProviderFactory())
+		#else
+		AppCheck.setAppCheckProviderFactory(PaceAppCheckProviderFactory())
+		#endif
+
 		// Configure Firebase — MUST run before any Auth.auth() calls.
 		FirebaseApp.configure()
 
