@@ -104,7 +104,8 @@ struct LoginScreen: View {
 								keyboardType: .phonePad,
 								borderColor: .white20,
 								onValueChanged: { newValue in
-									viewModel.phoneNumber = newValue
+									// Live-group on screen; the validator still sees plain digits.
+									viewModel.phoneNumber = newValue.asGroupedMobileNumber()
 								}
 							)
 							.focused($focus, equals: .phoneNumber)
@@ -204,7 +205,7 @@ struct LoginScreen: View {
 			}
 			
 			#if kDebug
-			viewModel.phoneNumber = "9898989898"
+			viewModel.phoneNumber = "9898989898".asGroupedMobileNumber()
 			viewModel.email = "wvedeveloper@gmail.com"
 			#endif
 			

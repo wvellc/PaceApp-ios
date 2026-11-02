@@ -22,7 +22,7 @@ struct ValidationProvider {
 			case .confirmPassword(let new):
 				return text == new
 			case .phoneNumber:
-				return matches(text, regex: "^[+]?[0-9\\s\\-().]{7,15}$")
+				return isValidPhoneNumber(text)
 			case .alphanumeric:
 				return matches(text, regex: "^[a-zA-Z0-9]+$")
 			case .custom(let regex):
@@ -36,6 +36,14 @@ struct ValidationProvider {
 		guard let expression = try? NSRegularExpression(pattern: regex) else { return false }
 		let range = NSRange(text.startIndex..., in: text)
 		return expression.firstMatch(in: text, range: range) != nil
+	}
+
+	// Phone: exactly 10 digits (grouping spaces ignored), a leading 2–9 as every
+	// real numbering plan uses, and not the same digit ten times over.
+	private static func isValidPhoneNumber(_ text: String) -> Bool {
+		let digits = text.filter(\.isNumber)
+		guard matches(digits, regex: "^[2-9][0-9]{9}$") else { return false }
+		return Set(digits).count > 1
 	}
 }
 

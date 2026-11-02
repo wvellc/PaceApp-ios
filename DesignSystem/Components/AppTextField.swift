@@ -130,8 +130,8 @@ struct AppTextField: View {
 			.animation(.easeInOut(duration: 0.2), value: isValid)
 			
 			// Inline validation error message
-			if !isValid && hasInteracted && validation?.validationMessage != nil {
-				Text(validation!.validationMessage)
+			if !isValid, hasInteracted, let validation {
+				Text(validation.message(for: text))
 					.font(.regular17)
 					.foregroundColor(.redBoho)
 					.padding(.top, 4)

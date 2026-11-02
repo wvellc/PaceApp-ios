@@ -45,9 +45,18 @@ extension String {
 		ValidationProvider.isValid(text: self, type: .password)
 	}
 	
-	/// Phone number: optional `+`, digits, spaces, dashes, parens; 7–15 chars total.
+	/// Phone number: 10 digits, leading 2–9, not all the same digit.
 	func isPhoneNumber() -> Bool {
 		ValidationProvider.isValid(text: self, type: .phoneNumber)
+	}
+
+	/// Live display format for a mobile number: strips non-digits, caps at 10,
+	/// and groups as "98765 43210". Idempotent, so it's safe to re-run on itself.
+	func asGroupedMobileNumber() -> String {
+		let digits = String(filter(\.isNumber).prefix(10))
+		guard digits.count > 5 else { return digits }
+		let split = digits.index(digits.startIndex, offsetBy: 5)
+		return "\(digits[..<split]) \(digits[split...])"
 	}
 	
 	/// Alphanumeric: letters and digits only, no spaces or special chars.

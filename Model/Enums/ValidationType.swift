@@ -32,5 +32,17 @@ enum ValidationType {
 			case .none:             return ""
 		}
 	}
+
+	// Context-aware message: lets a field explain *why* it's unhappy.
+	// Defaults to the static message above.
+	func message(for text: String) -> String {
+		let digits = text.filter(\.isNumber)
+		switch self {
+			case .phoneNumber where digits.count == 10 && Set(digits).count == 1:
+				return "Nice try — that's not a real number. 🙂"
+			default:
+				return validationMessage
+		}
+	}
 }
 
