@@ -889,6 +889,12 @@ Paid tier gated by the RevenueCat entitlement **`pace_app_pro`** (`Utility/Const
 - **Transfer behavior:** RevenueCat project setting is **"Keep with original App User ID"** (changed from
   "Transfer to new…" on 2026-11-02 — the old value leaked a subscription to whatever account logged in on a
   shared store account; correct for an app with its own login).
+- **Free-tier restrictions (display + Strava).** Beyond the create-gate, free users also: (1) **see only the
+  most-recent N events** in every list (`SubscriptionManager.visibleEventLimit`, Int.max when Pro → prefix in
+  Home/Favorites/History; History stops paging at the limit) — display only, **sync is unchanged**; (2) **auto-post
+  at most N events to Strava**, the rest deferred (`stravaDeferredFree`) and **backfilled on upgrade** by the
+  server-side `onProActivated` function. N = Remote Config `free_event_limit` (the Cloud Function reads it via
+  `admin.remoteConfig().getServerTemplate()`, fallback 15; the SA needs Remote Config read access or it falls back).
 
 ---
 
