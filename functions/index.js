@@ -50,6 +50,34 @@ const REVENUECAT_WEBHOOK_AUTH = defineSecret("REVENUECAT_WEBHOOK_AUTH");
 // Entitlement that represents Pace Pro (matches the apps' RevenueCatConst.entitlementPro).
 const PRO_ENTITLEMENT = "pace_app_pro";
 
+// Fallback free-tier Strava post cap, used only when Remote Config is unavailable. A free user
+// auto-posts at most the limit's worth of events to Strava; the rest are deferred until they go
+// Pro, then backfilled. Mirrors the app's compiled default.
+const FREE_STRAVA_POST_LIMIT = 15;
+
+// Live free_event_limit from Firebase Remote Config (server-side), cached briefly so we don't fetch
+// per event. Falls back to FREE_STRAVA_POST_LIMIT if Remote Config is unreachable or the value is
+// missing/invalid — so changing the Remote Config value moves the server cap with no redeploy.
+let _rcTemplate = null;
+let _rcTemplateAt = 0;
+const RC_TEMPLATE_TTL_MS = 5 * 60 * 1000;
+
+async function freeEventLimit() {
+  try {
+    if (!_rcTemplate || Date.now() - _rcTemplateAt > RC_TEMPLATE_TTL_MS) {
+      _rcTemplate = await admin.remoteConfig().getServerTemplate({
+        defaultConfig: { free_event_limit: FREE_STRAVA_POST_LIMIT },
+      });
+      _rcTemplateAt = Date.now();
+    }
+    const value = _rcTemplate.evaluate().getNumber("free_event_limit");
+    return value > 0 ? value : FREE_STRAVA_POST_LIMIT;
+  } catch (e) {
+    logger.warn(`free_event_limit from Remote Config failed (${e.message}); using fallback ${FREE_STRAVA_POST_LIMIT}`);
+    return FREE_STRAVA_POST_LIMIT;
+  }
+}
+
 // MARK: - Auth helper
 
 /** Verifies the Firebase ID token on the request and returns the uid, or null (response already sent). */
@@ -412,6 +440,18 @@ async function updateActivity(accessToken, activityId, { sportType, name, descri
 }
 
 /** Syncs a single event to Strava as a TCX upload with laps (no-op if already synced). */
+/**
+ * Whether the user may auto-post another event to Strava right now. Pro = unlimited; a free user
+ * may post up to the Remote Config free_event_limit (fallback FREE_STRAVA_POST_LIMIT). Reads the
+ * webhook-maintained `users/{uid}.subscription.isPro` and the running `stravaPostedCount`
+ * (incremented by syncEvent) — no per-event index query.
+ */
+async function canPostToStrava(uid) {
+  const snap = await db.doc(`users/${uid}`).get();
+  if (snap.get("subscription.isPro") === true) return true;
+  return (snap.get("stravaPostedCount") || 0) < await freeEventLimit();
+}
+
 async function syncEvent(uid, eventRef, event) {
   if (event.stravaActivityId) return null;
   const accessToken = await getValidAccessToken(uid);
@@ -448,7 +488,13 @@ async function syncEvent(uid, eventRef, event) {
     stravaActivityId: activityId,
     stravaSyncedAt: admin.firestore.FieldValue.serverTimestamp(),
     stravaSyncError: admin.firestore.FieldValue.delete(),
+    stravaDeferredFree: admin.firestore.FieldValue.delete(), // posted now, no longer deferred
   }, { merge: true });
+  // Track posts for the free-tier Strava quota (canPostToStrava reads this).
+  await db.doc(`users/${uid}`).set(
+    { stravaPostedCount: admin.firestore.FieldValue.increment(1) },
+    { merge: true },
+  );
   return activityId;
 }
 
@@ -535,6 +581,9 @@ exports.stravaBackfill = onRequest({ secrets: [STRAVA_CLIENT_SECRET], timeoutSec
     for (const doc of query.docs) {
       const data = doc.data();
       if (data.stravaActivityId) continue;
+      // Free users only backfill up to their remaining quota; Pro is unlimited. Re-checked each
+      // iteration because syncEvent bumps the count. Stop once the free quota is used up.
+      if (!(await canPostToStrava(uid))) break;
       try {
         const id = await syncEvent(uid, doc.ref, data);
         if (id) synced++;
@@ -790,6 +839,14 @@ exports.onEventCompleted = onDocumentWritten(
       return;
     }
 
+    // Free-tier Strava cap: past the limit, defer this event (leave it unsynced + flagged) instead
+    // of posting. It gets backfilled when the user goes Pro (onProActivated / stravaBackfill).
+    if (!(await canPostToStrava(data.userId))) {
+      logger.info(`onEventCompleted: ${eventId} deferred — free Strava post limit reached`);
+      await after.ref.set({ stravaDeferredFree: true }, { merge: true }).catch(() => {});
+      return;
+    }
+
     try {
       logger.info(`onEventCompleted: syncing ${eventId} to Strava…`);
       const activityId = await syncEvent(data.userId, after.ref, data);
@@ -798,5 +855,41 @@ exports.onEventCompleted = onDocumentWritten(
       logger.warn(`auto-sync failed for ${eventId}: ${e.message}`);
       await after.ref.set({ stravaSyncError: e.message }, { merge: true }).catch(() => {});
     }
+  }
+);
+
+// MARK: - Resume Strava posting on upgrade
+
+/**
+ * When a user gains Pace Pro — the webhook flips users/{uid}.subscription.isPro false/absent→true —
+ * post the completed events that were deferred while they were free. Covers purchase and restore
+ * server-side, so the apps need no change. Writes from syncEvent re-fire this, but the wasPro guard
+ * makes those re-entries no-ops (no loop).
+ */
+exports.onProActivated = onDocumentWritten(
+  { document: "users/{uid}", secrets: [STRAVA_CLIENT_SECRET], timeoutSeconds: 540 },
+  async (event) => {
+    const before = event.data && event.data.before;
+    const after = event.data && event.data.after;
+    if (!after || !after.exists) return;
+    const wasPro = before && before.exists && before.get("subscription.isPro") === true;
+    const isPro = after.get("subscription.isPro") === true;
+    if (wasPro || !isPro) return; // act only on the false/absent → true transition
+
+    const uid = event.params.uid;
+    if (!(await db.doc(`stravaTokens/${uid}`).get()).exists) return; // not connected → nothing to post
+
+    // Now Pro, so no quota — post every completed event not yet on Strava (the deferred ones).
+    const snap = await db.collection("events")
+      .where("userId", "==", uid)
+      .where("status", "==", "completed")
+      .get();
+    let posted = 0;
+    for (const doc of snap.docs) {
+      if (doc.data().stravaActivityId) continue;
+      try { await syncEvent(uid, doc.ref, doc.data()); posted++; }
+      catch (e) { logger.warn(`onProActivated: skipped ${doc.id}: ${e.message}`); }
+    }
+    logger.info(`onProActivated: backfilled ${posted} deferred event(s) to Strava for ${uid}`);
   }
 );
