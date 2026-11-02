@@ -874,7 +874,7 @@ feat(scope): impactful non-technical summary
 
 ## Subscriptions — Pace Pro (RevenueCat)
 
-Paid tier gated by the RevenueCat entitlement **`pace_app_pro`** (`Utility/Constant/RevenueCat.swift`, `entitlementPro`). The `purchases-ios-spm` SDK is configured at launch (`AppDelegate`) with a build switch — RevenueCat **Test Store** key in DEBUG, the `appl_` App Store key in release (`RevenueCatConst.apiKey`). The hosted dashboard paywall (`PaceProPaywall`, `default` offering) is presented via the **`.proPaywall`** modifier (Android parity: `PaywallActivityLauncher` — same dashboard paywall, each platform's native presentation). **`SubscriptionManager`** (`Utility/Manager/Subscription/`, `@Observable @MainActor` singleton) exposes `isPro` and the gate `count < RemoteConfigManager.shared.freeEventLimit`. Gate rule on both platforms: `isPro || (active + completed liveCount) < freeEventLimit`. **Don't gate the sync layer** — the watch→phone archive is ungated; only create/duplicate are gated.
+Paid tier gated by the RevenueCat entitlement **`pace_app_pro`** (`Utility/Constant/RevenueCat.swift`, `entitlementPro`). The `purchases-ios-spm` SDK is configured at launch (`AppDelegate`) with the `appl_` **App Store** key in all builds (`RevenueCatConst.apiKey`) — testing goes through the App Store sandbox; the RevenueCat Test Store was removed. The hosted dashboard paywall (`PaceProPaywall`, `default` offering) is presented via the **`.proPaywall`** modifier (Android parity: `PaywallActivityLauncher` — same dashboard paywall, each platform's native presentation). **`SubscriptionManager`** (`Utility/Manager/Subscription/`, `@Observable @MainActor` singleton) exposes `isPro` and the gate `count < RemoteConfigManager.shared.freeEventLimit`. Gate rule on both platforms: `isPro || (active + completed liveCount) < freeEventLimit`. **Don't gate the sync layer** — the watch→phone archive is ungated; only create/duplicate are gated.
 
 - **Free-event limit is remotely configurable** via Firebase Remote Config — **`Utility/Manager/RemoteConfig/RemoteConfigManager.swift`** (`@Observable @MainActor`), key **`free_event_limit`**, fallback **`RevenueCatConst.freeEventLimit = 15`**. `minimumFetchInterval` 0 in DEBUG / 3600s release; refreshed from `AppDelegate`. Both phones share one Firebase project, so a console change moves the limit on iOS and Android together (Android mirror: `core/config/RemoteConfigManager.kt`, same key).
 - **Home upsell footer** — `Modules/Dashboard/Home/HomeScreen.swift` `proUpsellFooter` renders when `!isPro && liveEventCount >= freeEventLimit` (`HomeViewModel.showProUpsell`), tap → paywall. Android mirror: `ProUpsellFooter.kt`.
@@ -894,7 +894,7 @@ Paid tier gated by the RevenueCat entitlement **`pace_app_pro`** (`Utility/Const
   Home/Favorites/History; History stops paging at the limit) — display only, **sync is unchanged**; (2) **auto-post
   at most N events to Strava**, the rest deferred (`stravaDeferredFree`) and **backfilled on upgrade** by the
   server-side `onProActivated` function. N = Remote Config `free_event_limit` (the Cloud Function reads it via
-  `admin.remoteConfig().getServerTemplate()`, fallback 15; the Functions SA has **Firebase Remote Config Viewer**
+  `admin.remoteConfig().getTemplate()` — the CLIENT template the apps use, NOT getServerTemplate — fallback 15; the Functions SA has **Firebase Remote Config Viewer**
   so the live value is honored — falls back to 15 only if that access is lost).
 
 ---

@@ -1,9 +1,9 @@
 # RevenueCat — Production Go-Live TODO
 
-Dev/testing runs against the RevenueCat **Test Store** (public key `test_…`). The
-app-side code is done, built and committed (`feat(subscriptions)` + `chore(deps)`).
-What remains is wiring the real **App Store** (and later Play Store) products and
-flipping the production key. The entitlement, offering, packages and published
+Dev/testing now runs against the real **App Store** (sandbox) — the RevenueCat Test Store was
+removed, so all builds use the `appl_` production key. The app-side code is done, built and
+committed. What remains is finishing the **App Store Connect** subscriptions (section D) so the
+sandbox has real products to buy. The entitlement, offering, packages and published
 paywall are already set up and carry over untouched.
 
 > Never commit secrets here — shared secret, `.p8` keys, Issuer/Key IDs go only
@@ -34,7 +34,7 @@ paywall are already set up and carry over untouched.
 
 ## C. App code ✅ DONE
 
-- [x] `RevenueCatConst.apiKey` → build switch: Test Store key in DEBUG, `appl_` key in release
+- [x] `RevenueCatConst.apiKey` → the `appl_` App Store key in ALL builds (Test Store removed — testing uses the App Store sandbox)
 - [x] Builds clean
 
 ## D. App Store Connect — finish the subscriptions (group `22503378`)
@@ -47,9 +47,11 @@ paywall are already set up and carry over untouched.
 - [ ] Review screenshot per subscription (a Pace Pro paywall screenshot works)
 - [ ] Submit the subscription group with the next app build
 
-## E. Test Store (dev) — optional
+## E. Test Store (dev) — REMOVED
 
-- [ ] Fix Test Store prices to $7.99 / $59.99 in the product editor so the dev paywall shows real numbers
+- [x] RevenueCat Test Store removed from the app — debug + release use the `appl_` App Store key, so dev
+  testing goes through the App Store sandbox (needs section D's subscriptions submitted + a Sandbox Apple
+  ID on the device). No separate Test Store to maintain.
 
 ## F. Google Play Store + Android
 

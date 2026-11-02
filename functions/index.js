@@ -65,13 +65,15 @@ const RC_TEMPLATE_TTL_MS = 5 * 60 * 1000;
 async function freeEventLimit() {
   try {
     if (!_rcTemplate || Date.now() - _rcTemplateAt > RC_TEMPLATE_TTL_MS) {
-      _rcTemplate = await admin.remoteConfig().getServerTemplate({
-        defaultConfig: { free_event_limit: FREE_STRAVA_POST_LIMIT },
-      });
+      // getTemplate() reads the CLIENT Remote Config template — the one the apps fetch, where
+      // free_event_limit lives. (getServerTemplate reads a SEPARATE server template that the apps
+      // don't use, so it would silently fall back to the in-app default.)
+      _rcTemplate = await admin.remoteConfig().getTemplate();
       _rcTemplateAt = Date.now();
     }
-    const value = _rcTemplate.evaluate().getNumber("free_event_limit");
-    return value > 0 ? value : FREE_STRAVA_POST_LIMIT;
+    const raw = _rcTemplate.parameters?.free_event_limit?.defaultValue?.value;
+    const value = parseInt(raw, 10);
+    return Number.isFinite(value) && value > 0 ? value : FREE_STRAVA_POST_LIMIT;
   } catch (e) {
     logger.warn(`free_event_limit from Remote Config failed (${e.message}); using fallback ${FREE_STRAVA_POST_LIMIT}`);
     return FREE_STRAVA_POST_LIMIT;
