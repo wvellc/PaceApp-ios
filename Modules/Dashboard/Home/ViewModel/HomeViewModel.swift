@@ -83,7 +83,9 @@ final class HomeViewModel {
 
 		activeEventsListener = eventRepository.observeActiveEvents(userId: userId) { [weak self] events in
 			guard let self else { return }
-			self.upcomingEvents = events
+			// Free users see only the most-recent N upcoming events; Pro = all. The footer/gate use
+			// liveEventCount (true count, refreshed below), so capping the display here is safe.
+			self.upcomingEvents = Array(events.prefix(SubscriptionManager.shared.visibleEventLimit))
 			self.isLoadingEvents = false
 			// A run leaving the active set means one just completed — refresh the header metrics.
 			self.refreshLatestCompletedMetrics(userId: userId)

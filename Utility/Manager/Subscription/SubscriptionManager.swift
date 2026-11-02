@@ -95,6 +95,15 @@ final class SubscriptionManager {
 		apply(try await Purchases.shared.restorePurchases())
 	}
 
+	// MARK: - Display cap
+
+	/// Free-tier DISPLAY cap: how many of the most-recent events a free user may see in lists.
+	/// Pro = Int.max (all). Mirrors Android `ProManager.visibleEventLimit`. Display only — sync /
+	/// Firestore are untouched. Snapshot read; a list re-caps on its next refresh/re-entry.
+	var visibleEventLimit: Int {
+		isPro ? .max : RemoteConfigManager.shared.freeEventLimit
+	}
+
 	// MARK: - Gating
 
 	/// Free users may keep up to `freeEventLimit` live events; Pro is unlimited.

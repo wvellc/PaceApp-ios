@@ -117,6 +117,14 @@ final class HistoryViewModel {
 		loadFirstPage()
 	}
 	
+	/// Free-tier display cap: trims the loaded list to the visible limit (Pro = unlimited) and
+	/// stops further paging once the limit is reached. Keeps History consistent with the cap.
+	private func applyVisibleCap(hasMoreFromPage: Bool) {
+		let limit = SubscriptionManager.shared.visibleEventLimit
+		if activities.count > limit { activities = Array(activities.prefix(limit)) }
+		hasMorePages = hasMoreFromPage && activities.count < limit
+	}
+
 	/// Resets pagination and fetches the first page with committed filters.
 	func loadFirstPage() {
 		guard let userId = currentUserId else { return }
@@ -139,7 +147,7 @@ final class HistoryViewModel {
 				)
 				self.activities = result.events
 				self.lastCursor = result.nextCursor
-				self.hasMorePages = result.events.count >= Self.pageSize
+				self.applyVisibleCap(hasMoreFromPage: result.events.count >= Self.pageSize)
 			} catch {
 				self.logger.error("Failed to load first page: \(error.localizedDescription)")
 			}
@@ -166,7 +174,7 @@ final class HistoryViewModel {
 			)
 			activities = result.events
 			lastCursor = result.nextCursor
-			hasMorePages = result.events.count >= Self.pageSize
+			applyVisibleCap(hasMoreFromPage: result.events.count >= Self.pageSize)
 		} catch {
 			logger.error("Failed to refresh history: \(error.localizedDescription)")
 		}
@@ -195,7 +203,7 @@ final class HistoryViewModel {
 				)
 				self.activities.append(contentsOf: result.events)
 				self.lastCursor = result.nextCursor
-				self.hasMorePages = result.events.count >= Self.pageSize
+				self.applyVisibleCap(hasMoreFromPage: result.events.count >= Self.pageSize)
 			} catch {
 				self.logger.error("Failed to load next page: \(error.localizedDescription)")
 			}

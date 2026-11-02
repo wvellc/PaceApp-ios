@@ -34,7 +34,9 @@ final class FavoritesViewModel {
 		do {
 			let favoriteIds = try await favoritesRepository.fetchFavoriteEventIds(userId: userId)
 			// Fetch ONLY favorites — much more efficient, no full history scan
-			favRuns = try await eventRepository.fetchEvents(byIds: favoriteIds)
+			let fetched = try await eventRepository.fetchEvents(byIds: favoriteIds)
+			// Free-tier display cap: show at most N (Pro = all). Re-caps on next load after purchase.
+			favRuns = Array(fetched.prefix(SubscriptionManager.shared.visibleEventLimit))
 			// Optional: sort by completedAt or scheduledAt for consistent UI
 //			favRuns.sort { ($0.completedAt ?? $0.scheduledAt) > ($1.completedAt ?? $1.scheduledAt) }
 		} catch {
