@@ -880,6 +880,15 @@ Paid tier gated by the RevenueCat entitlement **`pace_app_pro`** (`Utility/Const
 - **Home upsell footer** — `Modules/Dashboard/Home/HomeScreen.swift` `proUpsellFooter` renders when `!isPro && liveEventCount >= freeEventLimit` (`HomeViewModel.showProUpsell`), tap → paywall. Android mirror: `ProUpsellFooter.kt`.
 - **Profile Subscription row** (`Modules/Dashboard/Profile/ProfileScreen.swift` `subscriptionRow`) reads "Subscription" for free users (→ paywall) and "Subscribed" + mint seal for Pro (→ **`SubscriptionDetailView`**: a simplified white card — no "Active Plan" label, no "Manage Subscription" button). The RevenueCat **Customer Center** is wired but **dormant** (`showCustomerCenter` + `.sheet { CustomerCenterView() }`) — removing the Manage button left it without an entry point; re-wire if a manage/cancel path is wanted. Android matches (`PlanDetailsDialog`, dormant `CustomerCenterController`).
 - **Go-live + reference IDs** (project, entitlement, offering, package, paywall, product IDs) live in **`REVENUECAT_TODO.md`**. iOS App Store subscriptions (group `22503378`) still await submission (section D); the shared RevenueCat project's **Play side is live** and the **Android purchase path was verified on a real device (2026-10-30)** — test card → `pace_app_pro` unlocked. iOS sandbox purchase is the remaining real-device check once the App Store subscriptions are submitted.
+- **Server-side status (webhook → Firestore).** A RevenueCat webhook posts every event to the Cloud
+  Function **`revenueCatWebhook`** (`functions/index.js`, same codebase as Strava), which persists the
+  current state to **`users/{uid}.subscription`** and a **`users/{uid}/subscriptionEvents/{rcEventId}`**
+  history (purchase / renewal / cancellation / expiration / **transfer**). Store-only — the apps still
+  gate via the SDK; this is a server-of-record. Auth via the `REVENUECAT_WEBHOOK_AUTH` secret; URL
+  `https://thepaceapp.web.app/revenueCatWebhook`; TEST pings are acked without writing. `app_user_id` = uid.
+- **Transfer behavior:** RevenueCat project setting is **"Keep with original App User ID"** (changed from
+  "Transfer to new…" on 2026-11-02 — the old value leaked a subscription to whatever account logged in on a
+  shared store account; correct for an app with its own login).
 
 ---
 
