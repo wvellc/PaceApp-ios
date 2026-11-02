@@ -5,7 +5,7 @@
   },
   "functions": {
     "source": "functions",
-    "runtime": "nodejs20"
+    "runtime": "nodejs22"
   },
   "hosting": {
     "public": "firebase-hosting/public",
@@ -41,6 +41,10 @@
       {
         "source": "/stravaCallback/**",
         "function": { "functionId": "stravaCallback", "region": "us-central1" }
+      },
+      {
+        "source": "/revenueCatWebhook",
+        "function": { "functionId": "revenueCatWebhook", "region": "us-central1" }
       }
     ]
   }

@@ -39,6 +39,17 @@ const SPORT_BY_ACTIVITY = { Run: "Run", Walking: "Walk", Cycling: "Ride", Other:
 // the exact Strava sport_type is set afterwards via PUT /activities/{id}).
 const TCX_SPORT_BY_ACTIVITY = { Run: "Running", Walking: "Running", Cycling: "Biking", Other: "Other" };
 
+// MARK: - RevenueCat config
+
+// Shared secret compared against the Authorization header RevenueCat sends on each webhook.
+// Set the SAME value in both places (any strong random string):
+//   firebase functions:secrets:set REVENUECAT_WEBHOOK_AUTH
+//   RevenueCat dashboard → Integrations → Webhooks → Authorization header
+const REVENUECAT_WEBHOOK_AUTH = defineSecret("REVENUECAT_WEBHOOK_AUTH");
+
+// Entitlement that represents Pace Pro (matches the apps' RevenueCatConst.entitlementPro).
+const PRO_ENTITLEMENT = "pace_app_pro";
+
 // MARK: - Auth helper
 
 /** Verifies the Firebase ID token on the request and returns the uid, or null (response already sent). */
@@ -621,6 +632,134 @@ exports.stravaWebhook = onRequest(async (req, res) => {
   }
 
   res.status(405).send("Method Not Allowed");
+});
+
+// MARK: - RevenueCat webhook
+
+// Event types that mean the user currently has access. CANCELLATION keeps access until expiry
+// (auto-renew just turns off), so it counts as active — we flip willRenew to false instead.
+const RC_ACTIVE_EVENTS = new Set([
+  "INITIAL_PURCHASE", "RENEWAL", "UNCANCELLATION", "PRODUCT_CHANGE",
+  "NON_RENEWING_PURCHASE", "SUBSCRIPTION_EXTENDED", "TEMPORARY_ENTITLEMENT_GRANT",
+  "CANCELLATION",
+]);
+// Event types that end access immediately.
+const RC_INACTIVE_EVENTS = new Set(["EXPIRATION", "SUBSCRIPTION_PAUSED"]);
+
+/** A RevenueCat app_user_id is one of our users only when it isn't an anonymous RC id. */
+function realUid(appUserId) {
+  return appUserId && !String(appUserId).startsWith("$RCAnonymousID:") ? appUserId : null;
+}
+
+/** The current-status summary written (merged) to users/{uid}.subscription. */
+function subscriptionSummary(event, isActive) {
+  const entitlements = event.entitlement_ids
+    || (event.entitlement_id ? [event.entitlement_id] : []);
+  const hasPro = entitlements.includes(PRO_ENTITLEMENT);
+  return {
+    isActive,
+    isPro: isActive && hasPro,
+    entitlementId: hasPro ? PRO_ENTITLEMENT : (entitlements[0] || null),
+    productId: event.product_id || null,
+    store: event.store || null,                // APP_STORE / PLAY_STORE / ...
+    periodType: event.period_type || null,     // NORMAL / TRIAL / INTRO
+    environment: event.environment || null,    // PRODUCTION / SANDBOX
+    willRenew: isActive && event.type !== "CANCELLATION",
+    purchasedAtMs: event.purchased_at_ms || null,
+    expirationAtMs: event.expiration_at_ms || null,
+    latestEventType: event.type || null,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+}
+
+/** Writes the status summary (merge) + a deduped event-history doc for one uid. */
+async function applyRevenueCatEvent(uid, event, isActive) {
+  await db.doc(`users/${uid}`).set(
+    { subscription: subscriptionSummary(event, isActive) },
+    { merge: true },
+  );
+  // History log — doc id = RC event id, so webhook redelivery is idempotent.
+  if (event.id) {
+    await db.doc(`users/${uid}/subscriptionEvents/${event.id}`).set({
+      type: event.type || null,
+      entitlementIds: event.entitlement_ids
+        || (event.entitlement_id ? [event.entitlement_id] : []),
+      productId: event.product_id || null,
+      store: event.store || null,
+      periodType: event.period_type || null,
+      environment: event.environment || null,
+      isActive,
+      cancelReason: event.cancel_reason || null,
+      expirationReason: event.expiration_reason || null,
+      purchasedAtMs: event.purchased_at_ms || null,
+      expirationAtMs: event.expiration_at_ms || null,
+      eventTimestampMs: event.event_timestamp_ms || null,
+      priceInPurchasedCurrency: event.price_in_purchased_currency ?? null,
+      currency: event.currency || null,
+      receivedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+  }
+}
+
+/**
+ * RevenueCat webhook → Firestore. Persists subscription status (store-only; the apps still gate
+ * via the SDK). Requires the Authorization header to equal REVENUECAT_WEBHOOK_AUTH.
+ * URL: https://thepaceapp.web.app/revenueCatWebhook
+ */
+exports.revenueCatWebhook = onRequest({ secrets: [REVENUECAT_WEBHOOK_AUTH] }, async (req, res) => {
+  if (req.method !== "POST") {
+    res.status(405).send("Method Not Allowed");
+    return;
+  }
+  // Shared-secret auth — RevenueCat echoes the Authorization header you configure.
+  if ((req.get("Authorization") || "") !== REVENUECAT_WEBHOOK_AUTH.value()) {
+    res.status(401).send("Unauthorized");
+    return;
+  }
+
+  const event = (req.body && req.body.event) || {};
+  const type = event.type;
+
+  // The dashboard "Send test event" button sends a TEST ping with a sample app_user_id —
+  // acknowledge it without writing a junk doc to Firestore.
+  if (type === "TEST") {
+    logger.info("revenueCatWebhook: TEST ping (no Firestore write)");
+    res.status(200).send("OK");
+    return;
+  }
+
+  // Do the work BEFORE responding (Cloud Run throttles CPU once the response is sent).
+  try {
+    if (type === "TRANSFER") {
+      // Purchases moved between users: access leaves transferred_from, lands on transferred_to.
+      const from = (event.transferred_from || []).map(realUid).filter(Boolean);
+      const to = (event.transferred_to || []).map(realUid).filter(Boolean);
+      await Promise.allSettled([
+        ...from.map((uid) => applyRevenueCatEvent(uid, event, false)),
+        ...to.map((uid) => applyRevenueCatEvent(uid, event, true)),
+      ]);
+      logger.info(`revenueCatWebhook TRANSFER from [${from}] to [${to}]`);
+    } else {
+      const uid = realUid(event.app_user_id);
+      if (!uid) {
+        logger.info(`revenueCatWebhook: skipped ${type} (anonymous/absent app_user_id)`);
+        res.status(200).send("IGNORED");
+        return;
+      }
+      const isActive = RC_INACTIVE_EVENTS.has(type) ? false
+        : RC_ACTIVE_EVENTS.has(type) ? true
+        // BILLING_ISSUE / unknown: keep access while the entitlement hasn't expired yet.
+        : (event.expiration_at_ms == null || event.expiration_at_ms > Date.now());
+      await applyRevenueCatEvent(uid, event, isActive);
+      logger.info(`revenueCatWebhook ${type} uid=${uid} active=${isActive}`);
+    }
+  } catch (e) {
+    logger.error("revenueCatWebhook failed", e);
+    res.status(500).send("ERROR"); // 500 → RevenueCat retries with backoff.
+    return;
+  }
+
+  res.status(200).send("EVENT_RECEIVED");
 });
 
 // MARK: - Auto-sync trigger
