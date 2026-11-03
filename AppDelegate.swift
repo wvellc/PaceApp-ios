@@ -17,7 +17,12 @@ final class PaceAppCheckProviderFactory: NSObject, AppCheckProviderFactory {
 		if #available(iOS 14.0, *) {
 			return AppAttestProvider(app: app)
 		}
-		return DeviceCheckProvider(app: app)
+		
+		#if DEBUG || targetEnvironment(simulator)
+				return AppCheckDebugProvider(app: app)
+		#else
+				return AppAttestProvider(app: app)
+		#endif
 	}
 }
 
