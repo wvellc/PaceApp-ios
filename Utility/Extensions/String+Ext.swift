@@ -51,14 +51,10 @@ extension String {
 		ValidationProvider.isValid(text: self, type: .phoneNumber)
 	}
 
-	/// Live display format for a phone number: strips non-digits, caps at 15 (the E.164
-	/// ceiling), and groups into space-separated blocks of 5. Idempotent, so it's safe
-	/// to re-run on itself.
-	func asGroupedMobileNumber() -> String {
-		let digits = Array(filter(\.isNumber).prefix(15))
-		return stride(from: 0, to: digits.count, by: 5)
-			.map { String(digits[$0..<min($0 + 5, digits.count)]) }
-			.joined(separator: " ")
+	/// Sanitized phone number: strips non-digits and caps at 15 (the E.164 ceiling).
+	/// Shown as plain digits — no display grouping. Idempotent, safe to re-run on itself.
+	func asSanitizedMobileNumber() -> String {
+		String(filter(\.isNumber).prefix(15))
 	}
 	
 	/// Alphanumeric: letters and digits only, no spaces or special chars.
