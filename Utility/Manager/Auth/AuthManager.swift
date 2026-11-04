@@ -129,9 +129,16 @@ final class AuthManager {
 	// MARK: - Email Link Auth (Passwordless)
 	
 	func sendEmailLink(email: String) async throws {
+		let domain = RemoteConfigManager.shared.emailLinkDomain()
 		let settings = ActionCodeSettings()
-		settings.url = RemoteConfigManager.shared.emailLinkContinueURL()
+		settings.url = URL(string: "https://\(domain)/emailSignIn")
 		settings.handleCodeInApp = true
+		// linkDomain sets the host shown in the email link itself and must be a custom Hosting
+		// domain, so the default firebaseapp.com is used only as the continue URL and omitted
+		// from linkDomain (Firebase then falls back to the default domain automatically).
+		if domain != RemoteConfigManager.fallbackEmailLinkDomain {
+			settings.linkDomain = domain
+		}
 		settings.setIOSBundleID(Bundle.main.bundleIdentifier!)
 		try await Auth.auth().sendSignInLink(toEmail: email, actionCodeSettings: settings)
 		UserDefaults.standard.set(email, forKey: Keys.emailForSignIn)

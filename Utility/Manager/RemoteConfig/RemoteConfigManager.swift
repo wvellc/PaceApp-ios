@@ -63,16 +63,15 @@ final class RemoteConfigManager {
 		return value > 0 ? value : RevenueCatConst.freeEventLimit
 	}
 
-	/// Email sign-in continue URL, read live from Remote Config at send time. Default = the
-	/// branded custom domain; set the console value to the Firebase default domain to fail over
-	/// if auth.paceapp.net ever has issues. An unknown/blank value falls back to the default, so
-	/// a console typo can't break sign-in. Both hosts serve /emailSignIn and are Firebase
-	/// authorized domains, and both apps accept incoming links from either on the receive side.
-	func emailLinkContinueURL() -> URL {
+	/// Email sign-in link domain, read live from Remote Config at send time. Used as the
+	/// ActionCodeSettings linkDomain (which sets the host shown in the email link itself) and to
+	/// build the continue URL. Default = the branded custom domain; set the console value to the
+	/// Firebase default domain to fail over if auth.paceapp.net ever has issues. An unknown/blank
+	/// value falls back to the default, so a console typo can't break sign-in.
+	func emailLinkDomain() -> String {
 		let domain = remoteConfig[Keys.emailLinkDomain].stringValue
 			.trimmingCharacters(in: .whitespacesAndNewlines)
-		let host = Self.allowedEmailLinkDomains.contains(domain) ? domain : Self.primaryEmailLinkDomain
-		return URL(string: "https://\(host)/emailSignIn")!
+		return Self.allowedEmailLinkDomains.contains(domain) ? domain : Self.primaryEmailLinkDomain
 	}
 
 	// Email sign-in continue-URL host, remotely switchable (shared key with Android). Default =
