@@ -111,13 +111,32 @@
       document.getElementById("status-msg").textContent = msg;
     }
 
-    // ─── Deep-link URL that opens the iOS app ─────────────────────────────────
-    // The iOS app registers the Universal Link domain (thepaceapp.firebaseapp.com)
-    // so iOS will intercept this URL and open the app directly.
-    // The full current URL (with all Firebase query params) is passed so the app
-    // can call isSignInWithEmailLink() and complete sign-in natively.
-    function buildAppLink() {
-      return window.location.href;   // iOS universal link — same URL
+    // ─── Deep-link URL that opens the native app ──────────────────────────────
+    // The full current URL (with all Firebase query params) is handed to the app
+    // so it can call isSignInWithEmailLink() and complete sign-in natively.
+    const isAndroid = /Android/i.test(navigator.userAgent);
+
+    // iOS: the Universal Link domain (thepaceapp.firebaseapp.com) is intercepted
+    // by the app, so the same https URL opens it.
+    function buildIosLink() {
+      return window.location.href;
+    }
+
+    // Android: a verified App Link is NOT handed to the app from an in-browser
+    // same-origin navigation — Chrome just reloads this page. So force-open the
+    // app BY PACKAGE via an intent:// URL (works even if App Link verification
+    // failed). The https link rides along as the intent data and still matches
+    // the app's /emailSignIn intent-filter; browser_fallback_url catches the
+    // app-not-installed case (guarded below so it can't loop).
+    function buildAndroidLink() {
+      const dataUrl = new URL(window.location.href);
+      dataUrl.searchParams.set("appmissing", "1");           // only seen if app is absent
+      const fallback = encodeURIComponent(dataUrl.toString());
+      const hostPathQuery =
+        window.location.host + window.location.pathname + window.location.search;
+      return "intent://" + hostPathQuery +
+        "#Intent;scheme=https;package=net.paceapp;" +
+        "S.browser_fallback_url=" + fallback + ";end";
     }
 
     // ─── Main ─────────────────────────────────────────────────────────────────
@@ -128,13 +147,19 @@
         return;
       }
 
-      // Show redirect UI and set the deep-link
-      const appLink = buildAppLink();
+      const appLink = isAndroid ? buildAndroidLink() : buildIosLink();
       document.getElementById("open-btn").href = appLink;
       show("state-redirect");
-      setStatus("Redirecting to the app…");
 
-      // Attempt automatic redirect
+      // If Android already fell back here because the app isn't installed, don't
+      // auto-redirect again (that would loop) — just show the manual button.
+      const appMissing = new URLSearchParams(window.location.search).get("appmissing");
+      if (isAndroid && appMissing) {
+        setStatus("If Pace App didn't open, make sure it's installed, then tap above.");
+        return;
+      }
+
+      setStatus("Redirecting to the app…");
       try {
         window.location.href = appLink;
       } catch(e) {
