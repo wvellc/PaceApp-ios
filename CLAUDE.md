@@ -428,8 +428,8 @@ LoginScreen → OTPVerificationScreen (phone; OTPVerificationViewModel + OTPStat
 
 - **PhoneAuthUIDelegate** must be held strongly on `AuthManager` during `verifyPhoneNumber` — don't let it deallocate
 - **Email link different device**: If `Keys.emailForSignIn` is empty when link arrives, show error and redirect to `.auth`
-- **`continueURL`**: Must be path-qualified (`https://thepaceapp.firebaseapp.com/emailSignIn`), not bare domain root
-- **`linkDomain`**: Must not be set for `.firebaseapp.com` domains
+- **Email sign-in domain (`auth.paceapp.net`, remotely switchable)**: the host shown in the email link is set by `ActionCodeSettings.linkDomain` — **not** `url` (the continue URL). `linkDomain` must be a **custom** Hosting domain, so for the default `thepaceapp.firebaseapp.com` it is **omitted** (Firebase uses the default). Primary = `auth.paceapp.net` (a Connected Hosting custom domain); the host comes from Remote Config **`email_link_domain`** (`RemoteConfigManager.shared.emailLinkDomain()`, allowlist `{auth.paceapp.net, thepaceapp.firebaseapp.com}`, unknown/blank → primary) so it can fail over to `firebaseapp.com` from the console without a rebuild. Mirrors Android (`setLinkDomain`, same key).
+- **`continueURL` (`url`)**: Must be path-qualified (`https://<domain>/emailSignIn`), not a bare domain root; its domain must be an Authorized domain in the Firebase console (both `auth.paceapp.net` and `thepaceapp.firebaseapp.com` are).
 - **Friendly errors**: route all auth errors through `AuthErrorMapper.message(for:)` — never `error.localizedDescription`
 
 ---
@@ -761,7 +761,7 @@ Holding the screen structs as `@State` preserves each screen's identity — and 
 15. **ActivityData stable IDs** — never use `let id = UUID()` on model types in lists. Use stable, deterministic IDs (Firestore document ID or sync ID).
 16. **Timer and `@Observable`** — `Timer.scheduledTimer` fires off MainActor. Mutations to `@Observable` state must be dispatched to `@MainActor` explicitly.
 17. **Firestore user settings** — use flat fields + nested map on the user document, not subcollections. Avoids doubling Firestore read costs on launch.
-18. **`continueURL` for Firebase email link** — must be path-qualified (e.g., `https://thepaceapp.firebaseapp.com/emailSignIn`), not a bare domain root.
+18. **`continueURL` for Firebase email link** — must be path-qualified (e.g., `https://auth.paceapp.net/emailSignIn`), not a bare domain root. The link host itself comes from `ActionCodeSettings.linkDomain` (Remote Config `email_link_domain`, default `auth.paceapp.net`), not `continueURL`.
 19. **Form validation** — always centralize in ViewModel, never inline in views. Use `ValidationProvider.isValid(text:type:)`.
 20. **New forms** — use `AppTextField` and `AppSegmentedControl` from the design system. Never create ad-hoc form components.
 21. **Comment discipline** — write **single-line** `//` comments; include a short example or flow only when it genuinely helps (e.g. `// watch "2.5" ft → 2.5 Feet`); **never stack more than two comment lines together** in one place (`// MARK: -` headers are exempt). If a block needs more, simplify the code. Preserve existing `// MARK: -` sections and author headers.
