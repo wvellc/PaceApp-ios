@@ -36,7 +36,10 @@ final class RemoteConfigManager {
 		remoteConfig.configSettings = settings
 
 		// Fallback = the compiled constant, so the gate works offline / before the first fetch.
-		remoteConfig.setDefaults([Keys.freeEventLimit: NSNumber(value: RevenueCatConst.freeEventLimit)])
+		remoteConfig.setDefaults([
+			Keys.freeEventLimit: NSNumber(value: RevenueCatConst.freeEventLimit),
+			Keys.emailLinkDomain: Self.primaryEmailLinkDomain as NSString,
+		])
 		freeEventLimit = readFreeEventLimit()
 	}
 
@@ -60,8 +63,27 @@ final class RemoteConfigManager {
 		return value > 0 ? value : RevenueCatConst.freeEventLimit
 	}
 
+	/// Email sign-in continue URL, read live from Remote Config at send time. Default = the
+	/// branded custom domain; set the console value to the Firebase default domain to fail over
+	/// if auth.paceapp.net ever has issues. An unknown/blank value falls back to the default, so
+	/// a console typo can't break sign-in. Both hosts serve /emailSignIn and are Firebase
+	/// authorized domains, and both apps accept incoming links from either on the receive side.
+	func emailLinkContinueURL() -> URL {
+		let domain = remoteConfig[Keys.emailLinkDomain].stringValue
+			.trimmingCharacters(in: .whitespacesAndNewlines)
+		let host = Self.allowedEmailLinkDomains.contains(domain) ? domain : Self.primaryEmailLinkDomain
+		return URL(string: "https://\(host)/emailSignIn")!
+	}
+
+	// Email sign-in continue-URL host, remotely switchable (shared key with Android). Default =
+	// the branded custom domain; set the console value to the fallback host to fail over.
+	static let primaryEmailLinkDomain = "auth.paceapp.net"
+	static let fallbackEmailLinkDomain = "thepaceapp.firebaseapp.com"
+	private static let allowedEmailLinkDomains: Set<String> = [primaryEmailLinkDomain, fallbackEmailLinkDomain]
+
 	// Shared keys with Android — must match the Firebase console parameter names.
 	private enum Keys {
 		static let freeEventLimit = "free_event_limit"
+		static let emailLinkDomain = "email_link_domain"
 	}
 }

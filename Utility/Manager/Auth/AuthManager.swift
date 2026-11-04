@@ -130,7 +130,7 @@ final class AuthManager {
 	
 	func sendEmailLink(email: String) async throws {
 		let settings = ActionCodeSettings()
-		settings.url = URL(string: "https://auth.paceapp.net/emailSignIn")
+		settings.url = RemoteConfigManager.shared.emailLinkContinueURL()
 		settings.handleCodeInApp = true
 		settings.setIOSBundleID(Bundle.main.bundleIdentifier!)
 		try await Auth.auth().sendSignInLink(toEmail: email, actionCodeSettings: settings)
